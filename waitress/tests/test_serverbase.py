@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Tests for zope.server.serverbase
+"""Tests for waitress.serverbase
 """
 import doctest
 import unittest
@@ -27,7 +27,7 @@ def doctest_ServerBase():
     We will use a subclass of ServerBase so that unit tests do not actually try
     to bind to ports.
 
-        >>> from zope.server.serverbase import ServerBase
+        >>> from waitress.serverbase import ServerBase
         >>> class ServerBaseForTest(ServerBase):
         ...     def bind(self, (ip, port)):
         ...         print "Listening on %s:%d" % (ip or '*', port)
