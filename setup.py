@@ -33,18 +33,20 @@ tests_require = [
 
 
 setup(
-    name='zope.server',
-    version='3.8.6dev',
+    name='waitress',
+    version='0.0',
     author='Zope Foundation and Contributors',
     author_email='zope-dev@zope.org',
-    description='Zope Server (Web and FTP)',
+    maintainer="Chris McDonough",
+    maintainer_email="chrism@plope.com",
+    description='Waitress WSGI server',
     long_description=(
         read('README.txt')
         + '\n\n' +
         read('CHANGES.txt')
         ),
     license='ZPL 2.1',
-    keywords=('zope3 server http ftp'),
+    keywords=('waitress wsgi server http'),
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
@@ -55,10 +57,8 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Internet :: WWW/HTTP',
         'Framework :: Zope3'],
-    url='http://pypi.python.org/pypi/zope.server',
-    packages=find_packages('src'),
-    package_dir = {'': 'src'},
-    namespace_packages=['zope',],
+    url='https://github.com/mcdonc/waitress',
+    packages=find_packages(),
     tests_require=tests_require,
     install_requires=[
         'setuptools',
@@ -71,6 +71,6 @@ setup(
     zip_safe=False,
     entry_points="""
     [paste.server_runner]
-    main = zope.server.http.wsgihttpserver:run_paste
+    main = waitress.http.wsgihttpserver:run_paste
     """
     )
