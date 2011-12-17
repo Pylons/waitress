@@ -20,8 +20,7 @@ import socket
 import time
 
 from waitress.http.http_date import build_http_date
-from zope.publisher.interfaces.http import IHeaderOutput
-from waitress.interfaces import ITask
+from waitress.interfaces import ITask, IHeaderOutput
 
 from zope.interface import implements
 
@@ -37,7 +36,7 @@ class HTTPTask(object):
        Subclass this and override the execute() method.
     """
 
-    implements(ITask, IHeaderOutput)  #, IOutputStream
+    implements(ITask, IHeaderOutput)
 
     instream = None
     close_on_finish = 1
@@ -83,27 +82,27 @@ class HTTPTask(object):
         pass
 
     def setResponseStatus(self, status, reason):
-        """See zope.publisher.interfaces.http.IHeaderOutput"""
+        """See waitress.interfaces.http.IHeaderOutput"""
         self.status = status
         self.reason = reason
 
     def setResponseHeaders(self, mapping):
-        """See zope.publisher.interfaces.http.IHeaderOutput"""
+        """See waitress.interfaces.http.IHeaderOutput"""
         self.response_headers.update(mapping)
 
     def appendResponseHeaders(self, lst):
-        """See zope.publisher.interfaces.http.IHeaderOutput"""
+        """See waitress.interfaces.http.IHeaderOutput"""
         accum = self.accumulated_headers
         if accum is None:
             self.accumulated_headers = accum = []
         accum.extend(lst)
 
     def wroteResponseHeader(self):
-        """See zope.publisher.interfaces.http.IHeaderOutput"""
+        """See waitress.interfaces.http.IHeaderOutput"""
         return self.wrote_header
 
     def setAuthUserName(self, name):
-        """See zope.publisher.interfaces.http.IHeaderOutput"""
+        """See waitress.interfaces.http.IHeaderOutput"""
         self.auth_user_name = name
 
     def prepareResponseHeaders(self):

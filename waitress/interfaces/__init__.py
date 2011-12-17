@@ -296,3 +296,36 @@ class IDispatcher(ISocket, IDispatcherEventHandler, IDispatcherLogging):
            indicating that by default, all channels will be
            interested.
         """
+
+class IHeaderOutput(Interface):
+    """Interface for setting HTTP response headers.
+
+    This allows the HTTP server and the application to both set response
+    headers.
+    """
+
+    def setResponseStatus(status, reason):
+        """Sets the status code and the accompanying message.
+        """
+
+    def setResponseHeaders(mapping):
+        """Sets headers.  The headers must be Correctly-Cased.
+        """
+
+    def appendResponseHeaders(lst):
+        """Sets headers that can potentially repeat.
+
+        Takes a list of strings.
+        """
+
+    def wroteResponseHeader():
+        """Returns a flag indicating whether the response
+
+        header has already been sent.
+        """
+
+    def setAuthUserName(name):
+        """Sets the name of the authenticated user so the name can be logged.
+        """
+
+
