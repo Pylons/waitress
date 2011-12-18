@@ -5,3 +5,6 @@ develop-eggs/
 bin/
 eggs/
 parts/
+env*/
+.coverage
+

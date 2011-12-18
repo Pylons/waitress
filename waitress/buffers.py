@@ -15,7 +15,7 @@
 """
 try:
     from cStringIO import StringIO
-except ImportError:
+except ImportError: # pragma: no cover
     from StringIO import StringIO
 
 
@@ -56,7 +56,7 @@ class FileBasedBuffer(object):
         file.seek(read_pos)
         self.remain = self.remain + len(s)
 
-    def get(self, bytes=-1, skip=0):
+    def get(self, bytes=-1, skip=False):
         file = self.file
         if not skip:
             read_pos = file.tell()

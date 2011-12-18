@@ -68,6 +68,7 @@ setup(
         ],
     extras_require=dict(test=tests_require),
     include_package_data=True,
+    test_suite='waitress',
     zip_safe=False,
     entry_points="""
     [paste.server_runner]
