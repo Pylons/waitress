@@ -95,4 +95,33 @@ class TestFileBasedBuffer(unittest.TestCase):
         inst.remain = 0
         inst.prune()
         self.assertTrue(inst.file is f)
-        
+
+class TestTempfileBasedBuffer(unittest.TestCase):
+    def _makeOne(self, from_buffer=None):
+        from waitress.buffers import TempfileBasedBuffer
+        return TempfileBasedBuffer(from_buffer=from_buffer)
+
+    def test_newfile(self):
+        inst = self._makeOne()
+        r = inst.newfile()
+        self.assertTrue(isinstance(r, file))
+
+class TestStringIOBasedBuffer(unittest.TestCase):
+    def _makeOne(self, from_buffer=None):
+        from waitress.buffers import StringIOBasedBuffer
+        return StringIOBasedBuffer(from_buffer=from_buffer)
+
+    def test_ctor_from_buffer_not_None(self):
+        f = StringIO.StringIO()
+        f.getfile = lambda *x: f
+        inst = self._makeOne(f)
+        self.assertTrue(hasattr(inst.file, 'read'))
+
+    def test_ctor_from_buffer_None(self):
+        inst = self._makeOne()
+        self.assertTrue(hasattr(inst.file, 'read'))
+
+    def test_newfile(self):
+        inst = self._makeOne()
+        r = inst.newfile()
+        self.assertTrue(hasattr(r, 'read'))
