@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""WSGI-compliant HTTP Server that uses the Zope Publisher for executing a task.
+"""WSGI-compliant HTTP Server for executing a task.
 """
 import asyncore
 import re
@@ -54,7 +54,7 @@ def curriedStartResponse(task):
 
 
 class WSGIHTTPServer(HTTPServer):
-    """Zope Publisher-specific WSGI-compliant HTTP Server"""
+    """WSGI-compliant HTTP Server"""
 
     application = None
 
@@ -93,8 +93,8 @@ class WSGIHTTPServer(HTTPServer):
         # Note: Derived request parsers might not have these new attributes,
         # so fail gracefully.
         try:
-            env['zserver.proxy.scheme'] = task.request_data.proxy_scheme
-            env['zserver.proxy.host'] = task.request_data.proxy_netloc
+            env['waitress.proxy.scheme'] = task.request_data.proxy_scheme
+            env['waitress.proxy.host'] = task.request_data.proxy_netloc
         except AttributeError:
             pass
         return env

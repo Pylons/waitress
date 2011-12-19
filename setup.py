@@ -11,13 +11,6 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-# This package is developed by the Zope Toolkit project, documented here:
-# http://docs.zope.org/zopetoolkit
-# When developing and releasing this package, please follow the documented
-# Zope Toolkit policies as described by this documentation.
-##############################################################################
-"""Setup for zope.server package
-"""
 import os
 from setuptools import setup, find_packages
 

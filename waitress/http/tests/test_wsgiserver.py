@@ -131,11 +131,11 @@ class WSGIInfo(object):
 
     def proxy_scheme(self, REQUEST):
         """Return the proxy scheme."""
-        return REQUEST['zserver.proxy.scheme']
+        return REQUEST['waitress.proxy.scheme']
 
     def proxy_host(self, REQUEST):
         """Return the proxy host."""
-        return REQUEST['zserver.proxy.host']
+        return REQUEST['waitress.proxy.host']
 
 class Tests(PlacelessSetup, unittest.TestCase):
 
