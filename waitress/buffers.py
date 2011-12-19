@@ -56,27 +56,28 @@ class FileBasedBuffer(object):
         file.seek(read_pos)
         self.remain = self.remain + len(s)
 
-    def get(self, bytes=-1, skip=False):
+    def get(self, numbytes=-1, skip=False):
         file = self.file
         if not skip:
             read_pos = file.tell()
-        if bytes < 0:
+        if numbytes < 0:
             # Read all
             res = file.read()
         else:
-            res = file.read(bytes)
+            res = file.read(numbytes)
         if skip:
             self.remain -= len(res)
         else:
             file.seek(read_pos)
         return res
 
-    def skip(self, bytes, allow_prune=0):
-        if self.remain < bytes:
+    def skip(self, numbytes, allow_prune=0):
+        if self.remain < numbytes:
             raise ValueError("Can't skip %d bytes in buffer of %d bytes" % (
-                                 bytes, self.remain))
-        self.file.seek(bytes, 1)
-        self.remain = self.remain - bytes
+                numbytes, self.remain)
+                )
+        self.file.seek(numbytes, 1)
+        self.remain = self.remain - numbytes
 
     def newfile(self):
         raise NotImplementedError()
@@ -189,27 +190,27 @@ class OverflowableBuffer(object):
             if sz >= self.overflow:
                 self._set_large_buffer()
 
-    def get(self, bytes=-1, skip=0):
+    def get(self, numbytes=-1, skip=False):
         buf = self.buf
         if buf is None:
             strbuf = self.strbuf
             if not skip:
                 return strbuf
             buf = self._create_buffer()
-        return buf.get(bytes, skip)
+        return buf.get(numbytes, skip)
 
-    def skip(self, bytes, allow_prune=0):
+    def skip(self, numbytes, allow_prune=False):
         buf = self.buf
         if buf is None:
             strbuf = self.strbuf
-            if allow_prune and bytes == len(strbuf):
+            if allow_prune and numbytes == len(strbuf):
                 # We could slice instead of converting to
                 # a buffer, but that would eat up memory in
                 # large transfers.
                 self.strbuf = ''
                 return
             buf = self._create_buffer()
-        buf.skip(bytes, allow_prune)
+        buf.skip(numbytes, allow_prune)
 
     def prune(self):
         """
