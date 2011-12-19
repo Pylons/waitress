@@ -18,8 +18,6 @@ import re
 import sys
 from waitress.http.httpserver import HTTPServer
 from waitress.taskthreads import ThreadedTaskDispatcher
-import zope.security.management
-
 
 def fakeWrite(body):
     raise NotImplementedError(
@@ -133,21 +131,17 @@ class PMDBWSGIHTTPServer(WSGIHTTPServer):
             import sys, pdb
             print "%s:" % sys.exc_info()[0]
             print sys.exc_info()[1]
-            zope.security.management.restoreInteraction()
             try:
                 pdb.post_mortem(sys.exc_info()[2])
                 raise
             finally:
-                zope.security.management.endInteraction()
-
+                pass
 
 def run_paste(wsgi_app, global_conf, name='waitress.http',
               host='127.0.0.1', port=8080, threads=4):
     port = int(port)
     threads = int(threads)
-
     task_dispatcher = ThreadedTaskDispatcher()
     task_dispatcher.setThreadCount(threads)
-    server = WSGIHTTPServer(wsgi_app, name, host, port,
-                            task_dispatcher=task_dispatcher)
+    WSGIHTTPServer(wsgi_app, name, host, port, task_dispatcher=task_dispatcher)
     asyncore.loop()

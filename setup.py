@@ -64,7 +64,6 @@ setup(
         'setuptools',
         'zope.interface',
         'zope.publisher',
-        'zope.security',
         ],
     extras_require=dict(test=tests_require),
     include_package_data=True,
