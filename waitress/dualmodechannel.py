@@ -21,11 +21,6 @@ from waitress import trigger
 from waitress.adjustments import default_adj
 from waitress.buffers import OverflowableBuffer
 
-
-# Create the main trigger if it doesn't exist yet.
-the_trigger = trigger.trigger()
-
-
 class DualModeChannel(asyncore.dispatcher):
     """Channel that switches between asynchronous and synchronous mode.
 
@@ -42,14 +37,20 @@ class DualModeChannel(asyncore.dispatcher):
     # boolean: async or sync mode
     async_mode = True
 
-    def __init__(self, conn, addr, adj=None):
+    last_activity = None
+
+    trigger = trigger.trigger()
+
+    def __init__(self, conn, addr, adj=None, map=None):
+        if map is None: # for testing
+            map = asyncore.socket_map
         self.addr = addr
         if adj is None:
             adj = default_adj
         self.adj = adj
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
         self.creation_time = time()
-        asyncore.dispatcher.__init__(self, conn)
+        asyncore.dispatcher.__init__(self, conn, map=map)
 
     #
     # ASYNCHRONOUS METHODS
@@ -60,7 +61,7 @@ class DualModeChannel(asyncore.dispatcher):
 
     def writable(self):
         if not self.async_mode:
-            return 0
+            return False
         return self.will_close or self.outbuf
 
     def handle_write(self):
@@ -77,7 +78,7 @@ class DualModeChannel(asyncore.dispatcher):
 
     def readable(self):
         if not self.async_mode:
-            return 0
+            return False
         return not self.will_close
 
     def handle_read(self):
@@ -116,19 +117,23 @@ class DualModeChannel(asyncore.dispatcher):
     # SYNCHRONOUS METHODS
     #
 
-    def flush(self, block=True):
+    def flush(self, block=True): # pragma: no cover (see comment in body)
         """Sends pending data.
 
         If block is set, this pauses the application.  If it is turned
         off, only the amount of data that can be sent without blocking
         is sent.
         """
+        # XXX this looks smelly, but I think it's only actually used by
+        # test_serverbase and httptask, and nothing at all appears to call
+        # flush on httptask (CM); maybe delete it.
         if not block:
             while self._flush_some():
                 pass
             return
         blocked = False
         try:
+            # setting the blocking mode here?  wtf?  (CM)
             while self.outbuf:
                 # We propagate errors to the application on purpose.
                 if not blocked:
@@ -154,7 +159,7 @@ class DualModeChannel(asyncore.dispatcher):
 
     def write(self, data):
         wrote = 0
-        if isinstance(data, str):
+        if isinstance(data, bytes):
             if data:
                 self.outbuf.append(data)
                 wrote = len(data)
@@ -168,7 +173,7 @@ class DualModeChannel(asyncore.dispatcher):
             # Send what we can without blocking.
             # We propagate errors to the application on purpose
             # (to stop the application if the connection closes).
-            if not self._flush_some():
+            if not self._flush_some(): # pragma: no cover (coverage bug?)
                 break
 
         return wrote
@@ -176,7 +181,7 @@ class DualModeChannel(asyncore.dispatcher):
     def pull_trigger(self):
         """Wakes up the main loop.
         """
-        the_trigger.pull_trigger()
+        self.trigger.pull_trigger()
 
     def _flush_some(self):
         """Flushes data.
@@ -188,8 +193,8 @@ class DualModeChannel(asyncore.dispatcher):
             num_sent = self.send(chunk)
             if num_sent:
                 outbuf.skip(num_sent, 1)
-                return 1
-        return 0
+                return True
+        return False
 
     def close_when_done(self):
         # Flush all possible.
