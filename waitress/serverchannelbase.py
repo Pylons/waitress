@@ -16,7 +16,6 @@
 This module provides a base implementation for the server channel. It can only
 be used as a mix-in to actual server channel implementations.
 """
-import os
 import time
 import sys
 import asyncore
