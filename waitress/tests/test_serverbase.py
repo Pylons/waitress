@@ -13,86 +13,198 @@
 ##############################################################################
 """Tests for waitress.serverbase
 """
-import doctest
 import unittest
 
+class TestServerBase(unittest.TestCase):
+    def _makeOne(self, ip, port, task_dispatcher=None, adj=None, start=True,
+                 hit_log=None, verbose=False, map=None, logger=None, sock=None):
+        from waitress.serverbase import ServerBase
+        class NonBindingServerBase(ServerBase):
+            def bind(self, (ip, port)):
+                pass
+        return NonBindingServerBase(
+            ip,
+            port,
+            task_dispatcher=task_dispatcher,
+            adj=adj,
+            start=start,
+            hit_log=hit_log,
+            verbose=verbose,
+            map=map,
+            logger=logger,
+            sock=sock)
+    
+    def _makeOneWithMap(self, adj=None, start=True, verbose=False,
+                        ip='127.0.0.1', port=62122):
+        sock = DummySock()
+        task_dispatcher = DummyTaskDispatcher()
+        map = {}
+        logger = DummyLogger()
+        return self._makeOne(ip, port, task_dispatcher=task_dispatcher,
+                             start=start, verbose=verbose, map=map,
+                             logger=logger, sock=sock)
 
-def doctest_ServerBase():
-    r"""Regression test for ServerBase
+    def test_ctor_start_true_verbose(self):
+        inst = self._makeOneWithMap(verbose=True, start=True)
+        self.assertEqual(len(inst.logger.msgs), 2)
 
-    Bug: if the `ip` argument of ServerBase is a string containing a numberic
-    IP address, and the verbose argument is enabled, ServerBase.__init__
-    would try to use self.logger before it was initialized.
+    def test_ctor_start_false(self):
+        inst = self._makeOneWithMap(verbose=True, start=False)
+        self.assertEqual(len(inst.logger.msgs), 1)
 
-    We will use a subclass of ServerBase so that unit tests do not actually try
-    to bind to ports.
+    def test_log(self):
+        inst = self._makeOneWithMap(verbose=True, start=False)
+        inst.logger = DummyLogger()
+        inst.log('msg')
+        self.assertEqual(len(inst.logger.msgs), 1)
 
-        >>> from waitress.serverbase import ServerBase
-        >>> class ServerBaseForTest(ServerBase):
-        ...     def bind(self, (ip, port)):
-        ...         print "Listening on %s:%d" % (ip or '*', port)
-        >>> sb = ServerBaseForTest('127.0.0.1', 80, start=False, verbose=True)
-        Listening on 127.0.0.1:80
+    def test_computeServerName_empty(self):
+        inst = self._makeOneWithMap(verbose=True, start=False)
+        inst.logger = DummyLogger()
+        result = inst.computeServerName('')
+        self.failUnless(result)
+        self.assertEqual(len(inst.logger.msgs), 0)
 
-    """
+    def test_computeServerName_with_ip(self):
+        inst = self._makeOneWithMap(verbose=True, start=False)
+        inst.logger = DummyLogger()
+        result = inst.computeServerName('127.0.0.1')
+        self.failUnless(result)
+        self.assertEqual(len(inst.logger.msgs), 1)
 
-class FakeSocket:
-    data        = ''
-    setblocking = lambda *_: None
-    fileno      = lambda *_: 42
-    getpeername = lambda *_: ('localhost', 42)
+    def test_computeServerName_with_hostname(self):
+        inst = self._makeOneWithMap(verbose=True, start=False)
+        inst.logger = DummyLogger()
+        result = inst.computeServerName('fred.flintstone.com')
+        self.assertEqual(result, 'fred.flintstone.com')
+        self.assertEqual(len(inst.logger.msgs), 0)
 
-    def send(self, data):
-        self.data += data
-        return len(data)
+    def test_addTask_with_task_dispatcher(self):
+        task = DummyTask()
+        inst = self._makeOneWithMap()
+        inst.addTask(task)
+        self.assertEqual(inst.task_dispatcher.tasks, [task])
+        self.assertFalse(task.serviced)
 
+    def test_addTask_with_task_dispatcher_None(self):
+        task = DummyTask()
+        inst = self._makeOneWithMap()
+        inst.task_dispatcher = None
+        inst.addTask(task)
+        self.assertTrue(task.serviced)
 
-def channels_accept_iterables():
-    r"""
-Channels accept iterables (they special-case strings).
+    def test_readable_not_accepting(self):
+        inst = self._makeOneWithMap()
+        inst.accepting = False
+        self.assertFalse(inst.readable())
+        
+    def test_readable_maplen_gt_connection_limit(self):
+        inst = self._makeOneWithMap()
+        inst.accepting = True
+        inst.adj = DummyAdj
+        inst._map = {'a':1, 'b':2}
+        self.assertFalse(inst.readable())
 
-    >>> from waitress.dualmodechannel import DualModeChannel
-    >>> socket = FakeSocket()
-    >>> channel = DualModeChannel(socket, ('localhost', 42))
+    def test_readable_maplen_lt_connection_limit(self):
+        inst = self._makeOneWithMap()
+        inst.accepting = True
+        inst.adj = DummyAdj
+        inst._map = {}
+        self.assertTrue(inst.readable())
 
-    >>> channel.write("First")
-    5
+    def test_writable(self):
+        inst = self._makeOneWithMap()
+        self.assertFalse(inst.writable())
+        
+    def test_handle_read(self):
+        inst = self._makeOneWithMap()
+        self.assertEqual(inst.handle_read(), None)
 
-    >>> channel.flush()
-    >>> print socket.data
-    First
+    def test_handle_connect(self):
+        inst = self._makeOneWithMap()
+        self.assertEqual(inst.handle_connect(), None)
 
-    >>> channel.write(["\n", "Second", "\n", "Third"])
-    13
+    def test_handle_accept_wouldblock_socket_error(self):
+        inst = self._makeOneWithMap()
+        import socket
+        import errno
+        ewouldblock = socket.error(errno.EWOULDBLOCK)
+        inst.socket = DummySock(toraise=ewouldblock)
+        inst.handle_accept()
+        self.assertEqual(inst.socket.accepted, False)
 
-    >>> channel.flush()
-    >>> print socket.data
-    First
-    Second
-    Third
+    def test_handle_accept_other_socket_error(self):
+        inst = self._makeOneWithMap()
+        import socket
+        import errno
+        eaborted = socket.error(errno.ECONNABORTED)
+        inst.socket = DummySock(toraise=eaborted)
+        inst.adj = DummyAdj
+        inst.logger = DummyLogger()
+        inst.handle_accept()
+        self.assertEqual(inst.socket.accepted, False)
+        self.assertEqual(len(inst.logger.msgs), 1)
 
-    >>> def count():
-    ...     yield '\n1\n2\n3\n'
-    ...     yield 'I love to count. Ha ha ha.'
+    def test_handle_accept_noerror(self):
+        inst = self._makeOneWithMap()
+        innersock = DummySock()
+        inst.socket = DummySock(acceptresult=(innersock, None))
+        inst.adj = DummyAdj
+        L = []
+        inst.channel_class = lambda *arg: L.append(arg)
+        inst.handle_accept()
+        self.assertEqual(inst.socket.accepted, True)
+        self.assertEqual(innersock.opts, [('level', 'optname', 'value')])
+        self.assertEqual(L, [(inst, innersock, None, inst.adj)])
 
-    >>> channel.write(count())
-    33
+class DummySock(object):
+    accepted = False
+    blocking = False
+    def __init__(self, toraise=None, acceptresult=(None, None)):
+        self.toraise = toraise
+        self.acceptresult = acceptresult
+        self.opts = []
+    def accept(self):
+        if self.toraise:
+            raise self.toraise
+        self.accepted = True
+        return self.acceptresult
+    def setblocking(self, x):
+        self.blocking = True
+    def fileno(self):
+        return 10
+    def getpeername(self):
+        return '127.0.0.1'
+    def setsockopt(self, *arg):
+        self.opts.append(arg)
+    def getsockopt(self, *arg):
+        return 1
+    def listen(self, num):
+        self.listened = num
 
-    >>> channel.flush()
-    >>> print socket.data
-    First
-    Second
-    Third
-    1
-    2
-    3
-    I love to count. Ha ha ha.
+class DummyTaskDispatcher(object):
+    def __init__(self):
+        self.tasks = []
+    def addTask(self, task):
+        self.tasks.append(task)
 
-"""
+class DummyTask(object):
+    serviced = False
+    def service(self):
+        self.serviced = True
 
-def test_suite():
-    return doctest.DocTestSuite()
+class DummyLogger(object):
+    def __init__(self):
+        self.msgs = []
+    def log(self, level, msg):
+        self.msgs.append(msg)
+    def info(self, msg):
+        self.msgs.append(msg)
 
+class DummyAdj:
+    connection_limit = 1
+    log_socket_errors = True
+    socket_options = [('level', 'optname', 'value')]
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')

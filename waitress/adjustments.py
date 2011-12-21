@@ -15,9 +15,6 @@
 """
 import socket
 
-from waitress import maxsockets
-
-
 class Adjustments(object):
     """This class contains tunable communication parameters.
 
@@ -54,7 +51,7 @@ class Adjustments(object):
     inbuf_overflow = 525000
 
     # Stop accepting new connections if too many are already active.
-    connection_limit = maxsockets.max_select_sockets() - 3  # Safe
+    connection_limit = 100
 
     # Minimum seconds between cleaning up inactive channels.
     cleanup_interval = 300

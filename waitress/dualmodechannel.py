@@ -41,7 +41,7 @@ class DualModeChannel(asyncore.dispatcher):
 
     trigger = trigger.trigger()
 
-    def __init__(self, conn, addr, adj=None, map=None):
+    def __init__(self, sock, addr, adj=None, map=None):
         if map is None: # for testing
             map = asyncore.socket_map
         self.addr = addr
@@ -50,7 +50,7 @@ class DualModeChannel(asyncore.dispatcher):
         self.adj = adj
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
         self.creation_time = time()
-        asyncore.dispatcher.__init__(self, conn, map=map)
+        asyncore.dispatcher.__init__(self, sock, map=map)
 
     #
     # ASYNCHRONOUS METHODS

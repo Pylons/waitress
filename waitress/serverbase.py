@@ -33,21 +33,31 @@ class ServerBase(asyncore.dispatcher, object):
     # See waitress.interfaces.IServer
     channel_class = None    # Override with a channel class.
     SERVER_IDENT = 'waitress.serverbase'  # Override.
+    socketmod = socket # testing shim
 
-    def __init__(self, ip, port, task_dispatcher=None, adj=None, start=1,
-                 hit_log=None, verbose=0):
+    level_mapping = {
+        'info': logging.INFO,
+        'error': logging.ERROR,
+        'warning': logging.WARN,
+        }
+
+    def __init__(self, ip, port, task_dispatcher=None, adj=None, start=True,
+                 hit_log=None, verbose=False, map=None, logger=None, sock=None):
         if adj is None:
             adj = default_adj
         self.adj = adj
-        asyncore.dispatcher.__init__(self)
+        asyncore.dispatcher.__init__(self, sock, map=map)
         self.port = port
         self.task_dispatcher = task_dispatcher
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        if sock is None:
+            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind((ip, port))
         self.verbose = verbose
         self.hit_log = hit_log
-        self.logger = logging.getLogger(self.__class__.__name__)
+        if logger is None:
+            logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logger
         self.server_name = self.computeServerName(ip)
 
         if start:
@@ -58,12 +68,6 @@ class ServerBase(asyncore.dispatcher, object):
         # Override asyncore's default log()
         self.logger.info(message)
 
-    level_mapping = {
-        'info': logging.INFO,
-        'error': logging.ERROR,
-        'warning': logging.WARN,
-        }
-
     def log_info(self, message, type='info'):
         """See waitress.interfaces.IDispatcherLogging"""
         self.logger.log(self.level_mapping.get(type, logging.INFO), message)
@@ -73,29 +77,28 @@ class ServerBase(asyncore.dispatcher, object):
         if ip:
             server_name = str(ip)
         else:
-            server_name = str(socket.gethostname())
+            server_name = str(self.socketmod.gethostname())
         # Convert to a host name if necessary.
-        is_hostname = 0
+        is_hostname = False
         for c in server_name:
             if c != '.' and not c.isdigit():
-                is_hostname = 1
+                is_hostname = True
                 break
         if not is_hostname:
             if self.verbose:
                 self.log_info('Computing hostname', 'info')
             try:
-                server_name = socket.gethostbyaddr(server_name)[0]
-            except socket.error:
+                server_name = self.socketmod.gethostbyaddr(server_name)[0]
+            except socket.error: # pragma: no cover
                 if self.verbose:
                     self.log_info('Cannot do reverse lookup', 'info')
         return server_name
 
     def accept_connections(self):
         self.accepting = 1
-        self.socket.listen(self.adj.backlog)  # Circumvent asyncore's NT limit
+        self.socket.listen(self.adj.backlog)  # Get around asyncore NT limit
         if self.verbose:
-            self.log_info('%s started.\n'
-                          '\tHostname: %s\n\tPort: %d' % (
+            self.log_info('%s started.\n\tHostname: %s\n\tPort: %d' % (
                 self.SERVER_IDENT,
                 self.server_name,
                 self.port
@@ -112,12 +115,11 @@ class ServerBase(asyncore.dispatcher, object):
 
     def readable(self):
         """See waitress.interfaces.IDispatcher"""
-        return (self.accepting and
-                len(asyncore.socket_map) < self.adj.connection_limit)
+        return (self.accepting and len(self._map) < self.adj.connection_limit)
 
     def writable(self):
         """See waitress.interfaces.IDispatcher"""
-        return 0
+        return False
 
     def handle_read(self):
         """See waitress.interfaces.IDispatcherEventHandler"""
