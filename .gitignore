@@ -7,4 +7,4 @@ eggs/
 parts/
 env*/
 .coverage
-
+.idea/
