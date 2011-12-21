@@ -14,7 +14,6 @@ from zope.component.testing import PlacelessSetup
 import zope.component
 
 from zope.i18n.interfaces import IUserPreferredCharsets
-from zope.interface import implements
 
 from zope.publisher.publish import publish
 from zope.publisher.http import IHTTPRequest
@@ -26,7 +25,6 @@ from zope.publisher.http import HTTPRequest
 
 from waitress.task import ThreadedTaskDispatcher
 from waitress.adjustments import Adjustments
-from waitress.interfaces import ITask
 from waitress.tests.asyncerror import AsyncoreErrorHook
 
 td = ThreadedTaskDispatcher()
@@ -896,8 +894,6 @@ class DummyAdj:
     socket_options = [('level', 'optname', 'value')]
 
 class SleepingTask(object):
-
-    implements(ITask)
 
     def service(self):
         sleep(0.2)

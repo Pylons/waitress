@@ -18,17 +18,12 @@ import re
 import socket
 import sys
 
-from zope.interface import implements
-
-from waitress.interfaces import IServer
 from waitress.adjustments import default_adj
 from waitress.channel import HTTPServerChannel
 from waitress.task import ThreadedTaskDispatcher
 
 class ServerBase(asyncore.dispatcher, object):
     """Async. server base for launching derivatives of ServerChannelBase."""
-
-    implements(IServer)
 
     # See waitress.interfaces.IServer
     channel_class = None    # Override with a channel class.

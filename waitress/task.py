@@ -18,11 +18,7 @@ from thread import allocate_lock, start_new_thread
 import socket
 import time
 
-from zope.interface import implements
-
-from waitress.interfaces import ITaskDispatcher
 from waitress.utilities import build_http_date
-from waitress.interfaces import ITask, IHeaderOutput
 
 rename_headers = {
     'CONTENT_LENGTH' : 'CONTENT_LENGTH',
@@ -33,9 +29,9 @@ rename_headers = {
 log = logging.getLogger(__name__)
 
 class ThreadedTaskDispatcher(object):
-    """A Task Dispatcher that creates a thread for each task."""
-
-    implements(ITaskDispatcher)
+    """A Task Dispatcher that creates a thread for each task.
+    See ITaskDispatcher.
+    """
 
     stop_count = 0  # Number of threads that will stop soon.
 
@@ -134,9 +130,9 @@ class HTTPTask(object):
     """An HTTP task accepts a request and writes to a channel.
 
        Subclass this and override the execute() method.
-    """
 
-    implements(ITask, IHeaderOutput)
+       See ITask, IHeaderOutput.
+    """
 
     instream = None
     close_on_finish = 1

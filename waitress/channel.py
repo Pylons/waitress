@@ -19,9 +19,6 @@ import sys
 import time
 import thread
 
-from zope.interface import implements
-
-from waitress.interfaces import IServerChannel, ITask
 from waitress import trigger
 from waitress.adjustments import default_adj
 from waitress.buffers import OverflowableBuffer
@@ -31,7 +28,7 @@ from waitress.task import HTTPTask
 # task_lock is useful for synchronizing access to task-related attributes.
 task_lock = thread.allocate_lock()
 
-class DualModeChannel(asyncore.dispatcher):
+class DualModeChannel(asyncore.dispatcher, object):
     """Channel that switches between asynchronous and synchronous mode.
 
     Call set_sync() before using a channel in a thread other than
@@ -225,12 +222,11 @@ class DualModeChannel(asyncore.dispatcher):
         self.connected = False
         asyncore.dispatcher.close(self)
 
-class ServerChannelBase(DualModeChannel, object):
+class ServerChannelBase(DualModeChannel):
     """Base class for a high-performance, mixed-mode server-side channel."""
 
-    implements(IServerChannel, ITask)
-
-    # See waitress.interfaces.IServerChannel
+    # See waitress.interfaces.IServerChannel (also implements ITask)
+    
     parser_class = None       # Subclasses must provide a parser class
     task_class = None         # ... and a task class.
 

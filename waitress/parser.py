@@ -24,23 +24,20 @@ from waitress.receiver import FixedStreamReceiver
 from waitress.receiver import ChunkedReceiver
 from waitress.buffers import OverflowableBuffer
 from waitress.utilities import find_double_newline
-from waitress.interfaces import IStreamConsumer
-from zope.interface import implements
 
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
 
-
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
 
     Once the stream is completed, the instance is passed to
     a server task constructor.
-    """
 
-    implements(IStreamConsumer)
+    See waitress.interfaces.IStreamConsumer
+    """
 
     completed = 0  # Set once request is completed.
     empty = 0        # Set if no request was made.

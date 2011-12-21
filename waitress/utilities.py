@@ -19,7 +19,6 @@ import string
 import time
 import calendar
 
-
 def find_double_newline(s):
     """Returns the position just after a double newline in the given string."""
     pos1 = s.find('\n\r\n')  # One kind of double newline

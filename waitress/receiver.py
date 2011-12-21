@@ -15,12 +15,8 @@
 """
 
 from waitress.utilities import find_double_newline
-from waitress.interfaces import IStreamConsumer
-from zope.interface import implements
 
 class FixedStreamReceiver(object):
-
-    implements(IStreamConsumer)
 
     # See IStreamConsumer
     completed = False
@@ -50,8 +46,6 @@ class FixedStreamReceiver(object):
         return self.buf.getfile()
 
 class ChunkedReceiver(object):
-
-    implements(IStreamConsumer)
 
     chunk_remainder = 0
     control_line = ''
