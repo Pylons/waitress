@@ -23,7 +23,7 @@ class FixedStreamReceiver(object):
     implements(IStreamConsumer)
 
     # See IStreamConsumer
-    completed = 0
+    completed = False
 
     def __init__(self, cl, buf):
         self.remain = cl
@@ -33,13 +33,13 @@ class FixedStreamReceiver(object):
         'See IStreamConsumer'
         rm = self.remain
         if rm < 1:
-            self.completed = 1  # Avoid any chance of spinning
+            self.completed = True  # Avoid any chance of spinning
             return 0
         datalen = len(data)
         if rm <= datalen:
             self.buf.append(data[:rm])
             self.remain = 0
-            self.completed = 1
+            self.completed = True
             return rm
         else:
             self.buf.append(data)
