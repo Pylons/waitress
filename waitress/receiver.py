@@ -18,6 +18,36 @@ from waitress.utilities import find_double_newline
 from waitress.interfaces import IStreamConsumer
 from zope.interface import implements
 
+class FixedStreamReceiver(object):
+
+    implements(IStreamConsumer)
+
+    # See IStreamConsumer
+    completed = False
+
+    def __init__(self, cl, buf):
+        self.remain = cl
+        self.buf = buf
+
+    def received(self, data):
+        'See IStreamConsumer'
+        rm = self.remain
+        if rm < 1:
+            self.completed = True  # Avoid any chance of spinning
+            return 0
+        datalen = len(data)
+        if rm <= datalen:
+            self.buf.append(data[:rm])
+            self.remain = 0
+            self.completed = True
+            return rm
+        else:
+            self.buf.append(data)
+            self.remain -= datalen
+            return datalen
+
+    def getfile(self):
+        return self.buf.getfile()
 
 class ChunkedReceiver(object):
 

@@ -20,7 +20,8 @@ import re
 from urllib import unquote
 import urlparse
 
-from waitress.fixedstreamreceiver import FixedStreamReceiver
+from waitress.receiver import FixedStreamReceiver
+from waitress.receiver import ChunkedReceiver
 from waitress.buffers import OverflowableBuffer
 from waitress.utilities import find_double_newline
 from waitress.interfaces import IStreamConsumer
@@ -144,7 +145,6 @@ class HTTPRequestParser(object):
         if version == '1.1':
             te = headers.get('TRANSFER_ENCODING', '')
             if te == 'chunked':
-                from waitress.http.chunking import ChunkedReceiver
                 self.chunked = 1
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)

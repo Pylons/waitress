@@ -2,7 +2,7 @@ import unittest
 
 class TestFixedStreamReceiver(unittest.TestCase):
     def _makeOne(self, buf, cl):
-        from waitress.fixedstreamreceiver import FixedStreamReceiver
+        from waitress.receiver import FixedStreamReceiver
         return FixedStreamReceiver(buf, cl)
 
     def test_received_remain_lt_1(self):

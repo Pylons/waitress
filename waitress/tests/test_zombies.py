@@ -52,7 +52,7 @@ def zombies_test():
     >>> import waitress.adjustments
     >>> config = waitress.adjustments.Adjustments()
 
-    >>> from waitress.serverbase import ServerBase
+    >>> from waitress.server import ServerBase
     >>> class ServerBaseForTest(ServerBase):
     ...     def bind(self, (ip, port)):
     ...         print "Listening on %s:%d" % (ip or '*', port)
@@ -62,7 +62,7 @@ def zombies_test():
     First we confirm the correct behavior, where a channel with no activity
     for the timeout duration gets closed.
 
-    >>> from waitress.serverchannelbase import ServerChannelBase
+    >>> from waitress.channel import ServerChannelBase
     >>> socket = FakeSocket(42)
     >>> channel = ServerChannelBase(sb, socket, ('localhost', 42))
 
@@ -112,9 +112,9 @@ def zombies_test():
 
     >>> channel3.last_activity -= int(config.channel_timeout) + 1
 
-    >>> import waitress.http.httprequestparser
+    >>> import waitress.parser
     >>> channel3.parser_class = (
-    ...    waitress.http.httprequestparser.HTTPRequestParser)
+    ...    waitress.parser.HTTPRequestParser)
     >>> channel3.handle_read()
 
     >>> channel3.next_channel_cleanup[0] = channel3.creation_time - int(

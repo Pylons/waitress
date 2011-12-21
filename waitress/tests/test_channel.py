@@ -2,7 +2,7 @@ import unittest
 
 class TestDualModeChannel(unittest.TestCase):
     def _makeOne(self, sock, addr, adj=None, map=None):
-        from waitress.dualmodechannel import DualModeChannel
+        from waitress.channel import DualModeChannel
         return DualModeChannel(sock, addr, adj=adj, map=map)
 
     def _makeOneWithMap(self, adj=None):

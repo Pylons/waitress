@@ -14,13 +14,12 @@
 """HTTP Request Parser tests
 """
 import unittest
-from waitress.http.httprequestparser import HTTPRequestParser
+from waitress.parser import HTTPRequestParser
 from waitress.adjustments import Adjustments
-
 
 my_adj = Adjustments()
 
-class Tests(unittest.TestCase):
+class TestHTTPRequestParser(unittest.TestCase):
 
     def setUp(self):
         self.parser = HTTPRequestParser(my_adj)
@@ -128,9 +127,3 @@ Hello.
                     '10.11.12.13, unknown,127.0.0.1, 255.255.255.255',
                 })
 
-def test_suite():
-    loader = unittest.TestLoader()
-    return loader.loadTestsFromTestCase(Tests)
-
-if __name__=='__main__':
-    unittest.TextTestRunner().run(test_suite())

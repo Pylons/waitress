@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2001, 2002 Zope Foundation and Contributors.
+# Copyright (c) 2002 Zope Foundation and Contributors.
 # All Rights Reserved.
 #
 # This software is subject to the provisions of the Zope Public License,
@@ -11,15 +11,21 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""HTTP Server Channel
-"""
-from waitress.serverchannelbase import ServerChannelBase
-from waitress.http.httptask import HTTPTask
-from waitress.http.httprequestparser import HTTPRequestParser
+
+import unittest
+
+class HTTPDateTests(unittest.TestCase):
+    # test roundtrip conversion.
+    def testDateRoundTrip(self):
+        from waitress.utilities import build_http_date, parse_http_date
+        from time import time
+        t = int(time())
+        self.assertEquals(t, parse_http_date(build_http_date(t)))
 
 
-class HTTPServerChannel(ServerChannelBase):
-    """HTTP-specific Server Channel"""
+def test_suite():
+    loader = unittest.TestLoader()
+    return loader.loadTestsFromTestCase(HTTPDateTests)
 
-    task_class = HTTPTask
-    parser_class = HTTPRequestParser
+if __name__=='__main__':
+    unittest.TextTestRunner().run(test_suite())
