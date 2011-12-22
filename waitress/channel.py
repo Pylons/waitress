@@ -222,13 +222,13 @@ class DualModeChannel(asyncore.dispatcher, object):
         self.connected = False
         asyncore.dispatcher.close(self)
 
-class ServerChannelBase(DualModeChannel):
+class HTTPServerChannel(DualModeChannel):
     """Base class for a high-performance, mixed-mode server-side channel."""
 
     # See waitress.interfaces.IServerChannel (also implements ITask)
     
-    parser_class = None       # Subclasses must provide a parser class
-    task_class = None         # ... and a task class.
+    task_class = HTTPTask
+    parser_class = HTTPRequestParser
 
     active_channels = {}        # Class-specific channel tracker
     next_channel_cleanup = [0]  # Class-specific cleanup time
@@ -420,8 +420,3 @@ class ServerChannelBase(DualModeChannel):
     def defer(self):
         pass
 
-class HTTPServerChannel(ServerChannelBase):
-    """HTTP-specific Server Channel"""
-
-    task_class = HTTPTask
-    parser_class = HTTPRequestParser

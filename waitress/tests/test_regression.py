@@ -40,7 +40,7 @@ class FakeSocket:
 
 
 def zombies_test():
-    """Regression test for ServerChannelBase kill_zombies method
+    """Regression test for HTTPServerChannel kill_zombies method
 
     Bug: This method checks for channels that have been "inactive" for a
     configured time. The bug was that last_activity is set at creation time but
@@ -62,9 +62,9 @@ def zombies_test():
     First we confirm the correct behavior, where a channel with no activity
     for the timeout duration gets closed.
 
-    >>> from waitress.channel import ServerChannelBase
+    >>> from waitress.channel import HTTPServerChannel
     >>> socket = FakeSocket(42)
-    >>> channel = ServerChannelBase(sb, socket, ('localhost', 42))
+    >>> channel = HTTPServerChannel(sb, socket, ('localhost', 42))
 
     >>> channel.connected
     True
@@ -75,7 +75,7 @@ def zombies_test():
     ...     config.cleanup_interval) - 1
 
     >>> socket2 = FakeSocket(7)
-    >>> channel2 = ServerChannelBase(sb, socket2, ('localhost', 7))
+    >>> channel2 = HTTPServerChannel(sb, socket2, ('localhost', 7))
 
     >>> channel.connected
     False
@@ -97,7 +97,7 @@ def zombies_test():
     ...     config.cleanup_interval) - 1
 
     >>> socket3 = FakeSocket(3)
-    >>> channel3 = ServerChannelBase(sb, socket3, ('localhost', 3))
+    >>> channel3 = HTTPServerChannel(sb, socket3, ('localhost', 3))
 
     >>> channel2.connected
     True
@@ -121,7 +121,7 @@ def zombies_test():
     ...     config.cleanup_interval) - 1
 
     >>> socket4 = FakeSocket(4)
-    >>> channel4 = ServerChannelBase(sb, socket4, ('localhost', 4))
+    >>> channel4 = HTTPServerChannel(sb, socket4, ('localhost', 4))
 
     >>> channel3.connected
     True
