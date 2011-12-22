@@ -1,9 +1,11 @@
 import unittest
+import asyncore
 from asyncore import socket_map, poll
 from time import sleep, time
 import StringIO
 import socket
 import sys
+import traceback
 from threading import Thread, Event
 from httplib import HTTPConnection
 from httplib import HTTPResponse as ClientHTTPResponse
@@ -17,8 +19,6 @@ from zope.publisher.publish import publish
 from zope.publisher.http import IHTTPRequest
 from zope.publisher.http import HTTPCharsets
 from zope.publisher.browser import BrowserRequest
-
-from waitress.tests.asyncerror import AsyncoreErrorHook
 
 from zope.publisher.base import DefaultPublication
 from zope.publisher.interfaces import Redirect, Retry
@@ -44,7 +44,18 @@ my_adj.outbuf_overflow = 10000
 my_adj.inbuf_overflow = 10000
 
 
-class TestWSGIHTTPEchoServer(unittest.TestCase, AsyncoreErrorHook):
+class TestWSGIHTTPEchoServer(unittest.TestCase):
+
+    def hook_asyncore_error(self):
+        self._asyncore_traceback = asyncore.compact_traceback
+        asyncore.compact_traceback = self.handle_asyncore_error
+
+    def unhook_asyncore_error(self):
+        asyncore.compact_traceback = self._asyncore_traceback
+
+    def handle_asyncore_error(self): # pragma: no cover
+        L = traceback.format_exception(*sys.exc_info())
+        self.fail("".join(L))
 
     def setUp(self):
         # import only now to prevent the testrunner from importing it too early

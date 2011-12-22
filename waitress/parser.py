@@ -27,7 +27,7 @@ from waitress.utilities import find_double_newline
 
 try:
     from cStringIO import StringIO
-except ImportError:
+except ImportError: # pragma: no cover
     from StringIO import StringIO
 
 class HTTPRequestParser(object):
@@ -48,21 +48,19 @@ class HTTPRequestParser(object):
     # Other attributes: first_line, header, headers, command, uri, version,
     # path, query, fragment
 
-    # headers is a mapping containing keys translated to uppercase
-    # with dashes turned into underscores.
-
     def __init__(self, adj):
         """
         adj is an Adjustments object.
         """
+        # headers is a mapping containing keys translated to uppercase
+        # with dashes turned into underscores.
         self.headers = {}
         self.adj = adj
 
     def received(self, data):
         """
-        Receives the HTTP stream for one request.
-        Returns the number of bytes consumed.
-        Sets the completed flag once both the header and the
+        Receives the HTTP stream for one request.  Returns the number of
+        bytes consumed.  Sets the completed flag once both the header and the
         body have been received.
         """
         if self.completed:
@@ -174,7 +172,7 @@ class HTTPRequestParser(object):
 
     def crack_first_line(self):
         r = self.first_line
-        m = self.first_line_re.match (r)
+        m = self.first_line_re.match(r)
         if m is not None and m.end() == len(r):
             if m.group(3):
                 version = m.group(5)
@@ -185,8 +183,11 @@ class HTTPRequestParser(object):
             return None, None, None
 
     def split_uri(self):
-        (self.proxy_scheme, self.proxy_netloc, path, self.query, self.fragment) = \
-            urlparse.urlsplit(self.uri)
+        (self.proxy_scheme,
+         self.proxy_netloc,
+         path,
+         self.query,
+         self.fragment) = urlparse.urlsplit(self.uri)
         if path and '%' in path:
             path = unquote(path)
         self.path = path

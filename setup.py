@@ -19,11 +19,10 @@ def read(*rnames):
 
 
 tests_require = [
-    'zope.testing',
     'zope.i18n',
     'zope.component',
+    'zope.publisher',
     ]
-
 
 setup(
     name='waitress',
@@ -46,17 +45,23 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Zope Public License',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.2',
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Topic :: Internet :: WWW/HTTP',
-        'Framework :: Zope3'],
+        ],
     url='https://github.com/mcdonc/waitress',
     packages=find_packages(),
     tests_require=tests_require,
     install_requires=[
         'setuptools',
         'zope.interface',
-        'zope.publisher',
         ],
     extras_require=dict(test=tests_require),
     include_package_data=True,

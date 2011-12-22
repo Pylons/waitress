@@ -153,7 +153,9 @@ class DummyTaskDispatcher(object):
         self.tasks.append(task)
 
 class DummyTask(object):
-    pass
+    serviced = False
+    def service(self): # pragma: no cover
+        self.serviced = True
 
 class DummyAdj:
     connection_limit = 1
