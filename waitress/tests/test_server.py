@@ -153,9 +153,7 @@ class DummyTaskDispatcher(object):
         self.tasks.append(task)
 
 class DummyTask(object):
-    serviced = False
-    def service(self):
-        self.serviced = True
+    pass
 
 class DummyAdj:
     connection_limit = 1

@@ -24,17 +24,15 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
     """
 
     if __name__ == '__main__':
-
+        import asyncore
         from waitress.taskthreads import ThreadedTaskDispatcher
         td = ThreadedTaskDispatcher()
         td.setThreadCount(4)
-        WSGIHTTPServer('', 8080, task_dispatcher=td)
+        server = WSGIHTTPServer('', 8080, task_dispatcher=td)
+        server.run()
 
         try:
-            import asyncore
-            while 1:
-                asyncore.poll(5)
-
+            asyncore.loop()
         except KeyboardInterrupt:
             print 'shutting down...'
             td.shutdown()
