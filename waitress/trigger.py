@@ -209,7 +209,7 @@ else:
                    if count >= 10:  # I've never seen it go above 2
                        a.close()
                        w.close()
-                       raise BindError("Cannot bind trigger!")
+                       raise RuntimeError("Cannot bind trigger!")
                    # Close `a` and try again.  Note:  I originally put a short
                    # sleep() here, but it didn't appear to help or hurt.
                    a.close()
