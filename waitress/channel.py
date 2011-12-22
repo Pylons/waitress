@@ -20,13 +20,10 @@ import time
 import thread
 
 from waitress import trigger
-from waitress.adjustments import default_adj
+from waitress.adjustments import Adjustments
 from waitress.buffers import OverflowableBuffer
 from waitress.parser import HTTPRequestParser
 from waitress.task import HTTPTask
-
-# task_lock is useful for synchronizing access to task-related attributes.
-task_lock = thread.allocate_lock()
 
 class HTTPServerChannel(asyncore.dispatcher, object):
     """Channel that switches between asynchronous and synchronous mode.
@@ -42,6 +39,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
     parser_class = HTTPRequestParser
 
     trigger = trigger.trigger()
+    task_lock = thread.allocate_lock() # syncs access to task-related attrs
 
     active_channels = {}        # Class-specific channel tracker
     next_channel_cleanup = [0]  # Class-specific cleanup time
@@ -56,12 +54,19 @@ class HTTPServerChannel(asyncore.dispatcher, object):
     # ASYNCHRONOUS METHODS (including __init__)
     #
 
-    def __init__(self, server, sock, addr, adj=None, map=None):
-        if map is None: # for testing
+    def __init__(
+            self,
+            server,
+            sock,
+            addr,
+            adj=None,
+            map=None,  # test shim
+            ):
+        if map is None:
             map = asyncore.socket_map
         self.addr = addr
         if adj is None:
-            adj = default_adj
+            adj = Adjustments()
         self.adj = adj
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
         self.creation_time = time.time()
@@ -114,7 +119,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         self.async_mode = False
 
     def add_channel(self, map=None):
-        """See async.dispatcher
+        """See asyncore.dispatcher
 
         This hook keeps track of opened channels.
         """
@@ -122,51 +127,41 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         self.__class__.active_channels[self._fileno] = self
 
     def del_channel(self, map=None):
-        """See async.dispatcher
+        """See asyncore.dispatcher
 
         This hook keeps track of closed channels.
         """
+        fd = self._fileno # next line sets this to None
         asyncore.dispatcher.del_channel(self, map)
         ac = self.__class__.active_channels
-        fd = self._fileno
         if fd in ac:
             del ac[fd]
 
     def check_maintenance(self, now):
-        """See async.dispatcher
-
+        """
         Performs maintenance if necessary.
         """
         ncc = self.__class__.next_channel_cleanup
         if now < ncc[0]:
-            return
+            return False
         ncc[0] = now + self.adj.cleanup_interval
-        self.maintenance()
+        return self.maintenance()
 
     def maintenance(self):
-        """See async.dispatcher
-
-        Kills off dead connections.
         """
-        self.kill_zombies()
-
-    def kill_zombies(self):
-        """See async.dispatcher
-
         Closes connections that have not had any activity in a while.
 
         The timeout is configured through adj.channel_timeout (seconds).
         """
         now = time.time()
         cutoff = now - self.adj.channel_timeout
-        for channel in self.active_channels.values():
+        for channel in self.__class__.active_channels.values():
             if (channel is not self and not channel.running_tasks and
                 channel.last_activity < cutoff):
                 channel.close()
 
     def received(self, data):
-        """See async.dispatcher
-
+        """
         Receives input asynchronously and send requests to
         handle_request().
         """
@@ -196,22 +191,25 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         task = self.task_class(self, req)
         self.queue_task(task)
 
-    def handle_error(self):
+    def handle_error(self, exc_info=None): # exc_info for tests
         """See async.dispatcher
 
         Handles program errors (not communication errors)
         """
-        t, v = sys.exc_info()[:2]
+        if exc_info is None: # pragma: no cover
+            t, v = sys.exc_info()[:2]
+        else:
+            t, v = exc_info[:2]
         if t is SystemExit or t is KeyboardInterrupt:
             raise t(v)
         asyncore.dispatcher.handle_error(self)
 
     def handle_comm_error(self):
-        """See async.dispatcher
-
+        """
         Handles communication errors (not program errors)
         """
         if self.adj.log_socket_errors:
+            # handle_error calls close
             self.handle_error()
         else:
             # Ignore socket errors.
@@ -228,7 +226,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         The main thread will begin calling received() again.
         """
         self.async_mode = True
-        self.pull_trigger()
+        self.trigger.pull_trigger()
         self.last_activity = time.time()
 
     #
@@ -256,11 +254,6 @@ class HTTPServerChannel(asyncore.dispatcher, object):
 
         return wrote
 
-    def pull_trigger(self):
-        """Wakes up the main loop.
-        """
-        self.trigger.pull_trigger()
-
     def _flush_some(self):
         """Flushes data.
 
@@ -283,7 +276,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             # For safety, don't close the socket until the
             # main thread calls handle_write().
             self.async_mode = True
-            self.pull_trigger()
+            self.trigger.pull_trigger()
 
     def close(self):
         # Always close in asynchronous mode.  If the connection is
@@ -296,7 +289,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
     def queue_task(self, task):
         """Queue a channel-related task to be executed in another thread."""
         start = False
-        task_lock.acquire()
+        self.task_lock.acquire()
         try:
             if self.tasks is None:
                 self.tasks = []
@@ -305,7 +298,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
                 self.running_tasks = True
                 start = True
         finally:
-            task_lock.release()
+            self.task_lock.release()
         if start:
             self.set_sync()
             self.server.addTask(self)
@@ -318,7 +311,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         """Execute all pending tasks"""
         while True:
             task = None
-            task_lock.acquire()
+            self.task_lock.acquire()
             try:
                 if self.tasks:
                     task = self.tasks.pop(0)
@@ -328,7 +321,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
                     self.set_async()
                     break
             finally:
-                task_lock.release()
+                self.task_lock.release()
             try:
                 task.service()
             except:
@@ -338,7 +331,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
 
     def cancel(self):
         """Cancels all pending tasks"""
-        task_lock.acquire()
+        self.task_lock.acquire()
         try:
             if self.tasks:
                 old = self.tasks[:]
@@ -347,7 +340,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             self.tasks = []
             self.running_tasks = False
         finally:
-            task_lock.release()
+            self.task_lock.release()
         try:
             for task in old:
                 task.cancel()

@@ -17,7 +17,7 @@ import re
 import socket
 import sys
 
-from waitress.adjustments import default_adj
+from waitress.adjustments import Adjustments
 from waitress.channel import HTTPServerChannel
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
@@ -67,7 +67,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         self.ip = ip or '127.0.0.1'
 
         if adj is None:
-            adj = default_adj
+            adj = Adjustments()
         self.adj = adj
         asyncore.dispatcher.__init__(self, sock, map=map)
         self.port = port
@@ -107,11 +107,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
 
     def addTask(self, task):
         """See waitress.interfaces.ITaskDispatcher"""
-        td = self.task_dispatcher
-        if td is not None:
-            td.addTask(task)
-        else:
-            task.service()
+        self.task_dispatcher.addTask(task)
 
     def readable(self):
         """See waitress.interfaces.IDispatcher"""
@@ -193,7 +189,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
     def run(self):
         try:
             asyncore.loop()
-        except KeyboardInterrupt:
+        except (SystemError, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
 
 def fakeWrite(body):
@@ -209,9 +205,9 @@ def curriedStartResponse(task):
             try:
                 if task.wrote_header:
                     # higher levels will catch and handle raised exception:
-                    # 1. "service" method in httptask.py
-                    # 2. "service" method in severchannelbase.py
-                    # 3. "handlerThread" method in taskthreads.py
+                    # 1. "service" method in task.py
+                    # 2. "service" method in channel.py
+                    # 3. "handlerThread" method in task.py
                     raise exc_info[0], exc_info[1], exc_info[2]
                 else:
                     # As per WSGI spec existing headers must be cleared

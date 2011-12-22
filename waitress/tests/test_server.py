@@ -51,19 +51,12 @@ class TestWSGIHTTPServer(unittest.TestCase):
         result = inst.computeServerName('fred.flintstone.com')
         self.assertEqual(result, 'fred.flintstone.com')
 
-    def test_addTask_with_task_dispatcher(self):
+    def test_addTask(self):
         task = DummyTask()
         inst = self._makeOneWithMap()
         inst.addTask(task)
         self.assertEqual(inst.task_dispatcher.tasks, [task])
         self.assertFalse(task.serviced)
-
-    def test_addTask_with_task_dispatcher_None(self):
-        task = DummyTask()
-        inst = self._makeOneWithMap()
-        inst.task_dispatcher = None
-        inst.addTask(task)
-        self.assertTrue(task.serviced)
 
     def test_readable_not_accepting(self):
         inst = self._makeOneWithMap()

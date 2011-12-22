@@ -40,7 +40,7 @@ class FakeSocket:
 
 
 def zombies_test():
-    """Regression test for HTTPServerChannel kill_zombies method
+    """Regression test for HTTPServerChannel.maintenance method
 
     Bug: This method checks for channels that have been "inactive" for a
     configured time. The bug was that last_activity is set at creation time but

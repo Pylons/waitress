@@ -149,10 +149,6 @@ class TestHTTPServerChannel(unittest.TestCase):
         self.assertEqual(inst.last_activity, la)
         self.assertEqual(len(L), 1)
 
-    def test_received(self):
-        inst, sock, map = self._makeOneWithMap()
-        self.assertEqual(inst.received('a'), None)
-
     def test_set_sync(self):
         inst, sock, map = self._makeOneWithMap()
         inst.async_mode = True
@@ -207,12 +203,14 @@ class TestHTTPServerChannel(unittest.TestCase):
         wrote = inst.write('')
         self.assertEqual(wrote, 0)
 
-    def test_pull_trigger(self):
+    def test_write_channels_accept_iterables(self):
         inst, sock, map = self._makeOneWithMap()
-        trigger = DummyTrigger()
-        inst.trigger = trigger
-        inst.pull_trigger()
-        self.assertEqual(trigger.pulled, True)
+        self.assertEqual(inst.write('First'), 5)
+        self.assertEqual(inst.write(["\n", "Second", "\n", "Third"]), 13)
+        def count():
+            yield '\n1\n2\n3\n'
+            yield 'I love to count. Ha ha ha.'
+        self.assertEqual(inst.write(count()), 33)
 
     def test__flush_some_notconnected(self):
         inst, sock, map = self._makeOneWithMap()
@@ -273,14 +271,176 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.async_mode = False
         self.assertRaises(AssertionError, inst.close)
 
-    def test_channels_accept_iterables(self):
+    def test_add_channel(self):
         inst, sock, map = self._makeOneWithMap()
-        self.assertEqual(inst.write('First'), 5)
-        self.assertEqual(inst.write(["\n", "Second", "\n", "Third"]), 13)
-        def count():
-            yield '\n1\n2\n3\n'
-            yield 'I love to count. Ha ha ha.'
-        self.assertEqual(inst.write(count()), 33)
+        fileno = inst._fileno
+        try:
+            inst.add_channel(map)
+            self.assertEqual(map[fileno], inst)
+            self.assertEqual(inst.__class__.active_channels[fileno], inst)
+        finally:
+            inst.__class__.active_channels.pop(fileno, None)
+
+    def test_del_channel(self):
+        inst, sock, map = self._makeOneWithMap()
+        fileno = inst._fileno
+        try:
+            inst.__class__.active_channels[fileno] = True
+            inst.del_channel(map)
+            self.assertEqual(map.get(fileno), None)
+            self.assertEqual(inst.__class__.active_channels.get(fileno),
+                             None)
+        finally:
+            inst.__class__.active_channels.pop(fileno, None)
+
+    def test_check_maintenance_false(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.__class__.next_channel_cleanup = [10]
+        result = inst.check_maintenance(5)
+        self.assertEqual(result, False)
+
+    def test_check_maintenance_true(self):
+        inst, sock, map = self._makeOneWithMap()
+        ncc = inst.__class__.next_channel_cleanup
+        try:
+            inst.__class__.next_channel_cleanup = [10]
+            inst.maintenance = lambda *arg: True
+            self.assertEqual(inst.check_maintenance(20), True)
+            self.assertEqual(inst.__class__.next_channel_cleanup,
+                             [inst.adj.cleanup_interval + 20])
+        finally:
+            inst.__class__.next_channel_cleanup = ncc
+
+    def test_maintenance(self):
+        inst, sock, map = self._makeOneWithMap()
+        class DummyChannel(object):
+            def close(self):
+                self.closed = True
+        zombie = DummyChannel()
+        zombie.last_activity = 0
+        zombie.running_tasks = False
+        try:
+            inst.__class__.active_channels[100] = zombie
+            inst.maintenance()
+            self.assertEqual(zombie.closed, True)
+        finally:
+            inst.__class__.active_channels.pop(100, None)
+
+    def test_received(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        inst.received('GET / HTTP/1.1\n\n')
+        self.assertEqual(inst.server.tasks, [inst])
+        self.assertEqual(len(inst.tasks), 1)
+
+    def test_handle_request(self):
+        req = DummyParser()
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        inst.handle_request(req)
+        self.assertEqual(inst.server.tasks, [inst])
+        self.assertEqual(len(inst.tasks), 1)
+
+    def test_handle_error_reraises_SystemExit(self):
+        inst, sock, map = self._makeOneWithMap()
+        self.assertRaises(SystemExit,
+                          inst.handle_error, (SystemExit, None, None))
+
+    def test_handle_error_reraises_KeyboardInterrupt(self):
+        inst, sock, map = self._makeOneWithMap()
+        self.assertRaises(KeyboardInterrupt,
+                          inst.handle_error, (KeyboardInterrupt, None, None))
+
+    def test_handle_error_noreraise(self):
+        inst, sock, map = self._makeOneWithMap()
+        # compact_traceback throws an AssertionError without a traceback
+        self.assertRaises(AssertionError, inst.handle_error,
+                          (ValueError, ValueError('a'), None))
+
+    def test_handle_comm_error_log(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.log_socket_errors = True
+        # compact_traceback throws an AssertionError without a traceback
+        self.assertRaises(AssertionError, inst.handle_comm_error)
+
+    def test_handle_comm_error_no(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.log_socket_errors = False
+        inst.handle_comm_error()
+        self.assertEqual(inst.connected, False)
+        self.assertEqual(sock.closed, True)
+
+    def test_queue_task_no_existing_tasks_notrunning(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        task = DummyTask()
+        inst.queue_task(task)
+        self.assertEqual(inst.tasks, [task])
+        self.assertTrue(inst.running_tasks)
+        self.assertFalse(inst.async_mode)
+        self.assertEqual(inst.server.tasks, [inst])
+
+    def test_queue_task_no_existing_tasks_running(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        inst.running_tasks = True
+        task = DummyTask()
+        inst.queue_task(task)
+        self.assertEqual(inst.tasks, [task])
+        self.assertTrue(inst.async_mode)
+
+    def test_service_no_tasks(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.running_tasks = True
+        inst.async_mode = False
+        inst.service()
+        self.assertEqual(inst.running_tasks, False)
+        self.assertEqual(inst.async_mode, True)
+
+    def test_service_with_task(self):
+        inst, sock, map = self._makeOneWithMap()
+        task = DummyTask()
+        inst.tasks = [task]
+        inst.running_tasks = True
+        inst.async_mode = False
+        inst.service()
+        self.assertEqual(inst.running_tasks, False)
+        self.assertEqual(inst.async_mode, True)
+        self.assertTrue(task.serviced)
+
+    def test_service_with_task_raises(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        task = DummyTask(ValueError)
+        inst.tasks = [task]
+        inst.running_tasks = True
+        inst.async_mode = False
+        self.assertRaises(ValueError, inst.service)
+        self.assertEqual(inst.running_tasks, True)
+        self.assertEqual(inst.async_mode, False)
+        self.assertTrue(task.serviced)
+        self.assertEqual(inst.server.tasks, [inst])
+
+    def test_cancel_no_tasks(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.tasks = None
+        inst.async_mode = False
+        inst.cancel()
+        self.assertTrue(inst.async_mode)
+
+    def test_cancel_with_tasks(self):
+        inst, sock, map = self._makeOneWithMap()
+        task = DummyTask()
+        inst.tasks = [task]
+        inst.async_mode = False
+        inst.cancel()
+        self.assertTrue(inst.async_mode)
+        self.assertEqual(inst.tasks, [])
+        self.assertEqual(task.cancelled, True)
+
+    def test_defer(self):
+        inst, sock, map = self._makeOneWithMap()
+        self.assertEqual(inst.defer(), None)
 
 class DummySock(object):
     blocking = False
@@ -318,3 +478,25 @@ class DummyTrigger(object):
     pulled = False
     def pull_trigger(self):
         self.pulled = True
+
+class DummyServer(object):
+    def __init__(self):
+        self.tasks = []
+    def addTask(self, task):
+        self.tasks.append(task)
+
+class DummyParser(object):
+    version = 1
+    
+class DummyTask(object):
+    serviced = False
+    cancelled = False
+    def __init__(self, toraise=None):
+        self.toraise = toraise
+    def service(self):
+        self.serviced = True
+        if self.toraise:
+            raise self.toraise
+    def cancel(self):
+        self.cancelled = True
+        

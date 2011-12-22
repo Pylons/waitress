@@ -90,7 +90,6 @@ class ThreadedTaskDispatcher(object):
         """See waitress.interfaces.ITaskDispatcher"""
         if task is None:
             raise ValueError("No task passed to addTask().")
-        # assert ITask.providedBy(task)
         try:
             task.defer()
             self.queue.put(task)
