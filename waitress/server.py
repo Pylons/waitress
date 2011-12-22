@@ -143,38 +143,8 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             conn.setsockopt(level, optname, value)
         self.channel_class(self, conn, addr, self.adj)
 
-    def _constructWSGIEnvironment(self, task):
-        env = task.getCGIEnvironment()
-
-        # deduce the URL scheme (http or https)
-        if (env.get('HTTPS', '').lower() == "on" or
-            env.get('SERVER_PORT_SECURE') == "1"):
-            protocol = 'https'
-        else:
-            protocol = 'http'
-
-        # the following environment variables are required by the WSGI spec
-        env['wsgi.version'] = (1,0)
-        env['wsgi.url_scheme'] = protocol
-        env['wsgi.errors'] = sys.stderr # apps should use the logging module
-        env['wsgi.multithread'] = True
-        env['wsgi.multiprocess'] = True
-        env['wsgi.run_once'] = False
-        env['wsgi.input'] = task.request_data.getBodyStream()
-
-        # Add some proprietary proxy information.
-        # Note: Derived request parsers might not have these new attributes,
-        # so fail gracefully.
-        try:
-            env['waitress.proxy.scheme'] = task.request_data.proxy_scheme
-            env['waitress.proxy.host'] = task.request_data.proxy_netloc
-        except AttributeError:
-            pass
-        return env
-
     def executeRequest(self, task):
-        """Overrides HTTPServer.executeRequest()."""
-        env = self._constructWSGIEnvironment(task)
+        env = task.getEnvironment()
 
         # Call the application to handle the request and write a response
         result = self.application(env, curriedStartResponse(task))

@@ -12,10 +12,17 @@
 #
 ##############################################################################
 
-from Queue import Queue, Empty
-from thread import allocate_lock, start_new_thread
+from Queue import (
+    Queue,
+    Empty,
+    )
+from thread import (
+    allocate_lock,
+    start_new_thread,
+    )
 import socket
 import time
+import sys
 import traceback
 
 from waitress.utilities import build_http_date
@@ -26,12 +33,17 @@ rename_headers = {
     'CONNECTION'     : 'CONNECTION_TYPE',
     }
 
+class JustTesting(Exception):
+    pass
+
 class ThreadedTaskDispatcher(object):
     """A Task Dispatcher that creates a thread for each task.
     See ITaskDispatcher.
     """
 
     stop_count = 0  # Number of threads that will stop soon.
+    stderr = sys.stderr
+    start_new_thread = start_new_thread
 
     def __init__(self):
         self.threads = {}  # { thread number -> 1 }
@@ -48,15 +60,16 @@ class ThreadedTaskDispatcher(object):
                     break
                 try:
                     task.service()
-                except:
-                    traceback.print_exc()
+                except Exception as e:
+                    traceback.print_exc(None, self.stderr)
+                    if isinstance(e, JustTesting):
+                        break
         finally:
             mlock = self.thread_mgmt_lock
             mlock.acquire()
             try:
                 self.stop_count -= 1
-                try: del threads[thread_no]
-                except KeyError: pass
+                threads.pop(thread_no, None)
             finally:
                 mlock.release()
 
@@ -74,7 +87,7 @@ class ThreadedTaskDispatcher(object):
                     thread_no = thread_no + 1
                 threads[thread_no] = 1
                 running += 1
-                start_new_thread(self.handlerThread, (thread_no,))
+                self.start_new_thread(self.handlerThread, (thread_no,))
                 thread_no = thread_no + 1
             if running > count:
                 # Stop threads.
@@ -88,8 +101,6 @@ class ThreadedTaskDispatcher(object):
 
     def addTask(self, task):
         """See waitress.interfaces.ITaskDispatcher"""
-        if task is None:
-            raise ValueError("No task passed to addTask().")
         try:
             task.defer()
             self.queue.put(task)
@@ -105,7 +116,8 @@ class ThreadedTaskDispatcher(object):
         expiration = time.time() + timeout
         while threads:
             if time.time() >= expiration:
-                print("%d thread(s) still running" % len(threads))
+                self.stderr.write("%d thread(s) still running" % len(threads))
+                self.stderr.flush()
                 break
             time.sleep(0.1)
         if cancel_pending:
@@ -116,12 +128,10 @@ class ThreadedTaskDispatcher(object):
                     task = queue.get()
                     if task is not None:
                         task.cancel()
-            except Empty:
+            except Empty: # pragma: no cover
                 pass
-
-    def getPendingTasksEstimate(self):
-        """See waitress.interfaces.ITaskDispatcher"""
-        return self.queue.qsize()
+            return True
+        return False
 
 class HTTPTask(object):
     """An HTTP task accepts a request and writes to a channel.
@@ -132,14 +142,13 @@ class HTTPTask(object):
     """
 
     instream = None
-    close_on_finish = 1
+    close_on_finish = True
     status = '200'
     reason = 'OK'
-    wrote_header = 0
+    wrote_header = False
     accumulated_headers = None
     bytes_written = 0
-    auth_user_name = ''
-    cgi_env = None
+    environ = None
 
     def __init__(self, channel, request_data):
         self.channel = channel
@@ -159,7 +168,7 @@ class HTTPTask(object):
                 self.channel.server.executeRequest(self)
                 self.finish()
             except socket.error:
-                self.close_on_finish = 1
+                self.close_on_finish = True
                 if self.channel.adj.log_socket_errors:
                     raise
         finally:
@@ -179,10 +188,6 @@ class HTTPTask(object):
         self.status = status
         self.reason = reason
 
-    def setResponseHeaders(self, mapping):
-        """See waitress.interfaces.http.IHeaderOutput"""
-        self.response_headers.update(mapping)
-
     def appendResponseHeaders(self, lst):
         """See waitress.interfaces.http.IHeaderOutput"""
         accum = self.accumulated_headers
@@ -190,19 +195,11 @@ class HTTPTask(object):
             self.accumulated_headers = accum = []
         accum.extend(lst)
 
-    def wroteResponseHeader(self):
-        """See waitress.interfaces.http.IHeaderOutput"""
-        return self.wrote_header
-
-    def setAuthUserName(self, name):
-        """See waitress.interfaces.http.IHeaderOutput"""
-        self.auth_user_name = name
-
-    def prepareResponseHeaders(self):
+    def buildResponseHeader(self):
         version = self.version
         # Figure out whether the connection should be closed.
         connection = self.request_data.headers.get('CONNECTION', '').lower()
-        close_it = 0
+        close_it = False
         response_headers = self.response_headers
         accumulated_headers = self.accumulated_headers
         if accumulated_headers is None:
@@ -211,20 +208,20 @@ class HTTPTask(object):
         if version == '1.0':
             if connection == 'keep-alive':
                 if not ('Content-Length' in response_headers):
-                    close_it = 1
+                    close_it = True
                 else:
                     response_headers['Connection'] = 'Keep-Alive'
             else:
-                close_it = 1
+                close_it = True
         elif version == '1.1':
             if 'connection: close' in (header.lower() for header in
                 accumulated_headers):
-                close_it = 1
+                close_it = True
             if connection == 'close':
-                close_it = 1
+                close_it = True
             elif 'Transfer-Encoding' in response_headers:
                 if not response_headers['Transfer-Encoding'] == 'chunked':
-                    close_it = 1
+                    close_it = True
             elif self.status == '304':
                 # Replying with headers only.
                 pass
@@ -233,11 +230,11 @@ class HTTPTask(object):
                 # the value of content-length manually
                 if 'content-length' not in (header[:14].lower() for header in
                     accumulated_headers):
-                    close_it = 1
+                    close_it = True
             # under HTTP 1.1 keep-alive is default, no need to set the header
         else:
             # Close if unrecognized HTTP version.
-            close_it = 1
+            close_it = True
 
         self.close_on_finish = close_it
         if close_it:
@@ -255,8 +252,6 @@ class HTTPTask(object):
             self.response_headers['Date'] = build_http_date(self.start_time)
 
 
-    def buildResponseHeader(self):
-        self.prepareResponseHeaders()
         first_line = 'HTTP/%s %s %s' % (self.version, self.status, self.reason)
         lines = [first_line] + ['%s: %s' % hv
                                 for hv in self.response_headers.items()]
@@ -266,12 +261,12 @@ class HTTPTask(object):
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
         return res
 
-    def getCGIEnvironment(self):
-        """Returns a CGI-like environment."""
-        env = self.cgi_env
-        if env is not None:
+    def getEnvironment(self):
+        """Returns a WSGI environment."""
+        environ = self.environ
+        if environ is not None:
             # Return the cached copy.
-            return env
+            return environ
 
         request_data = self.request_data
         path = request_data.path
@@ -281,21 +276,21 @@ class HTTPTask(object):
         while path and path.startswith('/'):
             path = path[1:]
 
-        env = {}
-        env['REQUEST_METHOD'] = request_data.command.upper()
-        env['SERVER_PORT'] = str(server.port)
-        env['SERVER_NAME'] = server.server_name
-        env['SERVER_SOFTWARE'] = server.SERVER_IDENT
-        env['SERVER_PROTOCOL'] = "HTTP/%s" % self.version
-        env['CHANNEL_CREATION_TIME'] = channel.creation_time
-        env['SCRIPT_NAME']=''
-        env['PATH_INFO']='/' + path
+        environ = {}
+        environ['REQUEST_METHOD'] = request_data.command.upper()
+        environ['SERVER_PORT'] = str(server.port)
+        environ['SERVER_NAME'] = server.server_name
+        environ['SERVER_SOFTWARE'] = server.SERVER_IDENT
+        environ['SERVER_PROTOCOL'] = "HTTP/%s" % self.version
+        environ['CHANNEL_CREATION_TIME'] = channel.creation_time
+        environ['SCRIPT_NAME']=''
+        environ['PATH_INFO']='/' + path
         query = request_data.query
         if query:
-            env['QUERY_STRING'] = query
-        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
+            environ['QUERY_STRING'] = query
+        environ['GATEWAY_INTERFACE'] = 'CGI/1.1'
         addr = channel.addr[0]
-        env['REMOTE_ADDR'] = addr
+        environ['REMOTE_ADDR'] = addr
 
         # If the server has a resolver, try to get the
         # remote host from the resolver's cache.
@@ -305,20 +300,34 @@ class HTTPTask(object):
             if addr in dns_cache:
                 remote_host = dns_cache[addr][2]
                 if remote_host is not None:
-                    env['REMOTE_HOST'] = remote_host
-
-        env_has = env.has_key
+                    environ['REMOTE_HOST'] = remote_host
 
         for key, value in request_data.headers.items():
             value = value.strip()
             mykey = rename_headers.get(key, None)
             if mykey is None:
                 mykey = 'HTTP_%s' % key
-            if not env_has(mykey):
-                env[mykey] = value
+            if not mykey in environ:
+                environ[mykey] = value
 
-        self.cgi_env = env
-        return env
+        # deduce the URL scheme (http or https)
+        if (environ.get('HTTPS', '').lower() == "on" or
+            environ.get('SERVER_PORT_SECURE') == "1"):
+            protocol = 'https'
+        else:
+            protocol = 'http'
+
+        # the following environment variables are required by the WSGI spec
+        environ['wsgi.version'] = (1,0)
+        environ['wsgi.url_scheme'] = protocol
+        environ['wsgi.errors'] = sys.stderr # apps should use the logging module
+        environ['wsgi.multithread'] = True
+        environ['wsgi.multiprocess'] = True
+        environ['wsgi.run_once'] = False
+        environ['wsgi.input'] = self.request_data.getBodyStream()
+
+        self.environ = environ
+        return environ
 
     def start(self):
         now = time.time()
@@ -334,7 +343,7 @@ class HTTPTask(object):
             rh = self.buildResponseHeader()
             channel.write(rh)
             self.bytes_written += len(rh)
-            self.wrote_header = 1
+            self.wrote_header = True
         if data:
             self.bytes_written += channel.write(data)
 

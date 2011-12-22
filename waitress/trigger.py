@@ -15,14 +15,8 @@
 import asyncore
 import os
 import socket
-import struct
 import thread
 import errno
-
-_ADDRESS_MASK = 256 ** struct.calcsize('P')
-
-# Original comments follow; they're hard to follow in the context of
-# ZEO's use of triggers.  TODO:  rewrite from a ZEO perspective.
 
 # Wake up a call to select() running in the main thread.
 #

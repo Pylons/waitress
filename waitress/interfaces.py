@@ -102,15 +102,6 @@ class ITaskDispatcher(Interface):
         """Shuts down all handler threads and may cancel pending tasks.
         """
 
-    def getPendingTasksEstimate():
-        """Returns an estimate of the number of tasks waiting to be serviced.
-
-        This method may be useful for monitoring purposes.  If the
-        number of pending tasks is continually climbing, your server
-        is becoming overloaded and the operator should be notified.
-        """
-
-
 class ITask(Interface):
     """
     The interface expected of an object placed in the queue of
@@ -313,10 +304,6 @@ class IHeaderOutput(Interface):
         """Sets the status code and the accompanying message.
         """
 
-    def setResponseHeaders(mapping):
-        """Sets headers.  The headers must be Correctly-Cased.
-        """
-
     def appendResponseHeaders(lst):
         """Sets headers that can potentially repeat.
 
@@ -328,9 +315,4 @@ class IHeaderOutput(Interface):
 
         header has already been sent.
         """)
-
-    def setAuthUserName(name):
-        """Sets the name of the authenticated user so the name can be logged.
-        """
-
 
