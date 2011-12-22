@@ -2,14 +2,16 @@ import errno
 import socket
 import unittest
 
-class TestHTTPServer(unittest.TestCase):
-    def _makeOne(self, ip, port, task_dispatcher=None, adj=None, start=True,
-                 hit_log=None, verbose=False, map=None, logger=None, sock=None):
-        from waitress.server import HTTPServer
-        class TestServer(HTTPServer):
+class TestWSGIHTTPServer(unittest.TestCase):
+    def _makeOne(self, application, ip, port, task_dispatcher=None, adj=None,
+                 start=True, hit_log=None, verbose=False, map=None,
+                 logger=None, sock=None):
+        from waitress.server import WSGIHTTPServer
+        class TestServer(WSGIHTTPServer):
             def bind(self, (ip, port)):
                 pass
         return TestServer(
+            application,
             ip,
             port,
             task_dispatcher=task_dispatcher,
@@ -22,12 +24,12 @@ class TestHTTPServer(unittest.TestCase):
             sock=sock)
     
     def _makeOneWithMap(self, adj=None, start=True, verbose=False,
-                        ip='127.0.0.1', port=62122):
+                        ip='127.0.0.1', port=62122, app=None):
         sock = DummySock()
         task_dispatcher = DummyTaskDispatcher()
         map = {}
         logger = DummyLogger()
-        return self._makeOne(ip, port, task_dispatcher=task_dispatcher,
+        return self._makeOne(app, ip, port, task_dispatcher=task_dispatcher,
                              start=start, verbose=verbose, map=map,
                              logger=logger, sock=sock)
 

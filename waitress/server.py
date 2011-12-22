@@ -22,15 +22,15 @@ from waitress.adjustments import default_adj
 from waitress.channel import HTTPServerChannel
 from waitress.task import ThreadedTaskDispatcher
 
-class HTTPServer(asyncore.dispatcher, object):
-    """This is a generic HTTP Server.
+class WSGIHTTPServer(asyncore.dispatcher, object):
+    """
 
     if __name__ == '__main__':
 
         from waitress.taskthreads import ThreadedTaskDispatcher
         td = ThreadedTaskDispatcher()
         td.setThreadCount(4)
-        HTTPServer('', 8080, task_dispatcher=td)
+        WSGIHTTPServer('', 8080, task_dispatcher=td)
 
         try:
             import asyncore
@@ -52,8 +52,16 @@ class HTTPServer(asyncore.dispatcher, object):
         'warning': logging.WARN,
         }
 
-    def __init__(self, ip, port, task_dispatcher=None, adj=None, start=True,
-                 hit_log=None, verbose=False, map=None, logger=None, sock=None):
+    def __init__(self, application, ip, port, task_dispatcher=None,
+                 adj=None, start=True, hit_log=None, verbose=False,
+                 map=None, logger=None, sock=None, sub_protocol=None):
+        self.application = application
+
+        if sub_protocol:
+            self.SERVER_IDENT += ' (%s)' % str(sub_protocol)
+
+        if sys.platform[:3] == "win" and ip == 'localhost':
+            ip = ''
         if adj is None:
             adj = default_adj
         self.adj = adj
@@ -115,7 +123,6 @@ class HTTPServer(asyncore.dispatcher, object):
                 self.port
                 ))
 
-
     def addTask(self, task):
         """See waitress.interfaces.ITaskDispatcher"""
         td = self.task_dispatcher
@@ -160,28 +167,6 @@ class HTTPServer(asyncore.dispatcher, object):
             conn.setsockopt(level, optname, value)
         self.channel_class(self, conn, addr, self.adj)
 
-    def executeRequest(self, task):
-        """Execute an HTTP request."""
-        # This is a default implementation, meant to be overridden.
-        raise NotImplementedError()
-
-class WSGIHTTPServer(HTTPServer):
-    """WSGI-compliant HTTP Server"""
-
-    application = None
-
-    def __init__(self, application, sub_protocol=None, *args, **kw):
-
-        if sys.platform[:3] == "win" and args[0] == 'localhost':
-            args = ('',) + args[1:]
-
-        self.application = application
-
-        if sub_protocol:
-            self.SERVER_IDENT += ' (%s)' %str(sub_protocol)
-
-        HTTPServer.__init__(self, *args, **kw)
-
     def _constructWSGIEnvironment(self, task):
         env = task.getCGIEnvironment()
 
@@ -222,7 +207,6 @@ class WSGIHTTPServer(HTTPServer):
         # multiple times, allowing partial data to be sent.
         for value in result:
             task.write(value)
-
 
 def fakeWrite(body):
     raise NotImplementedError(
