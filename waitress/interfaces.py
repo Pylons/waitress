@@ -13,8 +13,13 @@
 ##############################################################################
 """Server interfaces.
 """
-from zope.interface import Interface
-from zope.interface import Attribute
+
+class Attribute(object):
+    def __init__(self, description):
+        self.description = description
+
+class Interface(object):
+    pass
 
 class ISocket(Interface):
     """Represents a socket.

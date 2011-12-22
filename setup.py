@@ -18,12 +18,6 @@ def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 
-tests_require = [
-    'zope.i18n',
-    'zope.component',
-    'zope.publisher',
-    ]
-
 setup(
     name='waitress',
     version='0.0',
@@ -58,12 +52,9 @@ setup(
         ],
     url='https://github.com/mcdonc/waitress',
     packages=find_packages(),
-    tests_require=tests_require,
     install_requires=[
         'setuptools',
-        'zope.interface',
         ],
-    extras_require=dict(test=tests_require),
     include_package_data=True,
     test_suite='waitress',
     zip_safe=False,
