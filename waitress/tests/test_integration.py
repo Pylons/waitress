@@ -127,7 +127,7 @@ class TestWSGIHTTPEchoServer(unittest.TestCase, AsyncoreErrorHook):
         self.failUnlessEqual(length, len(response_body))
         self.failUnlessEqual(response_body, body)
         # HTTP 1.1 requires the server and date header.
-        self.assertEqual(response.getheader('server'), 'waitress.http')
+        self.assertEqual(response.getheader('server'), 'waitress')
         self.assert_(response.getheader('date') is not None)
 
     def testMultipleRequestsWithoutBody(self):
@@ -403,8 +403,7 @@ class TestWSGIHTTPServerWithPublisher(PlacelessSetup, unittest.TestCase):
         # Bind to any port on localhost.
         ServerClass = self._getServerClass()
         self.server = ServerClass(application,
-                                  LOCALHOST, 0, task_dispatcher=td,
-                                  sub_protocol='Browser')
+                                  LOCALHOST, 0, task_dispatcher=td)
 
         self.port = self.server.socket.getsockname()[1]
         self.run_loop = 1
@@ -496,7 +495,7 @@ class TestWSGIHTTPServerWithPublisher(PlacelessSetup, unittest.TestCase):
             response.getheader('Date'), 'Thu, 01 Apr 2010 12:00:00 GMT')
         # The server adds a Via header.
         self.assertEqual(
-            response.getheader('Via'), 'waitress.http (Browser)')
+            response.getheader('Via'), 'waitress')
         # And the content got here too.
         self.assertEqual(response.read(), 'Proxied Content')
 
@@ -678,8 +677,7 @@ class TestWSGIHTTPServer(PlacelessSetup, unittest.TestCase):
         td.setThreadCount(4)
         # Bind to any port on localhost.
         ServerClass = self._getServerClass()
-        self.server = ServerClass(application, LOCALHOST, 0, task_dispatcher=td,
-                                  sub_protocol='Browser')
+        self.server = ServerClass(application, LOCALHOST, 0, task_dispatcher=td)
 
         self.port = self.server.socket.getsockname()[1]
         self.run_loop = 1
@@ -771,7 +769,7 @@ class TestWSGIHTTPServer(PlacelessSetup, unittest.TestCase):
             response.getheader('Date'), 'Thu, 01 Apr 2010 12:00:00 GMT')
         # The server adds a Via header.
         self.assertEqual(
-            response.getheader('Via'), 'waitress.http (Browser)')
+            response.getheader('Via'), 'waitress')
         # And the content got here too.
         self.assertEqual(response.read(), 'Proxied Content')
 

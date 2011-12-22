@@ -64,6 +64,6 @@ setup(
     zip_safe=False,
     entry_points="""
     [paste.server_runner]
-    main = waitress.server:run_paste
+    main = waitress:serve_paste
     """
     )

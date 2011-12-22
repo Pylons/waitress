@@ -20,7 +20,6 @@ import sys
 
 from waitress.adjustments import default_adj
 from waitress.channel import HTTPServerChannel
-from waitress.task import ThreadedTaskDispatcher
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
     """
@@ -43,7 +42,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
     """
 
     channel_class = HTTPServerChannel
-    SERVER_IDENT = 'waitress.http'
+    SERVER_IDENT = 'waitress'
     socketmod = socket # testing shim
 
     level_mapping = {
@@ -53,12 +52,12 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         }
 
     def __init__(self, application, ip, port, task_dispatcher=None,
-                 adj=None, start=True, hit_log=None, verbose=False,
-                 map=None, logger=None, sock=None, sub_protocol=None):
+                 ident=None, adj=None, verbose=True, logger=None, start=True, 
+                 map=None, sock=None):
         self.application = application
 
-        if sub_protocol:
-            self.SERVER_IDENT += ' (%s)' % str(sub_protocol)
+        if ident is not None:
+            self.SERVER_IDENT = ident
 
         if sys.platform[:3] == "win" and ip == 'localhost':
             ip = ''
@@ -73,12 +72,10 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         self.set_reuse_addr()
         self.bind((ip, port))
         self.verbose = verbose
-        self.hit_log = hit_log
         if logger is None:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self.server_name = self.computeServerName(ip)
-
         if start:
             self.accept_connections()
 
@@ -240,11 +237,3 @@ def curriedStartResponse(task):
         return fakeWrite
     return start_response
 
-def run_paste(wsgi_app, global_conf, name='waitress.http',
-              host='127.0.0.1', port=8080, threads=4):
-    port = int(port)
-    threads = int(threads)
-    task_dispatcher = ThreadedTaskDispatcher()
-    task_dispatcher.setThreadCount(threads)
-    WSGIHTTPServer(wsgi_app, name, host, port, task_dispatcher=task_dispatcher)
-    asyncore.loop()

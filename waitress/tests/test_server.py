@@ -4,7 +4,7 @@ import unittest
 
 class TestWSGIHTTPServer(unittest.TestCase):
     def _makeOne(self, application, ip, port, task_dispatcher=None, adj=None,
-                 start=True, hit_log=None, verbose=False, map=None,
+                 start=True, verbose=False, map=None,
                  logger=None, sock=None):
         from waitress.server import WSGIHTTPServer
         class TestServer(WSGIHTTPServer):
@@ -17,7 +17,6 @@ class TestWSGIHTTPServer(unittest.TestCase):
             task_dispatcher=task_dispatcher,
             adj=adj,
             start=start,
-            hit_log=hit_log,
             verbose=verbose,
             map=map,
             logger=logger,
