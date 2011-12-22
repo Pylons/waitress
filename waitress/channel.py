@@ -222,33 +222,6 @@ class HTTPServerChannel(asyncore.dispatcher, object):
     # SYNCHRONOUS METHODS
     #
 
-    def flush(self, block=True): # pragma: no cover (see comment in body)
-        """Sends pending data.
-
-        If block is set, this pauses the application.  If it is turned
-        off, only the amount of data that can be sent without blocking
-        is sent.
-        """
-        # XXX this looks smelly, but I think it's only actually used by
-        # test_serverbase and httptask, and nothing at all appears to call
-        # flush on httptask (CM); maybe delete it.
-        if not block:
-            while self._flush_some():
-                pass
-            return
-        blocked = False
-        try:
-            # setting the blocking mode here?  wtf?  (CM)
-            while self.outbuf:
-                # We propagate errors to the application on purpose.
-                if not blocked:
-                    self.socket.setblocking(1)
-                    blocked = True
-                self._flush_some()
-        finally:
-            if blocked:
-                self.socket.setblocking(0)
-
     def set_async(self):
         """Switches to asynchronous mode.
 
