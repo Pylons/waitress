@@ -64,6 +64,6 @@ setup(
     zip_safe=False,
     entry_points="""
     [paste.server_runner]
-    main = waitress.http.wsgihttpserver:run_paste
+    main = waitress.server:run_paste
     """
     )
