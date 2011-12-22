@@ -2,14 +2,14 @@ import errno
 import socket
 import unittest
 
-class TestServerBase(unittest.TestCase):
+class TestHTTPServer(unittest.TestCase):
     def _makeOne(self, ip, port, task_dispatcher=None, adj=None, start=True,
                  hit_log=None, verbose=False, map=None, logger=None, sock=None):
-        from waitress.server import ServerBase
-        class NonBindingServerBase(ServerBase):
+        from waitress.server import HTTPServer
+        class TestServer(HTTPServer):
             def bind(self, (ip, port)):
                 pass
-        return NonBindingServerBase(
+        return TestServer(
             ip,
             port,
             task_dispatcher=task_dispatcher,

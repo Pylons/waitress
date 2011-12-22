@@ -52,11 +52,11 @@ def zombies_test():
     >>> import waitress.adjustments
     >>> config = waitress.adjustments.Adjustments()
 
-    >>> from waitress.server import ServerBase
-    >>> class ServerBaseForTest(ServerBase):
+    >>> from waitress.server import HTTPServer
+    >>> class TestServer(HTTPServer):
     ...     def bind(self, (ip, port)):
     ...         print "Listening on %s:%d" % (ip or '*', port)
-    >>> sb = ServerBaseForTest('127.0.0.1', 80, start=False, verbose=True)
+    >>> sb = TestServer('127.0.0.1', 80, start=False, verbose=True)
     Listening on 127.0.0.1:80
 
     First we confirm the correct behavior, where a channel with no activity

@@ -22,12 +22,28 @@ from waitress.adjustments import default_adj
 from waitress.channel import HTTPServerChannel
 from waitress.task import ThreadedTaskDispatcher
 
-class ServerBase(asyncore.dispatcher, object):
-    """Async. server base for launching derivatives of ServerChannelBase."""
+class HTTPServer(asyncore.dispatcher, object):
+    """This is a generic HTTP Server.
 
-    # See waitress.interfaces.IServer
-    channel_class = None    # Override with a channel class.
-    SERVER_IDENT = 'waitress.serverbase'  # Override.
+    if __name__ == '__main__':
+
+        from waitress.taskthreads import ThreadedTaskDispatcher
+        td = ThreadedTaskDispatcher()
+        td.setThreadCount(4)
+        HTTPServer('', 8080, task_dispatcher=td)
+
+        try:
+            import asyncore
+            while 1:
+                asyncore.poll(5)
+
+        except KeyboardInterrupt:
+            print 'shutting down...'
+            td.shutdown()
+    """
+
+    channel_class = HTTPServerChannel
+    SERVER_IDENT = 'waitress.http'
     socketmod = socket # testing shim
 
     level_mapping = {
@@ -144,71 +160,10 @@ class ServerBase(asyncore.dispatcher, object):
             conn.setsockopt(level, optname, value)
         self.channel_class(self, conn, addr, self.adj)
 
-class HTTPServer(ServerBase):
-    """This is a generic HTTP Server.
-
-    if __name__ == '__main__':
-
-        from waitress.taskthreads import ThreadedTaskDispatcher
-        td = ThreadedTaskDispatcher()
-        td.setThreadCount(4)
-        HTTPServer('', 8080, task_dispatcher=td)
-
-        try:
-            import asyncore
-            while 1:
-                asyncore.poll(5)
-
-        except KeyboardInterrupt:
-            print 'shutting down...'
-            td.shutdown()
-    """
-
-    channel_class = HTTPServerChannel
-    SERVER_IDENT = 'waitress.http'
-
     def executeRequest(self, task):
         """Execute an HTTP request."""
         # This is a default implementation, meant to be overridden.
-        body = "The HTTP server is running!\r\n" * 10
-        task.response_headers['Content-Type'] = 'text/plain'
-        task.response_headers['Content-Length'] = str(len(body))
-        task.write(body)
-
-
-def fakeWrite(body):
-    raise NotImplementedError(
-        "Zope 3's HTTP Server does not support the WSGI write() function.")
-
-
-def curriedStartResponse(task):
-    def start_response(status, headers, exc_info=None):
-        if task.wroteResponseHeader() and not exc_info:
-            raise AssertionError("start_response called a second time "
-                                 "without providing exc_info.")
-        if exc_info:
-            try:
-                if task.wroteResponseHeader():
-                    # higher levels will catch and handle raised exception:
-                    # 1. "service" method in httptask.py
-                    # 2. "service" method in severchannelbase.py
-                    # 3. "handlerThread" method in taskthreads.py
-                    raise exc_info[0], exc_info[1], exc_info[2]
-                else:
-                    # As per WSGI spec existing headers must be cleared
-                    task.accumulated_headers = None
-                    task.response_headers = {}
-            finally:
-                exc_info = None
-        # Prepare the headers for output
-        status, reason = re.match('([0-9]*) (.*)', status).groups()
-        task.setResponseStatus(status, reason)
-        task.appendResponseHeaders(['%s: %s' % i for i in headers])
-
-        # Return the write method used to write the response data.
-        return fakeWrite
-    return start_response
-
+        raise NotImplementedError()
 
 class WSGIHTTPServer(HTTPServer):
     """WSGI-compliant HTTP Server"""
@@ -269,30 +224,37 @@ class WSGIHTTPServer(HTTPServer):
             task.write(value)
 
 
-class PMDBWSGIHTTPServer(WSGIHTTPServer):
-    """Enter the post-mortem debugger when there's an error"""
+def fakeWrite(body):
+    raise NotImplementedError(
+        "the waitress HTTP Server does not support the WSGI write() function.")
 
-    def executeRequest(self, task):
-        """Overrides HTTPServer.executeRequest()."""
-        env = self._constructWSGIEnvironment(task)
-        env['wsgi.handleErrors'] = False
-
-        # Call the application to handle the request and write a response
-        try:
-            result = self.application(env, curriedStartResponse(task))
-            # By iterating manually at this point, we execute task.write()
-            # multiple times, allowing partial data to be sent.
-            for value in result:
-                task.write(value)
-        except:
-            import sys, pdb
-            print "%s:" % sys.exc_info()[0]
-            print sys.exc_info()[1]
+def curriedStartResponse(task):
+    def start_response(status, headers, exc_info=None):
+        if task.wroteResponseHeader() and not exc_info:
+            raise AssertionError("start_response called a second time "
+                                 "without providing exc_info.")
+        if exc_info:
             try:
-                pdb.post_mortem(sys.exc_info()[2])
-                raise
+                if task.wroteResponseHeader():
+                    # higher levels will catch and handle raised exception:
+                    # 1. "service" method in httptask.py
+                    # 2. "service" method in severchannelbase.py
+                    # 3. "handlerThread" method in taskthreads.py
+                    raise exc_info[0], exc_info[1], exc_info[2]
+                else:
+                    # As per WSGI spec existing headers must be cleared
+                    task.accumulated_headers = None
+                    task.response_headers = {}
             finally:
-                pass
+                exc_info = None
+        # Prepare the headers for output
+        status, reason = re.match('([0-9]*) (.*)', status).groups()
+        task.setResponseStatus(status, reason)
+        task.appendResponseHeaders(['%s: %s' % i for i in headers])
+
+        # Return the write method used to write the response data.
+        return fakeWrite
+    return start_response
 
 def run_paste(wsgi_app, global_conf, name='waitress.http',
               host='127.0.0.1', port=8080, threads=4):

@@ -646,67 +646,6 @@ class TestWSGIHTTPServer(PlacelessSetup, unittest.TestCase):
 
         self.server.application = orig_app
 
-class PMDBTests(TestWSGIHTTPServer):
-
-    def _getServerClass(self):
-        # import only now to prevent the testrunner from importing it too early
-        # Otherwise dualmodechannel.the_trigger is closed by the ZEO tests
-        from waitress.server import PMDBWSGIHTTPServer
-        return PMDBWSGIHTTPServer
-
-    def testWSGIVariables(self):
-        # Assert that the environment contains all required WSGI variables
-        status, response_body = self.invokeRequest('/wsgi')
-        wsgi_variables = set(response_body.split())
-        self.assertEqual(wsgi_variables,
-                         set(['wsgi.version', 'wsgi.url_scheme', 'wsgi.input',
-                              'wsgi.errors', 'wsgi.multithread',
-                              'wsgi.multiprocess', 'wsgi.handleErrors',
-                              'wsgi.run_once']))
-
-    def test_multiple_start_response_calls(self):
-        # if start_response is called more than once with no exc_info
-        ignore, task = self._getFakeAppAndTask()
-        task.wrote_header = 1
-
-        # monkey-patch pdb.post_mortem so we don't go into pdb session.
-        pm_traceback = []
-        def fake_post_mortem(tb):
-            import traceback
-            pm_traceback.extend(traceback.format_tb(tb))
-
-        import pdb
-        orig_post_mortem = pdb.post_mortem
-        pdb.post_mortem = fake_post_mortem
-
-        self.assertRaises(AssertionError, self.server.executeRequest, task)
-        expected_msg = "start_response called a second time"
-        self.assertTrue(expected_msg in pm_traceback[-1])
-        pdb.post_mortem = orig_post_mortem
-
-    def test_start_response_with_headers_sent(self):
-        # If headers have been sent it raises the exception, which will
-        # be caught by the server and invoke pdb.post_mortem.
-        orig_app = self.server.application
-        self.server.application, task = self._getFakeAppAndTask()
-        task.wrote_header = 1
-
-        # monkey-patch pdb.post_mortem so we don't go into pdb session.
-        pm_traceback = []
-        def fake_post_mortem(tb):
-            import traceback
-            pm_traceback.extend(traceback.format_tb(tb))
-
-        import pdb
-        orig_post_mortem = pdb.post_mortem
-        pdb.post_mortem = fake_post_mortem
-
-        self.assertRaises(DummyException, self.server.executeRequest, task)
-        self.assertTrue("raise DummyException" in pm_traceback[-1])
-
-        self.server.application = orig_app
-        pdb.post_mortem = orig_post_mortem
-
 class TestHTTPServer(unittest.TestCase, AsyncoreErrorHook):
 
     def setUp(self):
@@ -1308,68 +1247,6 @@ class TestWSGIHTTPServer(PlacelessSetup, unittest.TestCase):
         self.assertRaises(DummyException, self.server.executeRequest, task)
 
         self.server.application = orig_app
-
-class PMDBTests(TestWSGIHTTPServer):
-
-    def _getServerClass(self):
-        # import only now to prevent the testrunner from importing it too early
-        # Otherwise dualmodechannel.the_trigger is closed by the ZEO tests
-        from waitress.server import PMDBWSGIHTTPServer
-        return PMDBWSGIHTTPServer
-
-    def testWSGIVariables(self):
-        # Assert that the environment contains all required WSGI variables
-        status, response_body = self.invokeRequest('/wsgi')
-        wsgi_variables = set(response_body.split())
-        self.assertEqual(wsgi_variables,
-                         set(['wsgi.version', 'wsgi.url_scheme', 'wsgi.input',
-                              'wsgi.errors', 'wsgi.multithread',
-                              'wsgi.multiprocess', 'wsgi.handleErrors',
-                              'wsgi.run_once']))
-
-    def test_multiple_start_response_calls(self):
-        # if start_response is called more than once with no exc_info
-        ignore, task = self._getFakeAppAndTask()
-        task.wrote_header = 1
-
-        # monkey-patch pdb.post_mortem so we don't go into pdb session.
-        pm_traceback = []
-        def fake_post_mortem(tb):
-            import traceback
-            pm_traceback.extend(traceback.format_tb(tb))
-
-        import pdb
-        orig_post_mortem = pdb.post_mortem
-        pdb.post_mortem = fake_post_mortem
-
-        self.assertRaises(AssertionError, self.server.executeRequest, task)
-        expected_msg = "start_response called a second time"
-        self.assertTrue(expected_msg in pm_traceback[-1])
-        pdb.post_mortem = orig_post_mortem
-
-    def test_start_response_with_headers_sent(self):
-        # If headers have been sent it raises the exception, which will
-        # be caught by the server and invoke pdb.post_mortem.
-        orig_app = self.server.application
-        self.server.application, task = self._getFakeAppAndTask()
-        task.wrote_header = 1
-
-        # monkey-patch pdb.post_mortem so we don't go into pdb session.
-        pm_traceback = []
-        def fake_post_mortem(tb):
-            import traceback
-            pm_traceback.extend(traceback.format_tb(tb))
-
-        import pdb
-        orig_post_mortem = pdb.post_mortem
-        pdb.post_mortem = fake_post_mortem
-
-        self.assertRaises(DummyException, self.server.executeRequest, task)
-        self.assertTrue("raise DummyException" in pm_traceback[-1])
-
-        self.server.application = orig_app
-        pdb.post_mortem = orig_post_mortem
-
 
 class SleepingTask(object):
 
