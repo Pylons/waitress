@@ -136,6 +136,7 @@ class HTTPRequestParser(object):
         self.uri = str(uri)
         self.version = version
         self.split_uri()
+        self.url_scheme = 'http' # use Paste#prefix middleware to change
 
         if version == '1.1':
             te = headers.get('TRANSFER_ENCODING', '')

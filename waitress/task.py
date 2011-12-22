@@ -148,6 +148,7 @@ class HTTPTask(object):
     wrote_header = False
     accumulated_headers = None
     bytes_written = 0
+    start_time = 0
     environ = None
 
     def __init__(self, channel, request_data):
@@ -214,9 +215,11 @@ class HTTPTask(object):
             else:
                 close_it = True
         elif version == '1.1':
-            if 'connection: close' in (header.lower() for header in
-                accumulated_headers):
-                close_it = True
+            for i, header in enumerate(accumulated_headers):
+                if header.lower() == 'connection: close':
+                    close_it = True
+                    # prevent double Connection: close
+                    del accumulated_headers[i]
             if connection == 'close':
                 close_it = True
             elif 'Transfer-Encoding' in response_headers:
@@ -253,11 +256,12 @@ class HTTPTask(object):
 
 
         first_line = 'HTTP/%s %s %s' % (self.version, self.status, self.reason)
-        lines = [first_line] + ['%s: %s' % hv
-                                for hv in self.response_headers.items()]
+        next_lines = ['%s: %s' % hv for hv in self.response_headers.items()]
         accum = self.accumulated_headers
         if accum is not None:
-            lines.extend(accum)
+            next_lines.extend(accum)
+        next_lines.sort()
+        lines = [first_line] + next_lines
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
         return res
 
@@ -282,25 +286,12 @@ class HTTPTask(object):
         environ['SERVER_NAME'] = server.server_name
         environ['SERVER_SOFTWARE'] = server.SERVER_IDENT
         environ['SERVER_PROTOCOL'] = "HTTP/%s" % self.version
-        environ['CHANNEL_CREATION_TIME'] = channel.creation_time
         environ['SCRIPT_NAME']=''
         environ['PATH_INFO']='/' + path
         query = request_data.query
         if query:
             environ['QUERY_STRING'] = query
-        environ['GATEWAY_INTERFACE'] = 'CGI/1.1'
-        addr = channel.addr[0]
-        environ['REMOTE_ADDR'] = addr
-
-        # If the server has a resolver, try to get the
-        # remote host from the resolver's cache.
-        resolver = getattr(server, 'resolver', None)
-        if resolver is not None:
-            dns_cache = resolver.cache
-            if addr in dns_cache:
-                remote_host = dns_cache[addr][2]
-                if remote_host is not None:
-                    environ['REMOTE_HOST'] = remote_host
+        environ['REMOTE_ADDR'] = channel.addr[0]
 
         for key, value in request_data.headers.items():
             value = value.strip()
@@ -310,28 +301,20 @@ class HTTPTask(object):
             if not mykey in environ:
                 environ[mykey] = value
 
-        # deduce the URL scheme (http or https)
-        if (environ.get('HTTPS', '').lower() == "on" or
-            environ.get('SERVER_PORT_SECURE') == "1"):
-            protocol = 'https'
-        else:
-            protocol = 'http'
-
         # the following environment variables are required by the WSGI spec
         environ['wsgi.version'] = (1,0)
-        environ['wsgi.url_scheme'] = protocol
+        environ['wsgi.url_scheme'] = request_data.url_scheme
         environ['wsgi.errors'] = sys.stderr # apps should use the logging module
-        environ['wsgi.multithread'] = True
-        environ['wsgi.multiprocess'] = True
+        environ['wsgi.multithread'] = True    # XXX base on dispatcher
+        environ['wsgi.multiprocess'] = False  # XXX base on dispatcher
         environ['wsgi.run_once'] = False
-        environ['wsgi.input'] = self.request_data.getBodyStream()
+        environ['wsgi.input'] = request_data.getBodyStream()
 
         self.environ = environ
         return environ
 
     def start(self):
-        now = time.time()
-        self.start_time = now
+        self.start_time = time.time()
 
     def finish(self):
         if not self.wrote_header:

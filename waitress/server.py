@@ -147,12 +147,16 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         env = task.getEnvironment()
 
         # Call the application to handle the request and write a response
-        result = self.application(env, curriedStartResponse(task))
+        app_iter = self.application(env, curriedStartResponse(task))
 
         # By iterating manually at this point, we execute task.write()
         # multiple times, allowing partial data to be sent.
-        for value in result:
-            task.write(value)
+        try:
+            for value in app_iter:
+                task.write(value)
+        finally:
+            if hasattr(app_iter, 'close'):
+                app_iter.close()
 
     def run(self):
         try:
