@@ -17,7 +17,7 @@ import doctest
 import unittest
 
 
-class FakeSocket:
+class FakeSocket: # pragma: no cover
     data        = ''
     setblocking = lambda *_: None
     close = lambda *_: None
@@ -145,7 +145,3 @@ def zombies_test():
 
 def test_suite():
     return doctest.DocTestSuite()
-
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
