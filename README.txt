@@ -1,17 +1,21 @@
 Introduction
 ------------
 
-This package is a production quality pure-Python WSGI server with very
-acceptable performance that runs on Unix and Windows under Python 2.6+ and
-Python 3.2.  It runs on CPython and PyPy.  It is meant to be used as a
-dependency by web framework authors who require broad platform support.  It's
-neither the fastest nor the fanciest WSGI server vailable but it can help
-eliminate the N-by-M documentation burden (e.g. production vs. deployment,
-Windows vs. Unix, Python 3 vs. Python 2, PyPI vs. CPython) and resulting user
-confusion imposed by spotty platform support and/or inappropriate dependency
-trees of the current (2012-ish) crop of WSGI servers.  It depends only on the
-Python standard library and has very good test coverage.  It is a fork of the
-WSGI-related components which existed in ``zope.server``.
+Waitress is a production-quality pure-Python WSGI server with very acceptable
+performance that runs on Unix and Windows under Python 2.6+ and Python 3.2.
+It runs on CPython and PyPy.  It depends only on the Python standard library
+and has very good test coverage.  It is a fork of the WSGI-related components
+which existed in ``zope.server``.
+
+It is meant to be used as a dependency by web framework authors who require
+broad platform support.  It's neither the fastest nor the fanciest WSGI
+server available but it can help eliminate the N-by-M documentation burden
+(e.g. production vs. deployment, Windows vs. Unix, Python 3 vs. Python 2,
+PyPI vs. CPython) and resulting user confusion imposed by spotty platform
+support of the current (2012-ish) crop of WSGI servers (and the inappropriate
+dependency trees of servers which claim wide platform support).
+
+It supports HTTP/1.0 and a subset of HTTP/1.1 (see "Known Issues" below).
 
 Usage
 -----
@@ -21,14 +25,66 @@ Here's normal usage of the server::
    from waitress import serve
    serve(wsgiapp, host='0.0.0.0', port=8080)
 
+If you want to serve your application on all IP addresses, on port 8080, you
+need just call ``serve`` with the WSGI app as a single argument::
+
+   from waitress import serve
+   serve(wsgiapp)
+
 Press Ctrl-C to exit the server.
 
-There's an entry point for PasteDeploy_ that lets you use waitress's WSGI
-gateway from a configuration file, e.g.::
+There's an entry point for PasteDeploy_ (``egg:waitress#main``) that lets you
+use waitress's WSGI gateway from a configuration file, e.g.::
 
   [server:main]
-  use = egg:waitress
+  use = egg:waitress#main
   host = 127.0.0.1
   port = 8080
+
+Using Behind a Reverse Proxy
+----------------------------
+
+By default, the ``wsgi.url_scheme`` provided by waitress is always ``http``.
+To use waitress as a target for a reverse proxy to an application that wants
+to generate ``https`` prefixed URLs, use the PasteDeploy_ PrefixMiddleware::
+
+  from watiress import serve
+  from paste.deploy.config import PrefixMiddleware
+  app = PrefixMiddleware(app)
+  serve(app)
+
+Then set up your proxy to send a ``X-Forwarded-Scheme`` with the value
+``https`` along with each proxied request.  The PrefixMiddleware will notice
+this header and change the ``wsgi.url_scheme`` appropriately.
+
+You can do this declaratively in a PasteDeploy_ configuration file too:
+
+   [app:myapp]
+   use = egg:mypackage#myapp
+
+   [filter:paste_prefix]
+   use = egg:PasteDeploy#prefix
+
+   [pipeline:main]
+   pipeline =
+       paste_prefix
+       myapp
+
+  [server:main]
+  use = egg:waitress#main
+  host = 127.0.0.1
+  port = 8080
+
+Known Issues
+------------
+
+- The server returns a ``write`` callable from ``start_response`` which
+  raises a ``NotImplementedError`` exception when called.  It does not
+  support the write callable.
+
+- This server claims to support HTTP/1.1 but does not implement the
+  Expect/Continue protocol required by WSGI.
+
+- This server does not support the ``wsgi.file_wrapper`` protocol.
 
 .. _PasteDeploy: http://pythonpaste.org/deploy/
