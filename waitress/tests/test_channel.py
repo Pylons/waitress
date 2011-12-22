@@ -333,6 +333,39 @@ class TestHTTPServerChannel(unittest.TestCase):
         self.assertEqual(inst.server.tasks, [inst])
         self.assertEqual(len(inst.tasks), 1)
 
+    def test_received_preq_not_completed(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        preq = DummyParser()
+        inst.proto_request = preq
+        preq.completed = False
+        preq.empty = True
+        inst.received('GET / HTTP/1.1\n\n')
+        self.assertEqual(inst.server.tasks, [])
+
+    def test_received_preq_completed(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        preq = DummyParser()
+        inst.proto_request = preq
+        preq.completed = True
+        preq.empty = True
+        inst.received('GET / HTTP/1.1\n\n')
+        self.assertEqual(inst.proto_request, None)
+        self.assertEqual(inst.server.tasks, [])
+
+    def test_received_preq_completed_n_lt_data(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        preq = DummyParser()
+        inst.proto_request = preq
+        preq.completed = True
+        preq.empty = True
+        preq.retval = 1
+        inst.received('GET / HTTP/1.1\n\n')
+        self.assertEqual(inst.proto_request, None)
+        self.assertEqual(inst.server.tasks, [inst])
+
     def test_handle_request(self):
         req = DummyParser()
         inst, sock, map = self._makeOneWithMap()
@@ -487,6 +520,13 @@ class DummyServer(object):
 
 class DummyParser(object):
     version = 1
+    data = None
+    completed = True
+    empty = False
+    retval = 1000
+    def received(self, data):
+        self.data = data
+        return self.retval
     
 class DummyTask(object):
     serviced = False
