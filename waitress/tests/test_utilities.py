@@ -21,11 +21,3 @@ class HTTPDateTests(unittest.TestCase):
         from time import time
         t = int(time())
         self.assertEquals(t, parse_http_date(build_http_date(t)))
-
-
-def test_suite():
-    loader = unittest.TestLoader()
-    return loader.loadTestsFromTestCase(HTTPDateTests)
-
-if __name__=='__main__':
-    unittest.TextTestRunner().run(test_suite())
