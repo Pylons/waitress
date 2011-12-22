@@ -20,14 +20,6 @@ import thread
 import errno
 
 _ADDRESS_MASK = 256 ** struct.calcsize('P')
-def positive_id(obj):
-    """Return id(obj) as a non-negative integer."""
-
-    result = id(obj)
-    if result < 0:
-        result += _ADDRESS_MASK
-        assert result > 0
-    return result
 
 # Original comments follow; they're hard to follow in the context of
 # ZEO's use of triggers.  TODO:  rewrite from a ZEO perspective.
@@ -135,9 +127,6 @@ class _triggerbase(object):
             self.thunks = []
         finally:
             self.lock.release()
-
-    def __repr__(self):
-        return '<select-trigger (%s) at %x>' % (self.kind, positive_id(self))
 
 if os.name == 'posix':
 
