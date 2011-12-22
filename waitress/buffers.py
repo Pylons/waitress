@@ -140,7 +140,7 @@ class OverflowableBuffer(object):
     The first two stages are fastest for simple transfers.
     """
 
-    overflowed = 0
+    overflowed = False
     buf = None
     strbuf = ''  # String-based buffer.
 
@@ -170,11 +170,11 @@ class OverflowableBuffer(object):
 
     def _set_small_buffer(self):
         self.buf = StringIOBasedBuffer(self.buf)
-        self.overflowed = 0
+        self.overflowed = False
 
     def _set_large_buffer(self):
         self.buf = TempfileBasedBuffer(self.buf)
-        self.overflowed = 1
+        self.overflowed = True
 
     def append(self, s):
         buf = self.buf

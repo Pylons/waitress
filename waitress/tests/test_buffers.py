@@ -30,7 +30,7 @@ class TestFileBasedBuffer(unittest.TestCase):
         inst.append('data2')
         self.assertEqual(f.getvalue(), 'datadata2')
         self.assertEqual(inst.remain, 5)
-        
+
     def test_get_skip_true(self):
         f = StringIO.StringIO('data')
         inst = self._makeOne(f)
@@ -177,6 +177,18 @@ class TestOverflowableBuffer(unittest.TestCase):
         inst.append('hello')
         self.assertEqual(inst.strbuf, '')
         self.assertEqual(len(inst.buf), 8197)
+        
+    def test_append_sz_gt_overflow(self):
+        from waitress.buffers import StringIOBasedBuffer
+        f = StringIO.StringIO('data')
+        inst = self._makeOne(f)
+        buf = StringIOBasedBuffer()
+        inst.buf = buf
+        inst.overflow = 2
+        inst.append('data2')
+        self.assertEqual(f.getvalue(), 'data')
+        self.assertTrue(inst.overflowed)
+        self.assertNotEqual(inst.buf, buf)
         
     def test_get_buf_None_skip_False(self):
         inst = self._makeOne()
