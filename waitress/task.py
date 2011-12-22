@@ -12,11 +12,11 @@
 #
 ##############################################################################
 
-import logging
 from Queue import Queue, Empty
 from thread import allocate_lock, start_new_thread
 import socket
 import time
+import traceback
 
 from waitress.utilities import build_http_date
 
@@ -25,8 +25,6 @@ rename_headers = {
     'CONTENT_TYPE'   : 'CONTENT_TYPE',
     'CONNECTION'     : 'CONNECTION_TYPE',
     }
-
-log = logging.getLogger(__name__)
 
 class ThreadedTaskDispatcher(object):
     """A Task Dispatcher that creates a thread for each task.
@@ -51,7 +49,7 @@ class ThreadedTaskDispatcher(object):
                 try:
                     task.service()
                 except:
-                    log.exception('Exception during task')
+                    traceback.print_exc()
         finally:
             mlock = self.thread_mgmt_lock
             mlock.acquire()
@@ -108,7 +106,7 @@ class ThreadedTaskDispatcher(object):
         expiration = time.time() + timeout
         while threads:
             if time.time() >= expiration:
-                log.error("%d thread(s) still running" % len(threads))
+                print("%d thread(s) still running" % len(threads))
                 break
             time.sleep(0.1)
         if cancel_pending:
@@ -330,9 +328,6 @@ class HTTPTask(object):
     def finish(self):
         if not self.wrote_header:
             self.write('')
-        hit_log = self.channel.server.hit_log
-        if hit_log is not None:
-            hit_log.log(self)
 
     def write(self, data):
         channel = self.channel

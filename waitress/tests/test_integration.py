@@ -553,8 +553,6 @@ class TestWSGIHTTPServerWithPublisher(PlacelessSetup, unittest.TestCase):
                 getBodyStream = lambda _: StringIO.StringIO()
             request_data = request_data()
             setResponseStatus = appendResponseHeaders = lambda *_: None
-            def wroteResponseHeader(self):
-                return self.wrote_header
             def write(self, v):
                 self.counter += 1
 
@@ -598,8 +596,6 @@ class TestWSGIHTTPServerWithPublisher(PlacelessSetup, unittest.TestCase):
             def setResponseStatus(self, status, reason):
                 self.status = status
                 self.reason = reason
-            def wroteResponseHeader(self):
-                return self.wrote_header
             def write(self, v):
                 self.response.append(v)
 
@@ -827,8 +823,6 @@ class TestWSGIHTTPServer(PlacelessSetup, unittest.TestCase):
                 getBodyStream = lambda _: StringIO.StringIO()
             request_data = request_data()
             setResponseStatus = appendResponseHeaders = lambda *_: None
-            def wroteResponseHeader(self):
-                return self.wrote_header
             def write(self, v):
                 self.counter += 1
 
@@ -872,8 +866,6 @@ class TestWSGIHTTPServer(PlacelessSetup, unittest.TestCase):
             def setResponseStatus(self, status, reason):
                 self.status = status
                 self.reason = reason
-            def wroteResponseHeader(self):
-                return self.wrote_header
             def write(self, v):
                 self.response.append(v)
 

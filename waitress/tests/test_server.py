@@ -4,8 +4,7 @@ import unittest
 
 class TestWSGIHTTPServer(unittest.TestCase):
     def _makeOne(self, application, ip, port, task_dispatcher=None, adj=None,
-                 start=True, verbose=False, map=None,
-                 logger=None, sock=None):
+                 start=True, map=None, sock=None):
         from waitress.server import WSGIHTTPServer
         class TestServer(WSGIHTTPServer):
             def bind(self, (ip, port)):
@@ -17,55 +16,40 @@ class TestWSGIHTTPServer(unittest.TestCase):
             task_dispatcher=task_dispatcher,
             adj=adj,
             start=start,
-            verbose=verbose,
             map=map,
-            logger=logger,
             sock=sock)
     
-    def _makeOneWithMap(self, adj=None, start=True, verbose=False,
-                        ip='127.0.0.1', port=62122, app=None):
+    def _makeOneWithMap(self, adj=None, start=True, ip='127.0.0.1', port=62122,
+                        app=None):
         sock = DummySock()
         task_dispatcher = DummyTaskDispatcher()
         map = {}
-        logger = DummyLogger()
         return self._makeOne(app, ip, port, task_dispatcher=task_dispatcher,
-                             start=start, verbose=verbose, map=map,
-                             logger=logger, sock=sock)
+                             start=start, map=map, sock=sock)
 
-    def test_ctor_start_true_verbose(self):
-        inst = self._makeOneWithMap(verbose=True, start=True)
-        self.assertEqual(len(inst.logger.msgs), 2)
+    def test_ctor_start_true(self):
+        inst = self._makeOneWithMap(start=True)
+        self.assertEqual(inst.accepting, True)
+        self.assertEqual(inst.socket.listened, 1024)
 
     def test_ctor_start_false(self):
-        inst = self._makeOneWithMap(verbose=True, start=False)
-        self.assertEqual(len(inst.logger.msgs), 1)
-
-    def test_log(self):
-        inst = self._makeOneWithMap(verbose=True, start=False)
-        inst.logger = DummyLogger()
-        inst.log('msg')
-        self.assertEqual(len(inst.logger.msgs), 1)
+        inst = self._makeOneWithMap(start=False)
+        self.assertEqual(inst.accepting, False)
 
     def test_computeServerName_empty(self):
-        inst = self._makeOneWithMap(verbose=True, start=False)
-        inst.logger = DummyLogger()
+        inst = self._makeOneWithMap(start=False)
         result = inst.computeServerName('')
         self.failUnless(result)
-        self.assertEqual(len(inst.logger.msgs), 0)
 
     def test_computeServerName_with_ip(self):
-        inst = self._makeOneWithMap(verbose=True, start=False)
-        inst.logger = DummyLogger()
+        inst = self._makeOneWithMap(start=False)
         result = inst.computeServerName('127.0.0.1')
         self.failUnless(result)
-        self.assertEqual(len(inst.logger.msgs), 1)
 
     def test_computeServerName_with_hostname(self):
-        inst = self._makeOneWithMap(verbose=True, start=False)
-        inst.logger = DummyLogger()
+        inst = self._makeOneWithMap(start=False)
         result = inst.computeServerName('fred.flintstone.com')
         self.assertEqual(result, 'fred.flintstone.com')
-        self.assertEqual(len(inst.logger.msgs), 0)
 
     def test_addTask_with_task_dispatcher(self):
         task = DummyTask()
@@ -124,10 +108,13 @@ class TestWSGIHTTPServer(unittest.TestCase):
         eaborted = socket.error(errno.ECONNABORTED)
         inst.socket = DummySock(toraise=eaborted)
         inst.adj = DummyAdj
-        inst.logger = DummyLogger()
+        L = []
+        def log_info(msg, type):
+            L.append(msg)
+        inst.log_info = log_info
         inst.handle_accept()
         self.assertEqual(inst.socket.accepted, False)
-        self.assertEqual(len(inst.logger.msgs), 1)
+        self.assertEqual(len(L), 1)
 
     def test_handle_accept_noerror(self):
         inst = self._makeOneWithMap()
@@ -176,14 +163,6 @@ class DummyTask(object):
     serviced = False
     def service(self):
         self.serviced = True
-
-class DummyLogger(object):
-    def __init__(self):
-        self.msgs = []
-    def log(self, level, msg):
-        self.msgs.append(msg)
-    def info(self, msg):
-        self.msgs.append(msg)
 
 class DummyAdj:
     connection_limit = 1

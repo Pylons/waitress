@@ -13,7 +13,6 @@
 ##############################################################################
 
 import asyncore
-import logging
 import re
 import socket
 import sys
@@ -43,17 +42,20 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
 
     channel_class = HTTPServerChannel
     SERVER_IDENT = 'waitress'
-    socketmod = socket # testing shim
+    socketmod = socket # test shim
 
-    level_mapping = {
-        'info': logging.INFO,
-        'error': logging.ERROR,
-        'warning': logging.WARN,
-        }
+    def __init__(self,
+                 application,
+                 ip,
+                 port,
+                 task_dispatcher,
+                 ident=None,
+                 adj=None,
+                 start=True, # test shim
+                 map=None,   # test shim
+                 sock=None   # test shim
+                 ): 
 
-    def __init__(self, application, ip, port, task_dispatcher=None,
-                 ident=None, adj=None, verbose=True, logger=None, start=True, 
-                 map=None, sock=None):
         self.application = application
 
         if ident is not None:
@@ -61,6 +63,9 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
 
         if sys.platform[:3] == "win" and ip == 'localhost':
             ip = ''
+
+        self.ip = ip or '127.0.0.1'
+
         if adj is None:
             adj = default_adj
         self.adj = adj
@@ -71,24 +76,11 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind((ip, port))
-        self.verbose = verbose
-        if logger is None:
-            logger = logging.getLogger(self.__class__.__name__)
-        self.logger = logger
         self.server_name = self.computeServerName(ip)
         if start:
             self.accept_connections()
 
-    def log(self, message):
-        """See waitress.interfaces.IDispatcherLogging"""
-        # Override asyncore's default log()
-        self.logger.info(message)
-
-    def log_info(self, message, type='info'):
-        """See waitress.interfaces.IDispatcherLogging"""
-        self.logger.log(self.level_mapping.get(type, logging.INFO), message)
-
-    def computeServerName(self, ip=''):
+    def computeServerName(self, ip):
         """Given an IP, try to determine the server name."""
         if ip:
             server_name = str(ip)
@@ -101,24 +93,17 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
                 is_hostname = True
                 break
         if not is_hostname:
-            if self.verbose:
-                self.log_info('Computing hostname', 'info')
             try:
+                if server_name == '0.0.0.0':
+                    return 'localhost'
                 server_name = self.socketmod.gethostbyaddr(server_name)[0]
             except socket.error: # pragma: no cover
-                if self.verbose:
-                    self.log_info('Cannot do reverse lookup', 'info')
+                pass
         return server_name
 
     def accept_connections(self):
-        self.accepting = 1
+        self.accepting = True
         self.socket.listen(self.adj.backlog)  # Get around asyncore NT limit
-        if self.verbose:
-            self.log_info('%s started.\n\tHostname: %s\n\tPort: %d' % (
-                self.SERVER_IDENT,
-                self.server_name,
-                self.port
-                ))
 
     def addTask(self, task):
         """See waitress.interfaces.ITaskDispatcher"""
@@ -157,8 +142,8 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             # address family is unknown.  We don't want the whole server
             # to shut down because of this.
             if self.adj.log_socket_errors:
-                self.log_info ('warning: server accept() threw an exception',
-                               'warning')
+                self.log_info('warning: server accept() threw an exception',
+                              'warning')
             return
         for (level, optname, value) in self.adj.socket_options:
             conn.setsockopt(level, optname, value)
@@ -205,18 +190,24 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         for value in result:
             task.write(value)
 
+    def run(self):
+        try:
+            asyncore.loop()
+        except KeyboardInterrupt:
+            self.task_dispatcher.shutdown()
+
 def fakeWrite(body):
     raise NotImplementedError(
         "the waitress HTTP Server does not support the WSGI write() function.")
 
 def curriedStartResponse(task):
     def start_response(status, headers, exc_info=None):
-        if task.wroteResponseHeader() and not exc_info:
+        if task.wrote_header and not exc_info:
             raise AssertionError("start_response called a second time "
                                  "without providing exc_info.")
         if exc_info:
             try:
-                if task.wroteResponseHeader():
+                if task.wrote_header:
                     # higher levels will catch and handle raised exception:
                     # 1. "service" method in httptask.py
                     # 2. "service" method in severchannelbase.py

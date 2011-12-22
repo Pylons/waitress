@@ -318,11 +318,11 @@ class IHeaderOutput(Interface):
         Takes a list of strings.
         """
 
-    def wroteResponseHeader():
+    wrote_header = Attribute(
         """Returns a flag indicating whether the response
 
         header has already been sent.
-        """
+        """)
 
     def setAuthUserName(name):
         """Sets the name of the authenticated user so the name can be logged.
