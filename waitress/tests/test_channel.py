@@ -1,9 +1,9 @@
 import unittest
 
-class TestDualModeChannel(unittest.TestCase):
+class TestHTTPServerChannel(unittest.TestCase):
     def _makeOne(self, sock, addr, adj=None, map=None):
-        from waitress.channel import DualModeChannel
-        return DualModeChannel(sock, addr, adj=adj, map=map)
+        from waitress.channel import HTTPServerChannel
+        return HTTPServerChannel(None, sock, addr, adj=adj, map=map)
 
     def _makeOneWithMap(self, adj=None):
         sock = DummySock()
@@ -45,35 +45,39 @@ class TestDualModeChannel(unittest.TestCase):
 
     def test_handle_write_sync_mode(self):
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = False
         result = inst.handle_write()
         self.assertEqual(result, None)
-        self.assertEqual(inst.last_activity, None)
+        self.assertEqual(inst.last_activity, la)
 
     def test_handle_write_async_mode_with_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = True
         inst.outbuf = DummyBuffer('abc')
         result = inst.handle_write()
         self.assertEqual(result, None)
-        self.assertTrue(inst.last_activity)
+        self.assertNotEqual(inst.last_activity, la)
         self.assertEqual(sock.sent, 'abc')
 
     def test_handle_write_async_mode_with_outbuf_raises_socketerror(self):
         import socket
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = True
         L = []
         inst.log_info = lambda *x: L.append(x)
         inst.outbuf = DummyBuffer('abc', socket.error)
         result = inst.handle_write()
         self.assertEqual(result, None)
-        self.assertTrue(inst.last_activity)
+        self.assertNotEqual(inst.last_activity, la)
         self.assertEqual(sock.sent, '')
         self.assertEqual(len(L), 1)
 
     def test_handle_write_async_mode_no_outbuf_will_close(self):
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = True
         inst.outbuf = None
         inst.will_close = True
@@ -81,7 +85,7 @@ class TestDualModeChannel(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(inst.connected, False)
         self.assertEqual(sock.closed, True)
-        self.assertTrue(inst.last_activity)
+        self.assertNotEqual(inst.last_activity, la)
 
     def test_readable_async_mode_not_will_close(self):
         inst, sock, map = self._makeOneWithMap()
@@ -102,21 +106,24 @@ class TestDualModeChannel(unittest.TestCase):
 
     def test_handle_read_sync_mode(self):
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = False
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertFalse(inst.last_activity)
+        self.assertEqual(inst.last_activity, la)
 
     def test_handle_read_async_mode_will_close(self):
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = True
         inst.will_close = True
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertFalse(inst.last_activity)
+        self.assertEqual(inst.last_activity, la)
 
     def test_handle_read_async_mode_no_error(self):
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = True
         inst.will_close = False
         inst.recv = lambda *arg: 'abc'
@@ -124,12 +131,13 @@ class TestDualModeChannel(unittest.TestCase):
         inst.received = lambda data: L.append(data)
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertTrue(inst.last_activity)
+        self.assertNotEqual(inst.last_activity, la)
         self.assertEqual(L, ['abc'])
 
     def test_handle_read_async_mode_error(self):
         import socket
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = True
         inst.will_close = False
         def recv(b): raise socket.error
@@ -138,7 +146,7 @@ class TestDualModeChannel(unittest.TestCase):
         inst.log_info = lambda *x: L.append(x)
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertFalse(inst.last_activity)
+        self.assertEqual(inst.last_activity, la)
         self.assertEqual(len(L), 1)
 
     def test_received(self):
@@ -153,11 +161,12 @@ class TestDualModeChannel(unittest.TestCase):
 
     def test_set_async(self):
         inst, sock, map = self._makeOneWithMap()
+        la = inst.last_activity
         inst.async_mode = False
         inst.trigger = DummyTrigger()
         inst.set_async()
         self.assertEqual(inst.async_mode, True)
-        self.assertTrue(inst.last_activity)
+        self.assertNotEqual(inst.last_activity, la)
         self.assertTrue(inst.trigger.pulled)
 
     def test_write_empty_byte(self):

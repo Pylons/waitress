@@ -28,7 +28,7 @@ from waitress.task import HTTPTask
 # task_lock is useful for synchronizing access to task-related attributes.
 task_lock = thread.allocate_lock()
 
-class DualModeChannel(asyncore.dispatcher, object):
+class HTTPServerChannel(asyncore.dispatcher, object):
     """Channel that switches between asynchronous and synchronous mode.
 
     Call set_sync() before using a channel in a thread other than
@@ -38,17 +38,25 @@ class DualModeChannel(asyncore.dispatcher, object):
     the main loop.
     """
 
-    # will_close is set to True to close the socket.
-    will_close = False
-
-    # boolean: async or sync mode
-    async_mode = True
-
-    last_activity = None
+    task_class = HTTPTask
+    parser_class = HTTPRequestParser
 
     trigger = trigger.trigger()
 
-    def __init__(self, sock, addr, adj=None, map=None):
+    active_channels = {}        # Class-specific channel tracker
+    next_channel_cleanup = [0]  # Class-specific cleanup time
+    proto_request = None        # A request parser instance
+    last_activity = 0           # Time of last activity
+    tasks = None                # List of channel-related tasks to execute
+    running_tasks = False       # True when another thread is running tasks
+    will_close = False          # will_close is set to True to close the socket.
+    async_mode = True           # boolean: async or sync mode
+
+    #
+    # ASYNCHRONOUS METHODS (including __init__)
+    #
+
+    def __init__(self, server, sock, addr, adj=None, map=None):
         if map is None: # for testing
             map = asyncore.socket_map
         self.addr = addr
@@ -58,10 +66,9 @@ class DualModeChannel(asyncore.dispatcher, object):
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
         self.creation_time = time.time()
         asyncore.dispatcher.__init__(self, sock, map=map)
-
-    #
-    # ASYNCHRONOUS METHODS
-    #
+        self.server = server
+        self.last_activity = t = self.creation_time
+        self.check_maintenance(t)
 
     def handle_close(self):
         self.close()
@@ -99,26 +106,117 @@ class DualModeChannel(asyncore.dispatcher, object):
         self.last_activity = time.time()
         self.received(data)
 
-    def received(self, data):
-        """
-        Override to receive data in async mode.
-        """
-        pass
-
-    def handle_comm_error(self):
-        """
-        Designed for handling communication errors that occur
-        during asynchronous operations *only*.  Probably should log
-        this, but in a different place.
-        """
-        self.handle_error()
-
     def set_sync(self):
         """Switches to synchronous mode.
 
         The main thread will stop calling received().
         """
         self.async_mode = False
+
+    def add_channel(self, map=None):
+        """See async.dispatcher
+
+        This hook keeps track of opened channels.
+        """
+        asyncore.dispatcher.add_channel(self, map)
+        self.__class__.active_channels[self._fileno] = self
+
+    def del_channel(self, map=None):
+        """See async.dispatcher
+
+        This hook keeps track of closed channels.
+        """
+        asyncore.dispatcher.del_channel(self, map)
+        ac = self.__class__.active_channels
+        fd = self._fileno
+        if fd in ac:
+            del ac[fd]
+
+    def check_maintenance(self, now):
+        """See async.dispatcher
+
+        Performs maintenance if necessary.
+        """
+        ncc = self.__class__.next_channel_cleanup
+        if now < ncc[0]:
+            return
+        ncc[0] = now + self.adj.cleanup_interval
+        self.maintenance()
+
+    def maintenance(self):
+        """See async.dispatcher
+
+        Kills off dead connections.
+        """
+        self.kill_zombies()
+
+    def kill_zombies(self):
+        """See async.dispatcher
+
+        Closes connections that have not had any activity in a while.
+
+        The timeout is configured through adj.channel_timeout (seconds).
+        """
+        now = time.time()
+        cutoff = now - self.adj.channel_timeout
+        for channel in self.active_channels.values():
+            if (channel is not self and not channel.running_tasks and
+                channel.last_activity < cutoff):
+                channel.close()
+
+    def received(self, data):
+        """See async.dispatcher
+
+        Receives input asynchronously and send requests to
+        handle_request().
+        """
+        preq = self.proto_request
+        while data:
+            if preq is None:
+                preq = self.parser_class(self.adj)
+            n = preq.received(data)
+            if preq.completed:
+                # The request is ready to use.
+                self.proto_request = None
+                if not preq.empty:
+                    self.handle_request(preq)
+                preq = None
+            else:
+                self.proto_request = preq
+            if n >= len(data):
+                break
+            data = data[n:]
+
+    def handle_request(self, req):
+        """Creates and queues a task for processing a request.
+
+        Subclasses may override this method to handle some requests
+        immediately in the main async thread.
+        """
+        task = self.task_class(self, req)
+        self.queue_task(task)
+
+    def handle_error(self):
+        """See async.dispatcher
+
+        Handles program errors (not communication errors)
+        """
+        t, v = sys.exc_info()[:2]
+        if t is SystemExit or t is KeyboardInterrupt:
+            raise t(v)
+        asyncore.dispatcher.handle_error(self)
+
+    def handle_comm_error(self):
+        """See async.dispatcher
+
+        Handles communication errors (not program errors)
+        """
+        if self.adj.log_socket_errors:
+            self.handle_error()
+        else:
+            # Ignore socket errors.
+            self.close()
+
 
     #
     # SYNCHRONOUS METHODS
@@ -221,140 +319,6 @@ class DualModeChannel(asyncore.dispatcher, object):
         assert self.async_mode
         self.connected = False
         asyncore.dispatcher.close(self)
-
-class HTTPServerChannel(DualModeChannel):
-    """Base class for a high-performance, mixed-mode server-side channel."""
-
-    # See waitress.interfaces.IServerChannel (also implements ITask)
-    
-    task_class = HTTPTask
-    parser_class = HTTPRequestParser
-
-    active_channels = {}        # Class-specific channel tracker
-    next_channel_cleanup = [0]  # Class-specific cleanup time
-    proto_request = None      # A request parser instance
-    last_activity = 0         # Time of last activity
-    tasks = None  # List of channel-related tasks to execute
-    running_tasks = False  # True when another thread is running tasks
-
-    #
-    # ASYNCHRONOUS METHODS (including __init__)
-    #
-
-    def __init__(self, server, conn, addr, adj=None):
-        """See async.dispatcher"""
-        DualModeChannel.__init__(self, conn, addr, adj)
-        self.server = server
-        self.last_activity = t = self.creation_time
-        self.check_maintenance(t)
-
-    def add_channel(self, map=None):
-        """See async.dispatcher
-
-        This hook keeps track of opened channels.
-        """
-        DualModeChannel.add_channel(self, map)
-        self.__class__.active_channels[self._fileno] = self
-
-    def del_channel(self, map=None):
-        """See async.dispatcher
-
-        This hook keeps track of closed channels.
-        """
-        DualModeChannel.del_channel(self, map)
-        ac = self.__class__.active_channels
-        fd = self._fileno
-        if fd in ac:
-            del ac[fd]
-
-    def check_maintenance(self, now):
-        """See async.dispatcher
-
-        Performs maintenance if necessary.
-        """
-        ncc = self.__class__.next_channel_cleanup
-        if now < ncc[0]:
-            return
-        ncc[0] = now + self.adj.cleanup_interval
-        self.maintenance()
-
-    def maintenance(self):
-        """See async.dispatcher
-
-        Kills off dead connections.
-        """
-        self.kill_zombies()
-
-    def kill_zombies(self):
-        """See async.dispatcher
-
-        Closes connections that have not had any activity in a while.
-
-        The timeout is configured through adj.channel_timeout (seconds).
-        """
-        now = time.time()
-        cutoff = now - self.adj.channel_timeout
-        for channel in self.active_channels.values():
-            if (channel is not self and not channel.running_tasks and
-                channel.last_activity < cutoff):
-                channel.close()
-
-    def received(self, data):
-        """See async.dispatcher
-
-        Receives input asynchronously and send requests to
-        handle_request().
-        """
-        preq = self.proto_request
-        while data:
-            if preq is None:
-                preq = self.parser_class(self.adj)
-            n = preq.received(data)
-            if preq.completed:
-                # The request is ready to use.
-                self.proto_request = None
-                if not preq.empty:
-                    self.handle_request(preq)
-                preq = None
-            else:
-                self.proto_request = preq
-            if n >= len(data):
-                break
-            data = data[n:]
-
-    def handle_request(self, req):
-        """Creates and queues a task for processing a request.
-
-        Subclasses may override this method to handle some requests
-        immediately in the main async thread.
-        """
-        task = self.task_class(self, req)
-        self.queue_task(task)
-
-    def handle_error(self):
-        """See async.dispatcher
-
-        Handles program errors (not communication errors)
-        """
-        t, v = sys.exc_info()[:2]
-        if t is SystemExit or t is KeyboardInterrupt:
-            raise t(v)
-        asyncore.dispatcher.handle_error(self)
-
-    def handle_comm_error(self):
-        """See async.dispatcher
-
-        Handles communication errors (not program errors)
-        """
-        if self.adj.log_socket_errors:
-            self.handle_error()
-        else:
-            # Ignore socket errors.
-            self.close()
-
-    #
-    # BOTH MODES
-    #
 
     def queue_task(self, task):
         """Queue a channel-related task to be executed in another thread."""
