@@ -22,6 +22,7 @@ class Adjustments(object):
     all sockets, or you can create a new instance of this class,
     change its attributes, and pass it to the channel constructors.
     """
+    url_scheme = 'http'
 
     # backlog is the argument to pass to socket.listen().
     backlog = 1024
