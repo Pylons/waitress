@@ -90,3 +90,7 @@ else: # pragma: no cover
 """)
 
 
+try: 
+    from StringIO import StringIO as NativeIO
+except ImportError: # pragma: no cover
+    from io import StringIO as NativeIO

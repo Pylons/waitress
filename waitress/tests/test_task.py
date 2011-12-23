@@ -15,10 +15,11 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(inst.threads, {})
 
     def test_handlerThread_task_raises(self):
+        from waitress.compat import NativeIO
         from waitress.task import JustTesting
         inst = self._makeOne()
         inst.threads[0] = True
-        inst.stderr = io.BytesIO()
+        inst.stderr = NativeIO()
         task = DummyTask(JustTesting)
         inst.queue.put(task)
         inst.handlerThread(0)
@@ -72,9 +73,10 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertTrue(task.cancelled)
 
     def test_shutdown_one_thread(self):
+        from waitress.compat import NativeIO
         inst = self._makeOne()
         inst.threads[0] = 1
-        inst.stderr = io.BytesIO()
+        inst.stderr = NativeIO()
         task = DummyTask()
         inst.queue.put(task)
         self.assertEqual(inst.shutdown(timeout=.01), True)
@@ -143,7 +145,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.request_data.headers['CONNECTION'] = 'keep-alive'
         inst.version = '1.0'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'HTTP/1.0 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -159,7 +161,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.response_headers = {'Content-Length':'10'}
         inst.version = '1.0'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], 'HTTP/1.0 200 OK')
         self.assertEqual(lines[1], 'Connection: Keep-Alive')
@@ -174,7 +176,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.version = '1.1'
         inst.accumulated_headers = ['Connection: close']
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -189,7 +191,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.version = '1.1'
         inst.request_data.headers['CONNECTION'] = 'close'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -204,7 +206,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.request_data.headers['CONNECTION'] = 'keep-alive'
         inst.version = '1.1'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -219,7 +221,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.response_headers = {'Transfer-Encoding': 'notchunked'}
         inst.version = '1.1'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -235,7 +237,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.response_headers = {'Transfer-Encoding': 'chunked'}
         inst.version = '1.1'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
         self.assertTrue(lines[1].startswith('Date:'))
@@ -249,7 +251,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.status = '304'
         inst.version = '1.1'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], 'HTTP/1.1 304 OK')
         self.assertTrue(lines[1].startswith('Date:'))
@@ -261,7 +263,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.request_data = DummyParser()
         inst.version = '1.1'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -275,7 +277,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.request_data = DummyParser()
         inst.version = '8.1'
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'HTTP/8.1 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -290,7 +292,7 @@ class TestHTTPTask(unittest.TestCase):
         inst.version = '1.0'
         inst.accumulated_headers = ['Server: abc']
         result = inst.buildResponseHeader()
-        lines = filter(None, result.split('\r\n'))
+        lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], 'HTTP/1.0 200 OK')
         self.assertEqual(lines[1], 'Connection: close')
@@ -457,3 +459,7 @@ class DummyParser(object):
         self.headers = {}
     def getBodyStream(self):
         return 'stream'
+
+def filter_lines(s):
+    return list(filter(None, s.split('\r\n')))
+

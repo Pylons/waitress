@@ -139,7 +139,7 @@ if os.name == 'posix':
             self._fds = []
 
         def _physical_pull(self):
-            os.write(self.trigger, 'x')
+            os.write(self.trigger, b'x')
 
 else:
     # Windows version; uses just sockets, because a pipe isn't select'able
