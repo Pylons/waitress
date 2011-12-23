@@ -139,7 +139,7 @@ class OverflowableBuffer(object):
 
     overflowed = False
     buf = None
-    strbuf = ''  # String-based buffer.
+    strbuf = b''  # Bytes-based buffer.
 
     def __init__(self, overflow):
         # overflow is the maximum to be stored in a StringIO buffer.
@@ -162,7 +162,7 @@ class OverflowableBuffer(object):
         buf = self.buf
         if strbuf:
             buf.append(self.strbuf)
-            self.strbuf = ''
+            self.strbuf = b''
         return buf
 
     def _set_small_buffer(self):
@@ -204,7 +204,7 @@ class OverflowableBuffer(object):
                 # We could slice instead of converting to
                 # a buffer, but that would eat up memory in
                 # large transfers.
-                self.strbuf = ''
+                self.strbuf = b''
                 return
             buf = self._create_buffer()
         buf.skip(numbytes, allow_prune)
@@ -216,7 +216,7 @@ class OverflowableBuffer(object):
         """
         buf = self.buf
         if buf is None:
-            self.strbuf = ''
+            self.strbuf = b''
             return
         buf.prune()
         if self.overflowed:

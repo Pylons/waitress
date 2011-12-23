@@ -14,6 +14,7 @@
 """HTTP Request Parser tests
 """
 import unittest
+from waitress.compat import text_
 
 class TestHTTPRequestParser(unittest.TestCase):
     def setUp(self):
@@ -84,15 +85,15 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(result, ('GET', '/', None))
 
     def test_get_header_lines(self):
-        result = self.parser.get_header_lines('slam\nslim')
-        self.assertEqual(result, ['slam', 'slim'])
+        result = self.parser.get_header_lines(b'slam\nslim')
+        self.assertEqual(result, [b'slam', b'slim'])
 
     def test_get_header_lines_tabbed(self):
-        result = self.parser.get_header_lines('slam\n\tslim')
-        self.assertEqual(result, ['slamslim'])
+        result = self.parser.get_header_lines(b'slam\n\tslim')
+        self.assertEqual(result, [b'slamslim'])
 
     def test_received_nonsense_with_double_cr(self):
-        data = """\
+        data = b"""\
 HTTP/1.0 GET /foobar
 
 
@@ -103,7 +104,7 @@ HTTP/1.0 GET /foobar
         self.assertEqual(self.parser.headers, {})
 
     def test_received_nonsense_nothing(self):
-        data = """\
+        data = b"""\
 
 
 """
@@ -113,7 +114,7 @@ HTTP/1.0 GET /foobar
         self.assertEqual(self.parser.headers, {})
 
     def test_received_no_doublecr(self):
-        data = """\
+        data = b"""\
 GET /foobar HTTP/8.4
 """
         result = self.parser.received(data)
@@ -123,11 +124,11 @@ GET /foobar HTTP/8.4
 
     def test_received_already_completed(self):
         self.parser.completed = True
-        result = self.parser.received('a')
+        result = self.parser.received(b'a')
         self.assertEqual(result, 0)
 
     def test_parse_header_gardenpath(self):
-        data = """\
+        data = b"""\
 GET /foobar HTTP/8.4
 foo: bar"""
         self.parser.parse_header(data)
@@ -135,12 +136,12 @@ foo: bar"""
         self.assertEqual(self.parser.headers['FOO'], 'bar')
 
     def test_parse_header_no_cr_in_headerplus(self):
-        data = "GET /foobar HTTP/8.4"
+        data = b"GET /foobar HTTP/8.4"
         self.parser.parse_header(data)
-        self.assertEqual(self.parser.first_line, data)
+        self.assertEqual(self.parser.first_line, data.decode('ascii'))
 
     def test_parse_header_bad_content_length(self):
-        data = "GET /foobar HTTP/8.4\ncontent-length: abc"
+        data = b"GET /foobar HTTP/8.4\ncontent-length: abc"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv, None)
         
@@ -163,7 +164,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         raise ValueError('Looping') # pragma: no cover
 
     def testSimpleGET(self):
-        data = """\
+        data = b"""\
 GET /foobar HTTP/8.4
 FirstName: mickey
 lastname: Mouse
@@ -186,10 +187,10 @@ Hello.
         self.assertEqual(parser.query, None)
         self.assertEqual(parser.proxy_scheme, '')
         self.assertEqual(parser.proxy_netloc, '')
-        self.assertEqual(parser.getBodyStream().getvalue(), 'Hello.\n')
+        self.assertEqual(parser.getBodyStream().getvalue(), b'Hello.\n')
 
     def testComplexGET(self):
-        data = """\
+        data = b"""\
 GET /foo/a+%2B%2F%C3%A4%3D%26a%3Aint?d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6 HTTP/8.4
 FirstName: mickey
 lastname: Mouse
@@ -208,13 +209,14 @@ Hello mickey.
                           'CONTENT_LENGTH': '10',
                           })
         # path should be utf-8 encoded
-        self.assertEqual(parser.path, '/foo/a++/\xc3\xa4=&a:int')
+        self.assertEqual(parser.path, text_(b'/foo/a++/\xc3\xa4=&a:int',
+                                            'utf-8'))
         self.assertEqual(parser.query,
                          'd=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6')
-        self.assertEqual(parser.getBodyStream().getvalue(), 'Hello mick')
+        self.assertEqual(parser.getBodyStream().getvalue(), b'Hello mick')
 
     def testProxyGET(self):
-        data = """\
+        data = b"""\
 GET https://example.com:8080/foobar HTTP/8.4
 content-length: 7
 
@@ -234,12 +236,12 @@ Hello.
         self.assertEqual(parser.proxy_netloc, 'example.com:8080')
         self.assertEqual(parser.command, 'GET')
         self.assertEqual(parser.query, None)
-        self.assertEqual(parser.getBodyStream().getvalue(), 'Hello.\n')
+        self.assertEqual(parser.getBodyStream().getvalue(), b'Hello.\n')
 
     def testDuplicateHeaders(self):
         # Ensure that headers with the same key get concatenated as per
         # RFC2616.
-        data = """\
+        data = b"""\
 GET /foobar HTTP/8.4
 x-forwarded-for: 10.11.12.13
 x-forwarded-for: unknown,127.0.0.1

@@ -11,7 +11,7 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertEqual(inst.file, 'file')
         
     def test_ctor_from_buffer(self):
-        from_buffer = io.BytesIO('data')
+        from_buffer = io.BytesIO(b'data')
         from_buffer.getfile = lambda *x: from_buffer
         f = io.BytesIO()
         inst = self._makeOne(f, from_buffer)
@@ -25,42 +25,42 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertEqual(len(inst), 10)
 
     def test_append(self):
-        f = io.BytesIO('data')
+        f = io.BytesIO(b'data')
         inst = self._makeOne(f)
-        inst.append('data2')
-        self.assertEqual(f.getvalue(), 'datadata2')
+        inst.append(b'data2')
+        self.assertEqual(f.getvalue(), b'datadata2')
         self.assertEqual(inst.remain, 5)
 
     def test_get_skip_true(self):
-        f = io.BytesIO('data')
+        f = io.BytesIO(b'data')
         inst = self._makeOne(f)
         result = inst.get(100, skip=True)
-        self.assertEqual(result, 'data')
+        self.assertEqual(result, b'data')
         self.assertEqual(inst.remain, -4)
         
     def test_get_skip_false(self):
-        f = io.BytesIO('data')
+        f = io.BytesIO(b'data')
         inst = self._makeOne(f)
         result = inst.get(100, skip=False)
-        self.assertEqual(result, 'data')
+        self.assertEqual(result, b'data')
         self.assertEqual(inst.remain, 0)
 
     def test_get_skip_bytes_less_than_zero(self):
-        f = io.BytesIO('data')
+        f = io.BytesIO(b'data')
         inst = self._makeOne(f)
         result = inst.get(-1, skip=False)
-        self.assertEqual(result, 'data')
+        self.assertEqual(result, b'data')
         self.assertEqual(inst.remain, 0)
 
     def test_skip_remain_gt_bytes(self):
-        f = io.BytesIO('d')
+        f = io.BytesIO(b'd')
         inst = self._makeOne(f)
         inst.remain = 1
         inst.skip(1)
         self.assertEqual(inst.remain, 0)
 
     def test_skip_remain_lt_bytes(self):
-        f = io.BytesIO('d')
+        f = io.BytesIO(b'd')
         inst = self._makeOne(f)
         inst.remain = 1
         self.assertRaises(ValueError, inst.skip, 2)
@@ -70,24 +70,24 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertRaises(NotImplementedError, inst.newfile)
 
     def test_prune_remain_notzero(self):
-        f = io.BytesIO('d')
+        f = io.BytesIO(b'd')
         inst = self._makeOne(f)
         inst.remain = 1
         nf = io.BytesIO()
         inst.newfile = lambda *x: nf
         inst.prune()
         self.assertTrue(inst.file is not f)
-        self.assertEqual(nf.getvalue(), 'd')
+        self.assertEqual(nf.getvalue(), b'd')
         
     def test_prune_remain_zero_tell_notzero(self):
-        f = io.BytesIO('d')
+        f = io.BytesIO(b'd')
         inst = self._makeOne(f)
-        nf = io.BytesIO('d')
+        nf = io.BytesIO(b'd')
         inst.newfile = lambda *x: nf
         inst.remain = 0
         inst.prune()
         self.assertTrue(inst.file is not f)
-        self.assertEqual(nf.getvalue(), 'd')
+        self.assertEqual(nf.getvalue(), b'd')
         
     def test_prune_remain_zero_tell_zero(self):
         f = io.BytesIO()
@@ -104,7 +104,7 @@ class TestTempfileBasedBuffer(unittest.TestCase):
     def test_newfile(self):
         inst = self._makeOne()
         r = inst.newfile()
-        self.assertTrue(isinstance(r, file))
+        self.assertTrue(hasattr(r, 'fileno')) # file
 
 class TestBytesIOBasedBuffer(unittest.TestCase):
     def _makeOne(self, from_buffer=None):
@@ -143,84 +143,84 @@ class TestOverflowableBuffer(unittest.TestCase):
     def test__create_buffer_large(self):
         from waitress.buffers import TempfileBasedBuffer
         inst = self._makeOne()
-        inst.strbuf = 'x' * 11
+        inst.strbuf = b'x' * 11
         inst._create_buffer()
         self.assertEqual(inst.buf.__class__, TempfileBasedBuffer)
-        self.assertEqual(inst.buf.get(100), 'x' * 11)
-        self.assertEqual(inst.strbuf, '')
+        self.assertEqual(inst.buf.get(100), b'x' * 11)
+        self.assertEqual(inst.strbuf, b'')
         
     def test__create_buffer_small(self):
         from waitress.buffers import BytesIOBasedBuffer
         inst = self._makeOne()
-        inst.strbuf = 'x' * 5
+        inst.strbuf = b'x' * 5
         inst._create_buffer()
         self.assertEqual(inst.buf.__class__, BytesIOBasedBuffer)
-        self.assertEqual(inst.buf.get(100), 'x' * 5)
-        self.assertEqual(inst.strbuf, '')
+        self.assertEqual(inst.buf.get(100), b'x' * 5)
+        self.assertEqual(inst.strbuf, b'')
 
-    def test_append_buf_None_not_longer_than_srtfbuf_limit(self):
+    def test_append_buf_None_not_longer_than_srtbuf_limit(self):
         inst = self._makeOne()
-        inst.strbuf = 'x' * 5
-        inst.append('hello')
-        self.assertEqual(inst.strbuf, 'xxxxxhello')
+        inst.strbuf = b'x' * 5
+        inst.append(b'hello')
+        self.assertEqual(inst.strbuf, b'xxxxxhello')
         
     def test_append_buf_None_longer_than_strbuf_limit(self):
         inst = self._makeOne(10000)
-        inst.strbuf = 'x' * 8192
-        inst.append('hello')
-        self.assertEqual(inst.strbuf, '')
+        inst.strbuf = b'x' * 8192
+        inst.append(b'hello')
+        self.assertEqual(inst.strbuf, b'')
         self.assertEqual(len(inst.buf), 8197)
         
     def test_append_overflow(self):
         inst = self._makeOne(10)
-        inst.strbuf = 'x' * 8192
-        inst.append('hello')
-        self.assertEqual(inst.strbuf, '')
+        inst.strbuf = b'x' * 8192
+        inst.append(b'hello')
+        self.assertEqual(inst.strbuf, b'')
         self.assertEqual(len(inst.buf), 8197)
         
     def test_append_sz_gt_overflow(self):
         from waitress.buffers import BytesIOBasedBuffer
-        f = io.BytesIO('data')
+        f = io.BytesIO(b'data')
         inst = self._makeOne(f)
         buf = BytesIOBasedBuffer()
         inst.buf = buf
         inst.overflow = 2
-        inst.append('data2')
-        self.assertEqual(f.getvalue(), 'data')
+        inst.append(b'data2')
+        self.assertEqual(f.getvalue(), b'data')
         self.assertTrue(inst.overflowed)
         self.assertNotEqual(inst.buf, buf)
         
     def test_get_buf_None_skip_False(self):
         inst = self._makeOne()
-        inst.strbuf = 'x' * 5
+        inst.strbuf = b'x' * 5
         r = inst.get(5)
-        self.assertEqual(r, 'xxxxx')
+        self.assertEqual(r, b'xxxxx')
         
     def test_get_buf_None_skip_True(self):
         inst = self._makeOne()
-        inst.strbuf = 'x' * 5
+        inst.strbuf = b'x' * 5
         r = inst.get(5, skip=True)
         self.assertFalse(inst.buf is None)
-        self.assertEqual(r, 'xxxxx')
+        self.assertEqual(r, b'xxxxx')
 
     def test_skip_buf_None(self):
         inst = self._makeOne()
-        inst.strbuf = 'data'
+        inst.strbuf = b'data'
         inst.skip(4)
-        self.assertEqual(inst.strbuf, '')
+        self.assertEqual(inst.strbuf, b'')
         self.assertNotEqual(inst.buf, None)
 
     def test_skip_buf_None_allow_prune_True(self):
         inst = self._makeOne()
-        inst.strbuf = 'data'
+        inst.strbuf = b'data'
         inst.skip(4, True)
-        self.assertEqual(inst.strbuf, '')
+        self.assertEqual(inst.strbuf, b'')
         self.assertEqual(inst.buf, None)
 
     def test_prune_buf_None(self):
         inst = self._makeOne()
         inst.prune()
-        self.assertEqual(inst.strbuf, '')
+        self.assertEqual(inst.strbuf, b'')
 
     def test_prune_with_buf(self):
         inst = self._makeOne()
@@ -237,7 +237,7 @@ class TestOverflowableBuffer(unittest.TestCase):
             def getfile(self): return self
             def prune(self): return True
             def __len__(self): return 5
-        buf = DummyBuffer('data')
+        buf = DummyBuffer(b'data')
         inst.buf = buf
         inst.overflowed = True
         inst.overflow = 10

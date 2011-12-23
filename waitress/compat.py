@@ -29,15 +29,22 @@ else:
     binary_type = str
     long = long
 
+def text_(s, encoding='latin-1', errors='strict'):
+    """ If ``s`` is an instance of ``binary_type``, return
+    ``s.decode(encoding, errors)``, otherwise return ``s``"""
+    if isinstance(s, binary_type):
+        return s.decode(encoding, errors)
+    return s # pragma: no cover
+
 if PY3: # pragma: no cover
     def toascii(s):
         if isinstance(s, text_type):
-            s = s.encode('ascii')
-        return str(s, 'ascii', 'strict')
+            s = s.encode('latin-1')
+        return str(s, 'latin-1', 'strict')
 else:
     def toascii(s):
         if isinstance(s, text_type):
-            s = s.encode('ascii')
+            s = s.encode('latin-1')
         return str(s)
 
 try:

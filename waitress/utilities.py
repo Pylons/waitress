@@ -21,10 +21,10 @@ import calendar
 
 def find_double_newline(s):
     """Returns the position just after a double newline in the given string."""
-    pos1 = s.find('\n\r\n')  # One kind of double newline
+    pos1 = s.find(b'\n\r\n')  # One kind of double newline
     if pos1 >= 0:
         pos1 += 3
-    pos2 = s.find('\n\n')    # Another kind of double newline
+    pos2 = s.find(b'\n\n')    # Another kind of double newline
     if pos2 >= 0:
         pos2 += 2
 

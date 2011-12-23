@@ -55,11 +55,11 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         la = inst.last_activity
         inst.async_mode = True
-        inst.outbuf = DummyBuffer('abc')
+        inst.outbuf = DummyBuffer(b'abc')
         result = inst.handle_write()
         self.assertEqual(result, None)
         self.assertNotEqual(inst.last_activity, la)
-        self.assertEqual(sock.sent, 'abc')
+        self.assertEqual(sock.sent, b'abc')
 
     def test_handle_write_async_mode_with_outbuf_raises_socketerror(self):
         import socket
@@ -68,11 +68,11 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.async_mode = True
         L = []
         inst.log_info = lambda *x: L.append(x)
-        inst.outbuf = DummyBuffer('abc', socket.error)
+        inst.outbuf = DummyBuffer(b'abc', socket.error)
         result = inst.handle_write()
         self.assertEqual(result, None)
         self.assertNotEqual(inst.last_activity, la)
-        self.assertEqual(sock.sent, '')
+        self.assertEqual(sock.sent, b'')
         self.assertEqual(len(L), 1)
 
     def test_handle_write_async_mode_no_outbuf_will_close(self):
@@ -167,22 +167,22 @@ class TestHTTPServerChannel(unittest.TestCase):
 
     def test_write_empty_byte(self):
         inst, sock, map = self._makeOneWithMap()
-        wrote = inst.write('')
+        wrote = inst.write(b'')
         self.assertEqual(wrote, 0)
 
     def test_write_nonempty_byte(self):
         inst, sock, map = self._makeOneWithMap()
-        wrote = inst.write('a')
+        wrote = inst.write(b'a')
         self.assertEqual(wrote, 1)
 
     def test_write_list_with_empty(self):
         inst, sock, map = self._makeOneWithMap()
-        wrote = inst.write([''])
+        wrote = inst.write([b''])
         self.assertEqual(wrote, 0)
 
     def test_write_list_with_full(self):
         inst, sock, map = self._makeOneWithMap()
-        wrote = inst.write(['a', 'b'])
+        wrote = inst.write([b'a', b'b'])
         self.assertEqual(wrote, 2)
 
     def test_write_outbuf_gt_send_bytes_has_data(self):
@@ -190,7 +190,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         class DummyAdj(Adjustments):
             send_bytes = 10
         inst, sock, map = self._makeOneWithMap(adj=DummyAdj)
-        wrote = inst.write('x' * 1024)
+        wrote = inst.write(b'x' * 1024)
         self.assertEqual(wrote, 1024)
 
     def test_write_outbuf_gt_send_bytes_no_data(self):
@@ -198,23 +198,23 @@ class TestHTTPServerChannel(unittest.TestCase):
         class DummyAdj(Adjustments):
             send_bytes = 10
         inst, sock, map = self._makeOneWithMap(adj=DummyAdj)
-        inst.outbuf.append('x' * 20)
+        inst.outbuf.append(b'x' * 20)
         self.connected = False
-        wrote = inst.write('')
+        wrote = inst.write(b'')
         self.assertEqual(wrote, 0)
 
     def test_write_channels_accept_iterables(self):
         inst, sock, map = self._makeOneWithMap()
-        self.assertEqual(inst.write('First'), 5)
-        self.assertEqual(inst.write(["\n", "Second", "\n", "Third"]), 13)
+        self.assertEqual(inst.write(b'First'), 5)
+        self.assertEqual(inst.write([b"\n", b"Second", b"\n", b"Third"]), 13)
         def count():
-            yield '\n1\n2\n3\n'
-            yield 'I love to count. Ha ha ha.'
+            yield b'\n1\n2\n3\n'
+            yield b'I love to count. Ha ha ha.'
         self.assertEqual(inst.write(count()), 33)
 
     def test__flush_some_notconnected(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.outbuf = '123'
+        inst.outbuf = b'123'
         inst.connected = False
         result = inst._flush_some()
         self.assertEqual(result, False)
@@ -228,7 +228,7 @@ class TestHTTPServerChannel(unittest.TestCase):
     def test__flush_some_full_outbuf_socket_returns_nonzero(self):
         inst, sock, map = self._makeOneWithMap()
         inst.connected = True
-        inst.outbuf.append('abc')
+        inst.outbuf.append(b'abc')
         result = inst._flush_some()
         self.assertEqual(result, True)
 
@@ -236,7 +236,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         sock.send = lambda x: False
         inst.connected = True
-        inst.outbuf.append('abc')
+        inst.outbuf.append(b'abc')
         result = inst._flush_some()
         self.assertEqual(result, False)
 
@@ -244,14 +244,14 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         inst.connected = True
         inst.async_mode = True
-        inst.outbuf.append('abc')
+        inst.outbuf.append(b'abc')
         inst.close_when_done()
         self.assertEqual(inst.will_close, True)
 
     def test_close_when_done_sync_mode(self):
         inst, sock, map = self._makeOneWithMap()
         inst.connected = True
-        inst.outbuf.append('abc')
+        inst.outbuf.append(b'abc')
         inst.async_mode = False
         inst.trigger = DummyTrigger()
         inst.close_when_done()
@@ -329,7 +329,7 @@ class TestHTTPServerChannel(unittest.TestCase):
     def test_received(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
-        inst.received('GET / HTTP/1.1\n\n')
+        inst.received(b'GET / HTTP/1.1\n\n')
         self.assertEqual(inst.server.tasks, [inst])
         self.assertEqual(len(inst.tasks), 1)
 
@@ -340,7 +340,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.proto_request = preq
         preq.completed = False
         preq.empty = True
-        inst.received('GET / HTTP/1.1\n\n')
+        inst.received(b'GET / HTTP/1.1\n\n')
         self.assertEqual(inst.server.tasks, [])
 
     def test_received_preq_completed(self):
@@ -350,7 +350,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.proto_request = preq
         preq.completed = True
         preq.empty = True
-        inst.received('GET / HTTP/1.1\n\n')
+        inst.received(b'GET / HTTP/1.1\n\n')
         self.assertEqual(inst.proto_request, None)
         self.assertEqual(inst.server.tasks, [])
 
@@ -362,7 +362,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         preq.completed = True
         preq.empty = True
         preq.retval = 1
-        inst.received('GET / HTTP/1.1\n\n')
+        inst.received(b'GET / HTTP/1.1\n\n')
         self.assertEqual(inst.proto_request, None)
         self.assertEqual(inst.server.tasks, [inst])
 
@@ -479,7 +479,7 @@ class DummySock(object):
     blocking = False
     closed = False
     def __init__(self):
-        self.sent = ''
+        self.sent = b''
     def setblocking(self, *arg):
         self.blocking = True
     def fileno(self):
@@ -501,7 +501,7 @@ class DummyBuffer(object):
         if self.toraise:
             raise self.toraise
         data = self.data
-        self.data = ''
+        self.data = b''
         return data
 
     def skip(self, num, x):

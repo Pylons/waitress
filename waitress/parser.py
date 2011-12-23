@@ -120,7 +120,7 @@ class HTTPRequestParser(object):
             if index > 0:
                 key = line[:index]
                 value = line[index + 1:].strip()
-                key1 = key.upper().replace(b'-', b'_')
+                key1 = toascii(key.upper().replace(b'-', b'_'))
                 # If a header already exists, we append subsequent values
                 # seperated by a comma. Applications already need to handle
                 # the comma seperated values, as HTTP front ends might do 
@@ -162,7 +162,7 @@ class HTTPRequestParser(object):
         r = []
         lines = header.split(b'\n')
         for line in lines:
-            if line and line[0] in (b' ', b'\t'):
+            if line.startswith((b' ', b'\t')):
                 r[-1] = r[-1] + line[1:]
             else:
                 r.append(line)

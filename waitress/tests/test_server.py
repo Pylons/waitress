@@ -97,10 +97,13 @@ class TestWSGIHTTPServer(unittest.TestCase):
         self.assertEqual(inst.socket.accepted, False)
 
     def test_handle_accept_other_socket_error(self):
+        import socket
         inst = self._makeOneWithMap()
         eaborted = socket.error(errno.ECONNABORTED)
         inst.socket = DummySock(toraise=eaborted)
         inst.adj = DummyAdj
+        def foo(): raise socket.error
+        inst.accept = foo
         L = []
         def log_info(msg, type):
             L.append(msg)
