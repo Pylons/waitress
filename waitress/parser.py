@@ -17,12 +17,12 @@ This server uses asyncore to accept connections and do initial
 processing but threads to do work.
 """
 import re
+from io import BytesIO
 
 from waitress.compat import (
     toascii,
     urlparse,
     unquote,
-    StringIO,
     )
 from waitress.buffers import OverflowableBuffer
 from waitress.receiver import (
@@ -202,4 +202,4 @@ class HTTPRequestParser(object):
         if body_rcv is not None:
             return body_rcv.getfile()
         else:
-            return StringIO(b'')
+            return BytesIO()

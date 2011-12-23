@@ -1,5 +1,5 @@
 import unittest
-import StringIO
+import io
 
 class TestThreadedTaskDispatcher(unittest.TestCase):
     def _makeOne(self):
@@ -18,7 +18,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         from waitress.task import JustTesting
         inst = self._makeOne()
         inst.threads[0] = True
-        inst.stderr = StringIO.StringIO()
+        inst.stderr = io.BytesIO()
         task = DummyTask(JustTesting)
         inst.queue.put(task)
         inst.handlerThread(0)
@@ -74,7 +74,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
     def test_shutdown_one_thread(self):
         inst = self._makeOne()
         inst.threads[0] = 1
-        inst.stderr = StringIO.StringIO()
+        inst.stderr = io.BytesIO()
         task = DummyTask()
         inst.queue.put(task)
         self.assertEqual(inst.shutdown(timeout=.01), True)

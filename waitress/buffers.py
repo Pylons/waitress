@@ -13,11 +13,8 @@
 ##############################################################################
 """Buffers
 """
-try:
-    from cStringIO import StringIO
-except ImportError: # pragma: no cover
-    from StringIO import StringIO
 
+from io import BytesIO
 
 # copy_bytes controls the size of temp. strings for shuffling data around.
 COPY_BYTES = 1 << 18  # 256K
@@ -116,17 +113,17 @@ class TempfileBasedBuffer(FileBasedBuffer):
 
 
 
-class StringIOBasedBuffer(FileBasedBuffer):
+class BytesIOBasedBuffer(FileBasedBuffer):
 
     def __init__(self, from_buffer=None):
         if from_buffer is not None:
-            FileBasedBuffer.__init__(self, StringIO(), from_buffer)
+            FileBasedBuffer.__init__(self, BytesIO(), from_buffer)
         else:
             # Shortcut. :-)
-            self.file = StringIO()
+            self.file = BytesIO()
 
     def newfile(self):
-        return StringIO()
+        return BytesIO()
 
 
 
@@ -169,7 +166,7 @@ class OverflowableBuffer(object):
         return buf
 
     def _set_small_buffer(self):
-        self.buf = StringIOBasedBuffer(self.buf)
+        self.buf = BytesIOBasedBuffer(self.buf)
         self.overflowed = False
 
     def _set_large_buffer(self):

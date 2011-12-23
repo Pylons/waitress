@@ -17,9 +17,9 @@ import asyncore
 import socket
 import sys
 import time
-import thread
 
 from waitress import trigger
+from waitress.compat import thread
 from waitress.adjustments import Adjustments
 from waitress.buffers import OverflowableBuffer
 from waitress.parser import HTTPRequestParser

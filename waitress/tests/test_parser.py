@@ -25,7 +25,7 @@ class TestHTTPRequestParser(unittest.TestCase):
     def test_getBodyStream_None(self):
         self.parser.body_recv = None
         result = self.parser.getBodyStream()
-        self.assertEqual(result.getvalue(), '')
+        self.assertEqual(result.getvalue(), b'')
 
     def test_getBodyStream_nonNone(self):
         body_rcv = DummyBodyStream()
@@ -155,7 +155,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
 
     def feed(self, data):
         parser = self.parser
-        for n in xrange(100): # make sure we never loop forever
+        for n in range(100): # make sure we never loop forever
             consumed = parser.received(data)
             data = data[consumed:]
             if parser.completed:

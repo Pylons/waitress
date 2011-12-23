@@ -12,21 +12,19 @@
 #
 ##############################################################################
 
-from Queue import (
-    Queue,
-    Empty,
-    )
-from thread import (
-    allocate_lock,
-    start_new_thread,
-    )
 import socket
-import time
 import sys
+import time
 import traceback
 
 from waitress.utilities import build_http_date
-from waitress.compat import toascii
+
+from waitress.compat import (
+    toascii,
+    Queue,
+    Empty,
+    thread,
+    )
 
 rename_headers = {
     'CONTENT_LENGTH' : 'CONTENT_LENGTH',
@@ -44,12 +42,12 @@ class ThreadedTaskDispatcher(object):
 
     stop_count = 0  # Number of threads that will stop soon.
     stderr = sys.stderr
-    start_new_thread = start_new_thread
+    start_new_thread = thread.start_new_thread
 
     def __init__(self):
         self.threads = {}  # { thread number -> 1 }
         self.queue = Queue()
-        self.thread_mgmt_lock = allocate_lock()
+        self.thread_mgmt_lock = thread.allocate_lock()
 
     def handlerThread(self, thread_no):
         threads = self.threads

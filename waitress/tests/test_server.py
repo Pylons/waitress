@@ -7,7 +7,7 @@ class TestWSGIHTTPServer(unittest.TestCase):
                  start=True, map=None, sock=None):
         from waitress.server import WSGIHTTPServer
         class TestServer(WSGIHTTPServer):
-            def bind(self, (ip, port)):
+            def bind(self, v):
                 pass
         return TestServer(
             application,

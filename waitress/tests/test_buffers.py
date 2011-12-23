@@ -1,5 +1,5 @@
 import unittest
-import StringIO
+import io
 
 class TestFileBasedBuffer(unittest.TestCase):
     def _makeOne(self, file=None, from_buffer=None):
@@ -11,9 +11,9 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertEqual(inst.file, 'file')
         
     def test_ctor_from_buffer(self):
-        from_buffer = StringIO.StringIO('data')
+        from_buffer = io.BytesIO('data')
         from_buffer.getfile = lambda *x: from_buffer
-        f = StringIO.StringIO()
+        f = io.BytesIO()
         inst = self._makeOne(f, from_buffer)
         self.assertEqual(inst.file, f)
         del from_buffer.getfile
@@ -25,42 +25,42 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertEqual(len(inst), 10)
 
     def test_append(self):
-        f = StringIO.StringIO('data')
+        f = io.BytesIO('data')
         inst = self._makeOne(f)
         inst.append('data2')
         self.assertEqual(f.getvalue(), 'datadata2')
         self.assertEqual(inst.remain, 5)
 
     def test_get_skip_true(self):
-        f = StringIO.StringIO('data')
+        f = io.BytesIO('data')
         inst = self._makeOne(f)
         result = inst.get(100, skip=True)
         self.assertEqual(result, 'data')
         self.assertEqual(inst.remain, -4)
         
     def test_get_skip_false(self):
-        f = StringIO.StringIO('data')
+        f = io.BytesIO('data')
         inst = self._makeOne(f)
         result = inst.get(100, skip=False)
         self.assertEqual(result, 'data')
         self.assertEqual(inst.remain, 0)
 
     def test_get_skip_bytes_less_than_zero(self):
-        f = StringIO.StringIO('data')
+        f = io.BytesIO('data')
         inst = self._makeOne(f)
         result = inst.get(-1, skip=False)
         self.assertEqual(result, 'data')
         self.assertEqual(inst.remain, 0)
 
     def test_skip_remain_gt_bytes(self):
-        f = StringIO.StringIO('d')
+        f = io.BytesIO('d')
         inst = self._makeOne(f)
         inst.remain = 1
         inst.skip(1)
         self.assertEqual(inst.remain, 0)
 
     def test_skip_remain_lt_bytes(self):
-        f = StringIO.StringIO('d')
+        f = io.BytesIO('d')
         inst = self._makeOne(f)
         inst.remain = 1
         self.assertRaises(ValueError, inst.skip, 2)
@@ -70,19 +70,19 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertRaises(NotImplementedError, inst.newfile)
 
     def test_prune_remain_notzero(self):
-        f = StringIO.StringIO('d')
+        f = io.BytesIO('d')
         inst = self._makeOne(f)
         inst.remain = 1
-        nf = StringIO.StringIO()
+        nf = io.BytesIO()
         inst.newfile = lambda *x: nf
         inst.prune()
         self.assertTrue(inst.file is not f)
         self.assertEqual(nf.getvalue(), 'd')
         
     def test_prune_remain_zero_tell_notzero(self):
-        f = StringIO.StringIO('d')
+        f = io.BytesIO('d')
         inst = self._makeOne(f)
-        nf = StringIO.StringIO('d')
+        nf = io.BytesIO('d')
         inst.newfile = lambda *x: nf
         inst.remain = 0
         inst.prune()
@@ -90,7 +90,7 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertEqual(nf.getvalue(), 'd')
         
     def test_prune_remain_zero_tell_zero(self):
-        f = StringIO.StringIO()
+        f = io.BytesIO()
         inst = self._makeOne(f)
         inst.remain = 0
         inst.prune()
@@ -106,13 +106,13 @@ class TestTempfileBasedBuffer(unittest.TestCase):
         r = inst.newfile()
         self.assertTrue(isinstance(r, file))
 
-class TestStringIOBasedBuffer(unittest.TestCase):
+class TestBytesIOBasedBuffer(unittest.TestCase):
     def _makeOne(self, from_buffer=None):
-        from waitress.buffers import StringIOBasedBuffer
-        return StringIOBasedBuffer(from_buffer=from_buffer)
+        from waitress.buffers import BytesIOBasedBuffer
+        return BytesIOBasedBuffer(from_buffer=from_buffer)
 
     def test_ctor_from_buffer_not_None(self):
-        f = StringIO.StringIO()
+        f = io.BytesIO()
         f.getfile = lambda *x: f
         inst = self._makeOne(f)
         self.assertTrue(hasattr(inst.file, 'read'))
@@ -150,11 +150,11 @@ class TestOverflowableBuffer(unittest.TestCase):
         self.assertEqual(inst.strbuf, '')
         
     def test__create_buffer_small(self):
-        from waitress.buffers import StringIOBasedBuffer
+        from waitress.buffers import BytesIOBasedBuffer
         inst = self._makeOne()
         inst.strbuf = 'x' * 5
         inst._create_buffer()
-        self.assertEqual(inst.buf.__class__, StringIOBasedBuffer)
+        self.assertEqual(inst.buf.__class__, BytesIOBasedBuffer)
         self.assertEqual(inst.buf.get(100), 'x' * 5)
         self.assertEqual(inst.strbuf, '')
 
@@ -179,10 +179,10 @@ class TestOverflowableBuffer(unittest.TestCase):
         self.assertEqual(len(inst.buf), 8197)
         
     def test_append_sz_gt_overflow(self):
-        from waitress.buffers import StringIOBasedBuffer
-        f = StringIO.StringIO('data')
+        from waitress.buffers import BytesIOBasedBuffer
+        f = io.BytesIO('data')
         inst = self._makeOne(f)
-        buf = StringIOBasedBuffer()
+        buf = BytesIOBasedBuffer()
         inst.buf = buf
         inst.overflow = 2
         inst.append('data2')
@@ -233,10 +233,11 @@ class TestOverflowableBuffer(unittest.TestCase):
         
     def test_prune_with_buf_overflow(self):
         inst = self._makeOne()
-        buf = StringIO.StringIO('data')
-        buf.getfile = lambda *x: buf
-        buf.prune = lambda *x: True
-        buf.__len__ = lambda *x: 5
+        class DummyBuffer(io.BytesIO):
+            def getfile(self): return self
+            def prune(self): return True
+            def __len__(self): return 5
+        buf = DummyBuffer('data')
         inst.buf = buf
         inst.overflowed = True
         inst.overflow = 10
@@ -250,7 +251,7 @@ class TestOverflowableBuffer(unittest.TestCase):
         
     def test_getfile_buf_not_None(self):
         inst = self._makeOne()
-        buf = StringIO.StringIO()
+        buf = io.BytesIO()
         buf.getfile = lambda *x: buf
         inst.buf = buf
         f = inst.getfile()

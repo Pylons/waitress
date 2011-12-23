@@ -89,14 +89,13 @@ rfc822_reg = re.compile(rfc822_date)
 
 def unpack_rfc822(m):
     g = m.group
-    a = string.atoi
     return (
-            a(g(4)),             # year
+            int(g(4)),             # year
             monmap[g(3)],        # month
-            a(g(2)),             # day
-            a(g(5)),             # hour
-            a(g(6)),             # minute
-            a(g(7)),             # second
+            int(g(2)),             # day
+            int(g(5)),             # hour
+            int(g(6)),             # minute
+            int(g(7)),             # second
             0,
             0,
             0
@@ -122,14 +121,13 @@ rfc850_reg = re.compile(rfc850_date)
 # they actually unpack the same way
 def unpack_rfc850(m):
     g = m.group
-    a = string.atoi
     return (
-            a(g(4)),           # year
+            int(g(4)),           # year
             monmap[g(3)],      # month
-            a(g(2)),           # day
-            a(g(5)),           # hour
-            a(g(6)),           # minute
-            a(g(7)),           # second
+            int(g(2)),           # day
+            int(g(5)),           # hour
+            int(g(6)),           # minute
+            int(g(7)),           # second
             0,
             0,
             0

@@ -19,6 +19,7 @@ import sys
 
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPServerChannel
+from waitress.compat import reraise
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
     """
@@ -180,7 +181,7 @@ def curriedStartResponse(task):
                     # 1. "service" method in task.py
                     # 2. "service" method in channel.py
                     # 3. "handlerThread" method in task.py
-                    raise exc_info[0], exc_info[1], exc_info[2]
+                    reraise(exc_info[0], exc_info[1], exc_info[2])
                 else:
                     # As per WSGI spec existing headers must be cleared
                     task.accumulated_headers = None
