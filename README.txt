@@ -60,7 +60,7 @@ the ``wsgi.url_scheme`` and possibly other WSGI environment variables
 appropriately.
 
 You can wrap your application in the PrefixMiddleware declaratively in a
-PasteDeploy_ configuration file too:
+PasteDeploy_ configuration file too::
 
    [app:myapp]
    use = egg:mypackage#myapp
@@ -78,8 +78,8 @@ PasteDeploy_ configuration file too:
   host = 127.0.0.1
   port = 8080
 
-You should instruct it to send along the original ``Host`` header from the
-client to your waitress server, as well as sending along a
+You should instruct your proxy server to send along the original ``Host``
+header from the client to your waitress server, as well as sending along a
 ``X-Forwarded-Proto`` header with the appropriate value for
 ``wsgi.url_scheme``.  It's ofen nice to set an ``X-Forwarded-For`` header
 too; the ``PrefixMiddleware`` uses this to adjust other environment

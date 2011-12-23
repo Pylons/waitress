@@ -15,7 +15,8 @@
 """
 
 class Attribute(object):
-    def __init__(self, description):
+    def __init__(self, title, description=None):
+        self.title = title
         self.description = description
 
 class Interface(object):

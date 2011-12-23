@@ -174,9 +174,9 @@ Hello.
 """
         parser = self.parser
         self.feed(data)
-        self.failUnless(parser.completed)
+        self.assertTrue(parser.completed)
         self.assertEqual(parser.version, '8.4')
-        self.failIf(parser.empty)
+        self.assertFalse(parser.empty)
         self.assertEqual(parser.headers,
                          {'FIRSTNAME': 'mickey',
                           'LASTNAME': 'Mouse',
@@ -202,7 +202,7 @@ Hello mickey.
         self.feed(data)
         self.assertEqual(parser.command, 'GET')
         self.assertEqual(parser.version, '8.4')
-        self.failIf(parser.empty)
+        self.assertFalse(parser.empty)
         self.assertEqual(parser.headers,
                          {'FIRSTNAME': 'mickey',
                           'LASTNAME': 'Mouse',
@@ -224,9 +224,9 @@ Hello.
 """
         parser = self.parser
         self.feed(data)
-        self.failUnless(parser.completed)
+        self.assertTrue(parser.completed)
         self.assertEqual(parser.version, '8.4')
-        self.failIf(parser.empty)
+        self.assertFalse(parser.empty)
         self.assertEqual(parser.headers,
                          {'CONTENT_LENGTH': '7',
                           })
@@ -251,7 +251,7 @@ content-length: 7
 Hello.
 """
         self.feed(data)
-        self.failUnless(self.parser.completed)
+        self.assertTrue(self.parser.completed)
         self.assertEqual(self.parser.headers, {
                 'CONTENT_LENGTH': '7',
                 'X_FORWARDED_FOR':

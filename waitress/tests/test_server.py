@@ -39,12 +39,12 @@ class TestWSGIHTTPServer(unittest.TestCase):
     def test_computeServerName_empty(self):
         inst = self._makeOneWithMap(start=False)
         result = inst.computeServerName('')
-        self.failUnless(result)
+        self.assertTrue(result)
 
     def test_computeServerName_with_ip(self):
         inst = self._makeOneWithMap(start=False)
         result = inst.computeServerName('127.0.0.1')
-        self.failUnless(result)
+        self.assertTrue(result)
 
     def test_computeServerName_with_hostname(self):
         inst = self._makeOneWithMap(start=False)

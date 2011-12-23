@@ -20,4 +20,4 @@ class HTTPDateTests(unittest.TestCase):
         from waitress.utilities import build_http_date, parse_http_date
         from time import time
         t = int(time())
-        self.assertEquals(t, parse_http_date(build_http_date(t)))
+        self.assertEqual(t, parse_http_date(build_http_date(t)))

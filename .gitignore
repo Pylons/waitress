@@ -3,3 +3,6 @@
 env*/
 .coverage
 .idea/
+.tox/
+nosetests.xml
+waitress/coverage.xml
