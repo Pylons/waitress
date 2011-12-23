@@ -76,7 +76,7 @@ class TestHTTPRequestParser(unittest.TestCase):
     def test_crack_first_line_nomatch(self):
         self.parser.first_line = 'get / bleh'
         result = self.parser.crack_first_line()
-        self.assertEqual(result, (None, None, None))
+        self.assertEqual(result, ('', '', ''))
 
     def test_crack_first_line_missing_version(self):
         self.parser.first_line = 'get /'
@@ -84,13 +84,11 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(result, ('GET', '/', None))
 
     def test_get_header_lines(self):
-        self.parser.header = 'slam\nslim'
-        result = self.parser.get_header_lines()
+        result = self.parser.get_header_lines('slam\nslim')
         self.assertEqual(result, ['slam', 'slim'])
 
     def test_get_header_lines_tabbed(self):
-        self.parser.header = 'slam\n\tslim'
-        result = self.parser.get_header_lines()
+        result = self.parser.get_header_lines('slam\n\tslim')
         self.assertEqual(result, ['slamslim'])
 
     def test_received_nonsense_with_double_cr(self):
@@ -140,7 +138,6 @@ foo: bar"""
         data = "GET /foobar HTTP/8.4"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.first_line, data)
-        self.assertEqual(self.parser.header, '')
 
     def test_parse_header_bad_content_length(self):
         data = "GET /foobar HTTP/8.4\ncontent-length: abc"

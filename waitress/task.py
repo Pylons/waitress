@@ -26,6 +26,7 @@ import sys
 import traceback
 
 from waitress.utilities import build_http_date
+from waitress.compat import toascii
 
 rename_headers = {
     'CONTENT_LENGTH' : 'CONTENT_LENGTH',
@@ -263,7 +264,7 @@ class HTTPTask(object):
         next_lines.sort()
         lines = [first_line] + next_lines
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
-        return res
+        return toascii(res)
 
     def getEnvironment(self):
         """Returns a WSGI environment."""
@@ -318,7 +319,7 @@ class HTTPTask(object):
 
     def finish(self):
         if not self.wrote_header:
-            self.write('')
+            self.write(b'')
 
     def write(self, data):
         channel = self.channel
@@ -329,4 +330,3 @@ class HTTPTask(object):
             self.wrote_header = True
         if data:
             self.bytes_written += channel.write(data)
-

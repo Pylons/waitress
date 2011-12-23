@@ -17,18 +17,19 @@ This server uses asyncore to accept connections and do initial
 processing but threads to do work.
 """
 import re
-from urllib import unquote
-import urlparse
 
-from waitress.receiver import FixedStreamReceiver
-from waitress.receiver import ChunkedReceiver
+from waitress.compat import (
+    toascii,
+    urlparse,
+    unquote,
+    StringIO,
+    )
 from waitress.buffers import OverflowableBuffer
+from waitress.receiver import (
+    FixedStreamReceiver,
+    ChunkedReceiver,
+    )
 from waitress.utilities import find_double_newline
-
-try:
-    from cStringIO import StringIO
-except ImportError: # pragma: no cover
-    from StringIO import StringIO
 
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
@@ -39,10 +40,10 @@ class HTTPRequestParser(object):
     See waitress.interfaces.IStreamConsumer
     """
 
-    completed = 0  # Set once request is completed.
-    empty = 0        # Set if no request was made.
-    header_plus = ''
-    chunked = 0
+    completed = False  # Set once request is completed.
+    empty = False        # Set if no request was made.
+    header_plus = b''
+    chunked = False
     content_length = 0
     body_rcv = None
     # Other attributes: first_line, header, headers, command, uri, version,
@@ -75,16 +76,15 @@ class HTTPRequestParser(object):
                 # Header finished.
                 header_plus = s[:index]
                 consumed = len(data) - (len(s) - index)
-                self.in_header = 0
                 # Remove preceeding blank lines.
                 header_plus = header_plus.lstrip()
                 if not header_plus:
-                    self.empty = 1
-                    self.completed = 1
+                    self.empty = True
+                    self.completed = True
                 else:
                     self.parse_header(header_plus)
                     if self.body_rcv is None:
-                        self.completed = 1
+                        self.completed = True
                 return consumed
             else:
                 # Header not finished yet.
@@ -94,7 +94,7 @@ class HTTPRequestParser(object):
             # In body.
             consumed = br.received(data)
             if br.completed:
-                self.completed = 1
+                self.completed = True
             return consumed
 
 
@@ -103,37 +103,37 @@ class HTTPRequestParser(object):
         Parses the header_plus block of text (the headers plus the
         first line of the request).
         """
-        index = header_plus.find('\n')
+        index = header_plus.find(b'\n')
         if index >= 0:
-            first_line = header_plus[:index].rstrip()
+            first_line = toascii(header_plus[:index].rstrip())
             header = header_plus[index + 1:]
         else:
-            first_line = header_plus.rstrip()
-            header = ''
+            first_line = toascii(header_plus.rstrip())
+            header = b''
         self.first_line = first_line
-        self.header = header
 
-        lines = self.get_header_lines()
+        lines = self.get_header_lines(header)
+
         headers = self.headers
         for line in lines:
-            index = line.find(':')
+            index = line.find(b':')
             if index > 0:
                 key = line[:index]
                 value = line[index + 1:].strip()
-                key1 = key.upper().replace('-', '_')
+                key1 = key.upper().replace(b'-', b'_')
                 # If a header already exists, we append subsequent values
                 # seperated by a comma. Applications already need to handle
                 # the comma seperated values, as HTTP front ends might do 
                 # the concatenation for you (behavior specified in RFC2616).
                 try:
-                    headers[key1] += ', %s' % value
+                    headers[key1] += toascii(b', ' + value)
                 except KeyError:
-                    headers[key1] = value
+                    headers[key1] = toascii(value)
             # else there's garbage in the headers?
 
         command, uri, version = self.crack_first_line()
-        self.command = str(command)
-        self.uri = str(uri)
+        self.command = command
+        self.uri = uri
         self.version = version
         self.split_uri()
         self.url_scheme = 'http' # use Paste#prefix middleware to change
@@ -141,7 +141,7 @@ class HTTPRequestParser(object):
         if version == '1.1':
             te = headers.get('TRANSFER_ENCODING', '')
             if te == 'chunked':
-                self.chunked = 1
+                self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
         if not self.chunked:
@@ -155,20 +155,20 @@ class HTTPRequestParser(object):
                 self.body_rcv = FixedStreamReceiver(cl, buf)
 
 
-    def get_header_lines(self):
+    def get_header_lines(self, header):
         """
         Splits the header into lines, putting multi-line headers together.
         """
         r = []
-        lines = self.header.split('\n')
+        lines = header.split(b'\n')
         for line in lines:
-            if line and line[0] in ' \t':
+            if line and line[0] in (b' ', b'\t'):
                 r[-1] = r[-1] + line[1:]
             else:
                 r.append(line)
         return r
 
-    first_line_re = re.compile (
+    first_line_re = re.compile(
         '([^ ]+) ((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)(( HTTP/([0-9.]+))$|$)')
 
     def crack_first_line(self):
@@ -179,9 +179,11 @@ class HTTPRequestParser(object):
                 version = m.group(5)
             else:
                 version = None
-            return m.group(1).upper(), m.group(2), version
+            command = m.group(1).upper()
+            path = m.group(2)
+            return command, path, version
         else:
-            return None, None, None
+            return '', '', ''
 
     def split_uri(self):
         (self.proxy_scheme,
@@ -200,4 +202,4 @@ class HTTPRequestParser(object):
         if body_rcv is not None:
             return body_rcv.getfile()
         else:
-            return StringIO('')
+            return StringIO(b'')

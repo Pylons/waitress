@@ -349,4 +349,3 @@ class HTTPServerChannel(asyncore.dispatcher, object):
 
     def defer(self):
         pass
-
