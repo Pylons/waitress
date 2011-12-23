@@ -4,4 +4,22 @@
 
 - Test on Windows.
 
-- Functional tests.
+- Content-Length guessing as per PEP.
+
+- 0.0.0.0?
+
+- Fix pipeline tests under 3.X
+
+- Validate chunked encoding.
+
+- add unit test for addResponseHeader.
+
+- Documentation.
+
+- Don't read past Content-Length when sending.
+
+- Figure out what to do when we have less data than Content-Length.
+
+- Knob for explicit https url_scheme.
+
+- Speed tweaking.
