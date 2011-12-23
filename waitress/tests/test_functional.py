@@ -17,12 +17,13 @@ class SubprocessTests(object):
     port = 61523
     host = 'localhost'
     def start_subprocess(self, cmd):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         cwd = os.getcwd()
         os.chdir(dn(dn(here)))
         self.proc = subprocess.Popen(cmd)
         os.chdir(cwd)
         time.sleep(.2)
-        if self.proc.returncode is not None:
+        if self.proc.returncode is not None: # pragma: no cover
             raise RuntimeError('%s didnt start' % str(cmd))
         self.conn = httplib.HTTPConnection('%s:%s' % (self.host, self.port))
 
@@ -31,6 +32,7 @@ class SubprocessTests(object):
         if self.proc.returncode is None:
             self.conn.close()
             self.proc.terminate()
+        self.sock.close()
 
     def getresponse(self, status=200):
         resp = self.conn.getresponse()
@@ -83,16 +85,15 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             "\n"
             "%s" % (len(data), data)
             )
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.send(s)
-        response = httplib.HTTPResponse(sock)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(s)
+        response = httplib.HTTPResponse(self.sock)
         response.begin()
-        self.failUnlessEqual(int(response.status), 200)
+        self.assertEqual(int(response.status), 200)
         length = int(response.getheader('Content-Length', '0'))
         response_body = response.read(length)
-        self.failUnlessEqual(length, len(data))
-        self.failUnlessEqual(response_body, tobytes(data))
+        self.assertEqual(length, len(data))
+        self.assertEqual(response_body, tobytes(data))
 
     def test_large_body(self):
         # 1024 characters.
@@ -113,7 +114,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         responses = []
         for h in conns:
             response = h.getresponse()
-            self.failUnlessEqual(response.status, 200)
+            self.assertEqual(response.status, 200)
             responses.append(response)
         for response in responses:
             response.read()
@@ -124,9 +125,9 @@ class EchoTests(SubprocessTests, unittest.TestCase):
                                        "Transfer-Encoding": "chunked"})
         h.send(b"0\r\n\r\n")
         response = h.getresponse()
-        self.failUnlessEqual(int(response.status), 200)
+        self.assertEqual(int(response.status), 200)
         response_body = response.read()
-        self.failUnlessEqual(response_body, b'')
+        self.assertEqual(response_body, b'')
 
     def test_chunking_request_with_content(self):
         control_line = b"20;\r\n"  # 20 hex = 32 dec
@@ -141,9 +142,9 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             h.send(s)
         h.send(b"0\r\n\r\n")
         response = h.getresponse()
-        self.failUnlessEqual(int(response.status), 200)
+        self.assertEqual(int(response.status), 200)
         response_body = response.read()
-        self.failUnlessEqual(response_body, expect)
+        self.assertEqual(response_body, expect)
 
     def test_keepalive_http_10(self):
         # Handling of Keep-Alive within HTTP 1.0
@@ -154,17 +155,17 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
              )
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.send(s)
-        response = httplib.HTTPResponse(sock)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(s)
+        response = httplib.HTTPResponse(self.sock)
         response.begin()
-        self.failUnlessEqual(int(response.status), 200)
+        self.assertEqual(int(response.status), 200)
         connection = response.getheader('Connection', '')
         # We sent no Connection: Keep-Alive header
         # Connection: close (or no header) is default.
-        self.failUnless(connection != 'Keep-Alive')
+        self.assertTrue(connection != 'Keep-Alive')
 
+    def test_keepalive_http10_explicit(self):
         # If header Connection: Keep-Alive is explicitly sent,
         # we want to keept the connection open, we also need to return
         # the corresponding header
@@ -176,14 +177,13 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
             )
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.send(s)
-        response = httplib.HTTPResponse(sock)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(s)
+        response = httplib.HTTPResponse(self.sock)
         response.begin()
-        self.failUnlessEqual(int(response.status), 200)
+        self.assertEqual(int(response.status), 200)
         connection = response.getheader('Connection', '')
-        self.failUnlessEqual(connection, 'Keep-Alive')
+        self.assertEqual(connection, 'Keep-Alive')
 
     def test_keepalive_http_11(self):
         # Handling of Keep-Alive within HTTP 1.1
@@ -195,14 +195,14 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "Content-Length: %d\n"
              "\n"
              "%s" % (len(data), data))
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.send(s)
-        response = httplib.HTTPResponse(sock)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(s)
+        response = httplib.HTTPResponse(self.sock)
         response.begin()
-        self.failUnlessEqual(int(response.status), 200)
-        self.failUnless(response.getheader('connection') != 'close')
+        self.assertEqual(int(response.status), 200)
+        self.assertTrue(response.getheader('connection') != 'close')
 
+    def test_keepalive_http11_explicit(self):
         # Explicitly set keep-alive
         data = "Default: Keep me alive"
         s = tobytes(
@@ -212,14 +212,14 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
              )
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.send(s)
-        response = httplib.HTTPResponse(sock)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(s)
+        response = httplib.HTTPResponse(self.sock)
         response.begin()
-        self.failUnlessEqual(int(response.status), 200)
-        self.failUnless(response.getheader('connection') != 'close')
+        self.assertEqual(int(response.status), 200)
+        self.assertTrue(response.getheader('connection') != 'close')
 
+    def test_keepalive_http11_connclose(self):
         # specifying Connection: close explicitly
         data = "Don't keep me alive"
         s = tobytes(
@@ -229,13 +229,12 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
              )
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.send(s)
-        response = httplib.HTTPResponse(sock)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(s)
+        response = httplib.HTTPResponse(self.sock)
         response.begin()
-        self.failUnlessEqual(int(response.status), 200)
-        self.failUnlessEqual(response.getheader('connection'), 'close')
+        self.assertEqual(int(response.status), 200)
+        self.assertEqual(response.getheader('connection'), 'close')
 
 class PipeliningTests(SubprocessTests, unittest.TestCase):
     def setUp(self):
@@ -261,16 +260,15 @@ class PipeliningTests(SubprocessTests, unittest.TestCase):
                 conn = 'close'
             to_send += tobytes(s % (conn, len(body), body))
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.send(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
         for n in range(count):
             expect_body = tobytes("Response #%d\r\n" % (n + 1))
-            response = httplib.HTTPResponse(sock)
+            response = httplib.HTTPResponse(self.sock)
             response.begin()
-            self.failUnlessEqual(int(response.status), 200)
+            self.assertEqual(int(response.status), 200)
             length = int(response.getheader('Content-Length', '0'))
             response_body = response.read(length)
-            self.failUnlessEqual(length, len(response_body))
-            self.failUnlessEqual(response_body, expect_body)
+            self.assertEqual(length, len(response_body))
+            self.assertEqual(response_body, expect_body)
 
