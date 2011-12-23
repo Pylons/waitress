@@ -20,7 +20,7 @@ import re
 from io import BytesIO
 
 from waitress.compat import (
-    toascii,
+    tostr,
     urlparse,
     unquote,
     )
@@ -105,10 +105,10 @@ class HTTPRequestParser(object):
         """
         index = header_plus.find(b'\n')
         if index >= 0:
-            first_line = toascii(header_plus[:index].rstrip())
+            first_line = tostr(header_plus[:index].rstrip())
             header = header_plus[index + 1:]
         else:
-            first_line = toascii(header_plus.rstrip())
+            first_line = tostr(header_plus.rstrip())
             header = b''
         self.first_line = first_line
 
@@ -120,15 +120,15 @@ class HTTPRequestParser(object):
             if index > 0:
                 key = line[:index]
                 value = line[index + 1:].strip()
-                key1 = toascii(key.upper().replace(b'-', b'_'))
+                key1 = tostr(key.upper().replace(b'-', b'_'))
                 # If a header already exists, we append subsequent values
                 # seperated by a comma. Applications already need to handle
                 # the comma seperated values, as HTTP front ends might do 
                 # the concatenation for you (behavior specified in RFC2616).
                 try:
-                    headers[key1] += toascii(b', ' + value)
+                    headers[key1] += tostr(b', ' + value)
                 except KeyError:
-                    headers[key1] = toascii(value)
+                    headers[key1] = tostr(value)
             # else there's garbage in the headers?
 
         command, uri, version = self.crack_first_line()

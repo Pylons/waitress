@@ -199,8 +199,7 @@ class OverflowableBuffer(object):
     def skip(self, numbytes, allow_prune=False):
         buf = self.buf
         if buf is None:
-            strbuf = self.strbuf
-            if allow_prune and numbytes == len(strbuf):
+            if allow_prune and numbytes == len(self.strbuf):
                 # We could slice instead of converting to
                 # a buffer, but that would eat up memory in
                 # large transfers.

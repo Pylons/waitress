@@ -37,15 +37,19 @@ def text_(s, encoding='latin-1', errors='strict'):
     return s # pragma: no cover
 
 if PY3: # pragma: no cover
-    def toascii(s):
+    def tostr(s):
         if isinstance(s, text_type):
             s = s.encode('latin-1')
         return str(s, 'latin-1', 'strict')
+    def tobytes(s):
+        return bytes(s, 'latin-1')
 else:
-    def toascii(s):
+    def tostr(s):
         if isinstance(s, text_type):
             s = s.encode('latin-1')
         return str(s)
+    def tobytes(s):
+        return s
 
 try:
     from Queue import (
@@ -101,3 +105,9 @@ try:
     from StringIO import StringIO as NativeIO
 except ImportError: # pragma: no cover
     from io import StringIO as NativeIO
+
+try:
+    import httplib
+except ImportError:
+    from http import client as httplib
+    

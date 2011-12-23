@@ -134,10 +134,10 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(inst.status, 'one')
         self.assertEqual(inst.reason, 'two')
 
-    def test_appendResponseHeaders(self):
+    def test_appendResponseHeader(self):
         inst = self._makeOne()
-        inst.appendResponseHeaders([('a', '1')])
-        self.assertEqual(inst.accumulated_headers, [('a', '1')])
+        inst.appendResponseHeader('x-forwarded-for', 'fred')
+        self.assertEqual(inst.response_headers, [('X-Forwarded-For', 'fred')])
 
     def test_buildResponseHeader_v10_keepalive_no_content_length(self):
         inst = self._makeOne()
@@ -147,42 +147,42 @@ class TestHTTPTask(unittest.TestCase):
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'HTTP/1.0 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: hithere')
+        self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
         self.assertEqual(inst.close_on_finish, True)
-        self.assertEqual(inst.response_headers['Connection'], 'close')
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
 
     def test_buildResponseHeader_v10_keepalive_with_content_length(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.request_data.headers['CONNECTION'] = 'keep-alive'
-        inst.response_headers = {'Content-Length':'10'}
+        inst.response_headers = [('Content-Length', '10')]
         inst.version = '1.0'
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
-        self.assertEqual(lines[0], 'HTTP/1.0 200 OK')
-        self.assertEqual(lines[1], 'Connection: Keep-Alive')
-        self.assertEqual(lines[2], 'Content-Length: 10')
-        self.assertTrue(lines[3].startswith('Date:'))
-        self.assertEqual(lines[4], 'Server: hithere')
+        self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
+        self.assertEqual(lines[1], b'Connection: Keep-Alive')
+        self.assertEqual(lines[2], b'Content-Length: 10')
+        self.assertTrue(lines[3].startswith(b'Date:'))
+        self.assertEqual(lines[4], b'Server: hithere')
         self.assertEqual(inst.close_on_finish, False)
 
     def test_buildResponseHeader_v11_connection_closed_by_app(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '1.1'
-        inst.accumulated_headers = ['Connection: close']
+        inst.response_headers = [('Connection', 'close')]
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: hithere')
-        self.assertEqual(inst.response_headers['Connection'], 'close')
+        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
     def test_buildResponseHeader_v11_connection_closed_by_client(self):
@@ -193,11 +193,11 @@ class TestHTTPTask(unittest.TestCase):
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: hithere')
-        self.assertEqual(inst.response_headers['Connection'], 'close')
+        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
     def test_buildResponseHeader_v11_connection_keepalive_by_client(self):
@@ -208,41 +208,41 @@ class TestHTTPTask(unittest.TestCase):
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: hithere')
-        self.assertEqual(inst.response_headers['Connection'], 'close')
+        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
     def test_buildResponseHeader_v11_transfer_encoding_nonchunked(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
-        inst.response_headers = {'Transfer-Encoding': 'notchunked'}
+        inst.response_headers = [('Transfer-Encoding', 'notchunked')]
         inst.version = '1.1'
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
-        self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: hithere')
-        self.assertEqual(lines[4], 'Transfer-Encoding: notchunked')
-        self.assertEqual(inst.response_headers['Connection'], 'close')
+        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[4], b'Transfer-Encoding: notchunked')
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
     def test_buildResponseHeader_v11_transfer_encoding_chunked(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
-        inst.response_headers = {'Transfer-Encoding': 'chunked'}
+        inst.response_headers = [('Transfer-Encoding', 'chunked')]
         inst.version = '1.1'
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
-        self.assertTrue(lines[1].startswith('Date:'))
-        self.assertEqual(lines[2], 'Server: hithere')
-        self.assertEqual(lines[3], 'Transfer-Encoding: chunked')
+        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
+        self.assertTrue(lines[1].startswith(b'Date:'))
+        self.assertEqual(lines[2], b'Server: hithere')
+        self.assertEqual(lines[3], b'Transfer-Encoding: chunked')
         self.assertEqual(inst.close_on_finish, False)
 
     def test_buildResponseHeader_v11_304_headersonly(self):
@@ -253,9 +253,9 @@ class TestHTTPTask(unittest.TestCase):
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 3)
-        self.assertEqual(lines[0], 'HTTP/1.1 304 OK')
-        self.assertTrue(lines[1].startswith('Date:'))
-        self.assertEqual(lines[2], 'Server: hithere')
+        self.assertEqual(lines[0], b'HTTP/1.1 304 OK')
+        self.assertTrue(lines[1].startswith(b'Date:'))
+        self.assertEqual(lines[2], b'Server: hithere')
         self.assertEqual(inst.close_on_finish, False)
 
     def test_buildResponseHeader_v11_200_no_content_length(self):
@@ -265,12 +265,12 @@ class TestHTTPTask(unittest.TestCase):
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'HTTP/1.1 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: hithere')
+        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
         self.assertEqual(inst.close_on_finish, True)
-        self.assertEqual(inst.response_headers['Connection'], 'close')
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
 
     def test_buildResponseHeader_unrecognized_http_version(self):
         inst = self._makeOne()
@@ -279,26 +279,26 @@ class TestHTTPTask(unittest.TestCase):
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'HTTP/8.1 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: hithere')
+        self.assertEqual(lines[0], b'HTTP/8.1 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
         self.assertEqual(inst.close_on_finish, True)
-        self.assertEqual(inst.response_headers['Connection'], 'close')
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
 
     def test_buildResponseHeader_via_added(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '1.0'
-        inst.accumulated_headers = ['Server: abc']
+        inst.response_headers = [('Server',  'abc')]
         result = inst.buildResponseHeader()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
-        self.assertEqual(lines[0], 'HTTP/1.0 200 OK')
-        self.assertEqual(lines[1], 'Connection: close')
-        self.assertTrue(lines[2].startswith('Date:'))
-        self.assertEqual(lines[3], 'Server: abc')
-        self.assertEqual(lines[4], 'Via: hithere')
+        self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: abc')
+        self.assertEqual(lines[4], b'Via: hithere')
 
     def test_getEnviron_already_cached(self):
         inst = self._makeOne()
@@ -386,14 +386,14 @@ class TestHTTPTask(unittest.TestCase):
     def test_write_wrote_header(self):
         inst = self._makeOne()
         inst.wrote_header = True
-        inst.write('abc')
-        self.assertEqual(inst.channel.written, 'abc')
+        inst.write(b'abc')
+        self.assertEqual(inst.channel.written, b'abc')
         self.assertEqual(inst.bytes_written, 3)
 
     def test_write_header_not_written(self):
         inst = self._makeOne()
         inst.wrote_header = False
-        inst.write('abc')
+        inst.write(b'abc')
         self.assertTrue(inst.channel.written)
         self.assertEqual(inst.bytes_written, 95)
         self.assertEqual(inst.wrote_header, True)
@@ -442,7 +442,7 @@ class DummyChannel(object):
         if server is None:
             server = DummyServer()
         self.server = server
-        self.written = ''
+        self.written = b''
     def close_when_done(self):
         self.closed_when_done = True
     def write(self, data):
@@ -461,5 +461,5 @@ class DummyParser(object):
         return 'stream'
 
 def filter_lines(s):
-    return list(filter(None, s.split('\r\n')))
+    return list(filter(None, s.split(b'\r\n')))
 

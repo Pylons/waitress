@@ -1,0 +1,7 @@
+- Expose more adjustments to serve().
+
+- Expect/Continue support for HTTP/1.1.
+
+- Test on Windows.
+
+- Functional tests.

@@ -20,7 +20,8 @@ import traceback
 from waitress.utilities import build_http_date
 
 from waitress.compat import (
-    toascii,
+    tostr,
+    tobytes,
     Queue,
     Empty,
     thread,
@@ -61,6 +62,7 @@ class ThreadedTaskDispatcher(object):
                     task.service()
                 except Exception as e:
                     traceback.print_exc(None, self.stderr)
+                    self.stderr.flush()
                     if isinstance(e, JustTesting):
                         break
         finally:
@@ -141,7 +143,7 @@ class HTTPTask(object):
     """
 
     instream = None
-    close_on_finish = True
+    close_on_finish = False
     status = '200'
     reason = 'OK'
     wrote_header = False
@@ -153,7 +155,7 @@ class HTTPTask(object):
     def __init__(self, channel, request_data):
         self.channel = channel
         self.request_data = request_data
-        self.response_headers = {}
+        self.response_headers = []
         version = request_data.version
         if version not in ('1.0', '1.1'):
             # fall back to a version we support.
@@ -188,81 +190,87 @@ class HTTPTask(object):
         self.status = status
         self.reason = reason
 
-    def appendResponseHeaders(self, lst):
-        """See waitress.interfaces.http.IHeaderOutput"""
-        accum = self.accumulated_headers
-        if accum is None:
-            self.accumulated_headers = accum = []
-        accum.extend(lst)
+    def appendResponseHeader(self, name, value):
+        if not isinstance(name, str):
+            raise ValueError(
+                'Header name %r is not a string in %s' % (name, (name, value))
+                )
+        if not isinstance(value, str):
+            raise ValueError(
+                'Header value %r is not a string in %s' % (value, (name, value))
+                )
+        name = '-'.join([x.capitalize() for x in name.split('-')])
+        self.response_headers.append((tostr(name), tostr(value)))
 
     def buildResponseHeader(self):
         version = self.version
         # Figure out whether the connection should be closed.
         connection = self.request_data.headers.get('CONNECTION', '').lower()
-        close_it = False
         response_headers = self.response_headers
-        accumulated_headers = self.accumulated_headers
-        if accumulated_headers is None:
-            accumulated_headers = []
+        connection_header = None
+        content_length_header = None
+        transfer_encoding_header = None
+        date_header = None
+        server_header = None
+
+        for headername, headerval in response_headers:
+            if headername == 'Connection':
+                connection_header = headerval.lower()
+            if headername == 'Content-Length':
+                content_length_header = headerval
+            if headername == 'Transfer-Encoding':
+                transfer_encoding_header = headerval.lower()
+            if headername == 'Date':
+                date_header = headerval
+            if headername == 'Server':
+                server_header = headerval
+
+        def close():
+            if connection_header != 'close':
+                response_headers.append(('Connection', 'close'))
+            self.close_on_finish = True
 
         if version == '1.0':
             if connection == 'keep-alive':
-                if not ('Content-Length' in response_headers):
-                    close_it = True
-                else:
-                    response_headers['Connection'] = 'Keep-Alive'
+                if not content_length_header:
+                    close()
+                elif not connection_header:
+                    response_headers.append(('Connection', 'Keep-Alive'))
             else:
-                close_it = True
+                close()
         elif version == '1.1':
-            for i, header in enumerate(accumulated_headers):
-                if header.lower() == 'connection: close':
-                    close_it = True
-                    # prevent double Connection: close
-                    del accumulated_headers[i]
-            if connection == 'close':
-                close_it = True
-            elif 'Transfer-Encoding' in response_headers:
-                if not response_headers['Transfer-Encoding'] == 'chunked':
-                    close_it = True
+            if connection_header == 'close':
+                self.close_on_finish = True
+            elif connection == 'close':
+                close()
+            elif transfer_encoding_header:
+                if transfer_encoding_header != 'chunked':
+                    close()
             elif self.status == '304':
                 # Replying with headers only.
                 pass
-            elif not ('Content-Length' in response_headers):
-                # accumulated_headers is a simple list, we need to cut off
-                # the value of content-length manually
-                if 'content-length' not in (header[:14].lower() for header in
-                    accumulated_headers):
-                    close_it = True
+            elif not content_length_header:
+                close()
             # under HTTP 1.1 keep-alive is default, no need to set the header
         else:
             # Close if unrecognized HTTP version.
-            close_it = True
-
-        self.close_on_finish = close_it
-        if close_it:
-            self.response_headers['Connection'] = 'close'
+            close()
 
         # Set the Server and Date field, if not yet specified. This is needed
         # if the server is used as a proxy.
-        if 'server' not in (header[:6].lower() for header in
-                            accumulated_headers):
-            self.response_headers['Server'] = self.channel.server.SERVER_IDENT
+        ident = self.channel.server.SERVER_IDENT
+        if not server_header:
+            response_headers.append(('Server', ident))
         else:
-            self.response_headers['Via'] = self.channel.server.SERVER_IDENT
-        if 'date' not in (header[:4].lower() for header in
-                            accumulated_headers):
-            self.response_headers['Date'] = build_http_date(self.start_time)
-
+            response_headers.append(('Via', ident))
+        if not date_header:
+            response_headers.append(('Date', build_http_date(self.start_time)))
 
         first_line = 'HTTP/%s %s %s' % (self.version, self.status, self.reason)
-        next_lines = ['%s: %s' % hv for hv in self.response_headers.items()]
-        accum = self.accumulated_headers
-        if accum is not None:
-            next_lines.extend(accum)
-        next_lines.sort()
+        next_lines = ['%s: %s' % hv for hv in sorted(self.response_headers)]
         lines = [first_line] + next_lines
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
-        return toascii(res)
+        return tobytes(res)
 
     def getEnvironment(self):
         """Returns a WSGI environment."""
@@ -328,3 +336,4 @@ class HTTPTask(object):
             self.wrote_header = True
         if data:
             self.bytes_written += channel.write(data)
+

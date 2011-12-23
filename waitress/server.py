@@ -147,8 +147,40 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
     def executeRequest(self, task):
         env = task.getEnvironment()
 
+        def start_response(status, headers, exc_info=None):
+            if task.wrote_header and not exc_info:
+                raise AssertionError("start_response called a second time "
+                                     "without providing exc_info.")
+            if exc_info:
+                try:
+                    if task.wrote_header:
+                        # higher levels will catch and handle raised exception:
+                        # 1. "service" method in task.py
+                        # 2. "service" method in channel.py
+                        # 3. "handlerThread" method in task.py
+                        reraise(exc_info[0], exc_info[1], exc_info[2])
+                    else:
+                        # As per WSGI spec existing headers must be cleared
+                        task.accumulated_headers = None
+                        task.response_headers = {}
+                finally:
+                    exc_info = None
+
+            # Prepare the headers for output
+            if not isinstance(status, str):
+                raise ValueError('status %s is not a string' % status)
+
+            status, reason = re.match('([0-9]*) (.*)', status).groups()
+            task.setResponseStatus(status, reason)
+
+            for k, v in headers:
+                task.appendResponseHeader(k, v)
+
+            # Return the write method used to write the response data.
+            return fakeWrite
+
         # Call the application to handle the request and write a response
-        app_iter = self.application(env, curriedStartResponse(task))
+        app_iter = self.application(env, start_response)
 
         # By iterating manually at this point, we execute task.write()
         # multiple times, allowing partial data to be sent.
@@ -159,6 +191,21 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             if hasattr(app_iter, 'close'):
                 app_iter.close()
 
+        
+
+
+    ## def executeRequest(self, task):
+    ##     headers = task.request_data.headers
+    ##     if 'CONTENT_LENGTH' in headers:
+    ##         cl = headers['CONTENT_LENGTH']
+    ##         task.response_headers['Content-Length'] = cl
+    ##     instream = task.request_data.getBodyStream()
+    ##     while 1:
+    ##         data = instream.read(8192)
+    ##         if not data:
+    ##             break
+    ##         task.write(data)
+
     def run(self):
         try:
             asyncore.loop()
@@ -168,32 +215,4 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
 def fakeWrite(body):
     raise NotImplementedError(
         "the waitress HTTP Server does not support the WSGI write() function.")
-
-def curriedStartResponse(task):
-    def start_response(status, headers, exc_info=None):
-        if task.wrote_header and not exc_info:
-            raise AssertionError("start_response called a second time "
-                                 "without providing exc_info.")
-        if exc_info:
-            try:
-                if task.wrote_header:
-                    # higher levels will catch and handle raised exception:
-                    # 1. "service" method in task.py
-                    # 2. "service" method in channel.py
-                    # 3. "handlerThread" method in task.py
-                    reraise(exc_info[0], exc_info[1], exc_info[2])
-                else:
-                    # As per WSGI spec existing headers must be cleared
-                    task.accumulated_headers = None
-                    task.response_headers = {}
-            finally:
-                exc_info = None
-        # Prepare the headers for output
-        status, reason = re.match('([0-9]*) (.*)', status).groups()
-        task.setResponseStatus(status, reason)
-        task.appendResponseHeaders(['%s: %s' % i for i in headers])
-
-        # Return the write method used to write the response data.
-        return fakeWrite
-    return start_response
 

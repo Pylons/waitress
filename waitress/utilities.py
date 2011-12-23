@@ -15,7 +15,6 @@
 """
 
 import re
-import string
 import time
 import calendar
 
