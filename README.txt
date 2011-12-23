@@ -44,20 +44,23 @@ use waitress's WSGI gateway from a configuration file, e.g.::
 Using Behind a Reverse Proxy
 ----------------------------
 
-By default, the ``wsgi.url_scheme`` provided by waitress is always ``http``.
-To use waitress as a target for a reverse proxy to an application that wants
-to generate ``https`` prefixed URLs, use the PasteDeploy_ PrefixMiddleware::
+To use waitress as a target for a reverse proxy to a WSGI application that
+generates URLs based on the value of the ``Host`` header sent by the client
+and the value of the WSGI ``wsgi.url_scheme`` environment variable, use the
+PasteDeploy_ PrefixMiddleware::
 
-  from watiress import serve
+  from waitress import serve
   from paste.deploy.config import PrefixMiddleware
   app = PrefixMiddleware(app)
   serve(app)
 
-Then set up your proxy to send a ``X-Forwarded-Scheme`` with the value
-``https`` along with each proxied request.  The PrefixMiddleware will notice
-this header and change the ``wsgi.url_scheme`` appropriately.
+Once you wrap your application in the the ``PrefixMiddleware``, the
+middleware will notice certain headers sent from your proxy and will change
+the ``wsgi.url_scheme`` and possibly other WSGI environment variables
+appropriately.
 
-You can do this declaratively in a PasteDeploy_ configuration file too:
+You can wrap your application in the PrefixMiddleware declaratively in a
+PasteDeploy_ configuration file too:
 
    [app:myapp]
    use = egg:mypackage#myapp
@@ -74,6 +77,28 @@ You can do this declaratively in a PasteDeploy_ configuration file too:
   use = egg:waitress#main
   host = 127.0.0.1
   port = 8080
+
+You should instruct it to send along the original ``Host`` header from the
+client to your waitress server, as well as sending along a
+``X-Forwarded-Proto`` header with the appropriate value for
+``wsgi.url_scheme``.  It's ofen nice to set an ``X-Forwarded-For`` header
+too; the ``PrefixMiddleware`` uses this to adjust other environment
+variables.
+
+For example, when using Nginx as a reverse proxy, you might add the following
+lines in a ``location`` section::
+
+    proxy_set_header        Host $host;
+
+If your proxy accepts HTTPS, and you want your application to generate HTTPS
+urls, also set up your proxy to send a ``X-Forwarded-Proto`` with the value
+``https`` along with each proxied request::
+
+    proxy_set_header        X-Forwarded-Proto $scheme;
+
+For the ``X-Forwarded-For`` header::
+
+    proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
 
 Known Issues
 ------------
