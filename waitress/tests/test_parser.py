@@ -209,8 +209,8 @@ Hello mickey.
                           'CONTENT_LENGTH': '10',
                           })
         # path should be utf-8 encoded
-        self.assertEqual(parser.path, text_(b'/foo/a++/\xc3\xa4=&a:int',
-                                            'utf-8'))
+        self.assertEqual(text_(parser.path, 'utf-8'),
+                         text_(b'/foo/a++/\xc3\xa4=&a:int', 'utf-8'))
         self.assertEqual(parser.query,
                          'd=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6')
         self.assertEqual(parser.getBodyStream().getvalue(), b'Hello mick')
