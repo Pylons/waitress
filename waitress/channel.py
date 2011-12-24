@@ -96,6 +96,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         self.last_activity = time.time()
 
     def readable(self):
+        self.check_maintenance(time.time())
         if not self.async_mode:
             return False
         return not self.will_close
@@ -152,6 +153,13 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         Closes connections that have not had any activity in a while.
 
         The timeout is configured through adj.channel_timeout (seconds).
+
+        CM: the maintenance method never closes the channel upon which it is
+        called, it closes any other channel that is a) not running a task and
+        b) has exceeded its inactivity timeout.  Since channel maintenance is
+        only done at channel creation time, this means that an inactive
+        channel will not be closed until at least one other channel is
+        created.
         """
         now = time.time()
         cutoff = now - self.adj.channel_timeout

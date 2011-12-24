@@ -11,11 +11,9 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Tests for waitress.serverchannelbase zombie logic
+"""Tests for waitress.channel maintenance logic
 """
 import doctest
-import unittest
-
 
 class FakeSocket: # pragma: no cover
     data        = ''
@@ -43,10 +41,10 @@ def zombies_test():
     """Regression test for HTTPServerChannel.maintenance method
 
     Bug: This method checks for channels that have been "inactive" for a
-    configured time. The bug was that last_activity is set at creation time but
-    never updated during async channel activity (reads and writes), so any
-    channel older than the configured timeout will be closed when a new channel
-    is created, regardless of activity.
+    configured time. The bug was that last_activity is set at creation time
+    but never updated during async channel activity (reads and writes), so
+    any channel older than the configured timeout will be closed when a new
+    channel is created, regardless of activity.
 
     >>> import time
     >>> import waitress.adjustments

@@ -23,20 +23,12 @@ from waitress.compat import reraise
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
     """
-
     if __name__ == '__main__':
-        import asyncore
         from waitress.taskthreads import ThreadedTaskDispatcher
         td = ThreadedTaskDispatcher()
         td.setThreadCount(4)
         server = WSGIHTTPServer('', 8080, task_dispatcher=td)
         server.run()
-
-        try:
-            asyncore.loop()
-        except KeyboardInterrupt:
-            print 'shutting down...'
-            td.shutdown()
     """
 
     channel_class = HTTPServerChannel
@@ -190,21 +182,6 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         finally:
             if hasattr(app_iter, 'close'):
                 app_iter.close()
-
-        
-
-
-    ## def executeRequest(self, task):
-    ##     headers = task.request_data.headers
-    ##     if 'CONTENT_LENGTH' in headers:
-    ##         cl = headers['CONTENT_LENGTH']
-    ##         task.response_headers['Content-Length'] = cl
-    ##     instream = task.request_data.getBodyStream()
-    ##     while 1:
-    ##         data = instream.read(8192)
-    ##         if not data:
-    ##             break
-    ##         task.write(data)
 
     def run(self):
         try:
