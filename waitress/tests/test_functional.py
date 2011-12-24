@@ -262,13 +262,34 @@ class PipeliningTests(SubprocessTests, unittest.TestCase):
 
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
         for n in range(count):
             expect_body = tobytes("Response #%d\r\n" % (n + 1))
-            response = httplib.HTTPResponse(self.sock)
-            response.begin()
-            self.assertEqual(int(response.status), 200)
-            length = int(response.getheader('Content-Length', '0'))
-            response_body = response.read(length)
-            self.assertEqual(length, len(response_body))
-            self.assertEqual(response_body, expect_body)
+            line = fp.readline() # status line
+            version, status, reason = (x.strip() for x in line.split(None, 2))
+            headers = parse_headers(fp)
+            length = int(headers.get('content-length')) or None
+            response_body = fp.read(length)
+            assert int(status) ==  200
+            assert length == len(response_body)
+            assert response_body == expect_body
 
+def parse_headers(fp):
+    """Parses only RFC2822 headers from a file pointer.
+
+    email Parser wants to see strings rather than bytes.
+    But a TextIOWrapper around self.rfile would buffer too many bytes
+    from the stream, bytes which we later need to read as bytes.
+    So we read the correct bytes here, as bytes, for email Parser
+    to parse.
+
+    """
+    headers = {}
+    while True:
+        line = fp.readline()
+        if line in (b'\r\n', b'\n', b''):
+            break
+        line = line.decode('iso-8859-1')
+        name, value = line.strip().split(':', 1)
+        headers[name.lower()] = value.lower()
+    return headers
