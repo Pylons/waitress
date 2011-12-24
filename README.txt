@@ -101,7 +101,7 @@ Waitress is meant to be useful to web framework authors who require broad
 platform support.  It's neither the fastest nor the fanciest WSGI server
 available but using it helps eliminate the N-by-M documentation burden
 (e.g. production vs. deployment, Windows vs. Unix, Python 3 vs. Python 2,
-PyPI vs. CPython) and resulting user confusion imposed by spotty platform
+PyPy vs. CPython) and resulting user confusion imposed by spotty platform
 support of the current (2012-ish) crop of WSGI servers.  For example,
 ``gunicorn`` is great, but doesn't run on Windows.  ``paste.httpserver`` is
 perfectly serviceable, but doesn't run under Python 3 and has no dedicated
