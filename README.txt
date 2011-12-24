@@ -5,8 +5,7 @@ Waitress is meant to be a production-quality pure-Python WSGI server with
 very acceptable performance.  It has no dependencies except ones which live
 in the Python standard library.  It runs on CPython on Unix and Windows under
 Python 2.6+ and Python 3.2.  It is also known to run on PyPy 1.6.0 on UNIX.
-It supports HTTP/1.0 and a subset of HTTP/1.1; see "Known Issues" below for
-HTTP/1.1 caveats.
+It supports HTTP/1.0 and HTTP/1.1.
 
 Usage
 -----
@@ -115,35 +114,60 @@ At the time of this writing, some existing WSGI servers already claim wide
 platform support and have serviceable test suites.  The CherryPy WSGI server,
 for example, targets Python 2 and Python 3 and it can run on UNIX or Windows.
 However, it is not distributed separately from its eponymous web framework,
-and asking a non-CherryPy web framework to depend on the CherryPy web
+and requiring a non-CherryPy web framework to depend on the CherryPy web
 framework distribution simply for its server component is awkward.  The test
 suite of the CherryPy server also depends on the CherryPy web framework, so
 even if we forked its server component into a separate distribution, we would
 have still needed to backfill for all of its tests.
 
+Finally, I wanted the control that is provided by maintaining my own server.
+A WSGI server is an important dependency of my web framework, and being able
+to make arbitrary changes (add features, fix bugs, etc) without anyone else's
+permission is nice.
+
 Waitress is a fork of the WSGI-related components which existed in
 ``zope.server``.  ``zope.server`` had passable framework-independent test
-coverage out of the box, anda good bit more coverage was added during the
+coverage out of the box, and a good bit more coverage was added during the
 fork.  ``zope.server`` has existed in one form or another since about 2001,
 and has seen production usage since then, so Waitress is not exactly
 "another" server, it's more a repackaging of an old one that was already
 known to work fairly well.
 
-Finally, I wanted some control.  I am a web framework author.  A WSGI server
-is an important dependency of my web framework, and being able to make
-arbitrary changes to one is important to me, especially as we transition from
-Python 2 to Python 3 over the next few years.
-
 Known Issues
 ------------
 
 - The server returns a ``write`` callable from ``start_response`` which
-  raises a ``NotImplementedError`` exception when called.  It does not
-  support the write callable.
+  raises a ``NotImplementedError`` exception when called.
 
-- This server claims to support HTTP/1.1 but does not implement the
-  Expect/Continue protocol required by WSGI.
-
-- This server does not support the ``wsgi.file_wrapper`` protocol.
+- The server does not support the ``wsgi.file_wrapper`` protocol.
 
 .. _PasteDeploy: http://pythonpaste.org/deploy/
+
+Differences from ``zope.server``
+--------------------------------
+
+- Has no dependencies.
+
+- No support for non-WSGI servers (no FTP, plain-HTTP, etc); refactored as a
+  result.
+
+- Slight cleanup in the way application response headers are handled (no more
+  "accumulated headers").
+
+- Supports the HTTP 1.1 "expect/continue" mechanism (required by WSGI spec).
+
+- Calls "close()" on the app_iter object returned by the WSGI application.
+
+- Supports an explicit ``wsgi.url_scheme`` parameter for ease of deployment
+  behind SSL proxies.
+
+- Different adjustment defaults (less conservative).
+
+- Python 3 compatible.
+
+- Better test coverage.
+
+- Supports convenience ``waitress.serve`` function (e.g. ``from waitress
+  import serve; serve(app)`` and convenience ``server.serve()`` function.
+
+- Slight interface changes

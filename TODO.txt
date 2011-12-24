@@ -1,14 +1,10 @@
 - Expose more adjustments to serve().
 
-- Expect/Continue support for HTTP/1.1.
-
 - Test on Windows.
 
 - Content-Length guessing as per PEP.
 
 - 0.0.0.0 / IPv6.
-
-- Fix pipeline tests under 3.X
 
 - Validate chunked encoding works as expected.
 
@@ -19,8 +15,6 @@
 - Don't read past Content-Length when sending.
 
 - Figure out what to do when we have less data than Content-Length.
-
-- Knob for explicit https url_scheme.
 
 - Speed tweaking.
 
@@ -48,7 +42,7 @@
 
 - Waitress Version number in header.
 
-- Put maintenance check on server rather than channel.
+- Put maintenance check on server rather than channel to avoid DOS.
 
 - Ensure upload streams can not exceed a maximum size.
 

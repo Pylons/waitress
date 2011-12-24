@@ -42,6 +42,8 @@ class HTTPRequestParser(object):
 
     completed = False  # Set once request is completed.
     empty = False        # Set if no request was made.
+    expect_continue = False # client sent "Expect: 100-continue" header
+    headers_finished = False # True when headers have been read
     header_plus = b''
     chunked = False
     content_length = 0
@@ -85,6 +87,7 @@ class HTTPRequestParser(object):
                     self.parse_header(header_plus)
                     if self.body_rcv is None:
                         self.completed = True
+                self.headers_finished = True
                 return consumed
             else:
                 # Header not finished yet.
@@ -144,6 +147,8 @@ class HTTPRequestParser(object):
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
+            expect = headers.get('EXPECT', '').lower()
+            self.expect_continue = expect == '100-continue'
         if not self.chunked:
             try:
                 cl = int(headers.get('CONTENT_LENGTH', 0))

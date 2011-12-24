@@ -523,6 +523,8 @@ class DummyParser(object):
     data = None
     completed = True
     empty = False
+    headers_finished = False
+    expect_continue = False
     retval = 1000
     def received(self, data):
         self.data = data

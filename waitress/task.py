@@ -161,6 +161,7 @@ class HTTPTask(object):
             # fall back to a version we support.
             version = '1.0'
         self.version = version
+        self.expect_continue = self.request_data.expect_continue
 
     def service(self):
         """See waitress.interfaces.ITask"""
@@ -225,7 +226,7 @@ class HTTPTask(object):
             if headername == 'Server':
                 server_header = headerval
 
-        def close():
+        def close_on_finish():
             if connection_header != 'close':
                 response_headers.append(('Connection', 'close'))
             self.close_on_finish = True
@@ -233,28 +234,28 @@ class HTTPTask(object):
         if version == '1.0':
             if connection == 'keep-alive':
                 if not content_length_header:
-                    close()
+                    close_on_finish()
                 elif not connection_header:
                     response_headers.append(('Connection', 'Keep-Alive'))
             else:
-                close()
+                close_on_finish()
         elif version == '1.1':
             if connection_header == 'close':
-                self.close_on_finish = True
+                self.close_on_finish = True # shortcut doesnt call closure
             elif connection == 'close':
-                close()
+                close_on_finish()
             elif transfer_encoding_header:
                 if transfer_encoding_header != 'chunked':
-                    close()
+                    close_on_finish()
             elif self.status == '304':
                 # Replying with headers only.
                 pass
             elif not content_length_header:
-                close()
+                close_on_finish()
             # under HTTP 1.1 keep-alive is default, no need to set the header
         else:
             # Close if unrecognized HTTP version.
-            close()
+            close_on_finish()
 
         # Set the Server and Date field, if not yet specified. This is needed
         # if the server is used as a proxy.
@@ -293,8 +294,8 @@ class HTTPTask(object):
         environ['SERVER_NAME'] = server.server_name
         environ['SERVER_SOFTWARE'] = server.SERVER_IDENT
         environ['SERVER_PROTOCOL'] = "HTTP/%s" % self.version
-        environ['SCRIPT_NAME']=''
-        environ['PATH_INFO']='/' + path
+        environ['SCRIPT_NAME'] = ''
+        environ['PATH_INFO'] = '/' + path
         query = request_data.query
         if query:
             environ['QUERY_STRING'] = query

@@ -48,13 +48,13 @@ class Adjustments(object):
     inbuf_overflow = 524288
 
     # Stop accepting new connections if too many are already active.
-    connection_limit = 100
+    connection_limit = 1000
 
     # Minimum seconds between cleaning up inactive channels.
     cleanup_interval = 300
 
     # Maximum seconds to leave an inactive connection open.
-    channel_timeout = 60
+    channel_timeout = 900
 
     # Boolean: turn off to not log premature client disconnects.
     log_socket_errors = True

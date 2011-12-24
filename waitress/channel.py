@@ -178,8 +178,12 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             if preq is None:
                 preq = self.parser_class(self.adj)
             n = preq.received(data)
+            if preq.expect_continue and preq.headers_finished:
+                # guaranteed by parser to be a 1.1 request
+                self.write(b'HTTP/1.1 100 Continue\r\n\r\n')
+                preq.expect_continue = False
             if preq.completed:
-                # The request is ready to use.
+                # The request (with the body) is ready to use.
                 self.proto_request = None
                 if not preq.empty:
                     self.handle_request(preq)

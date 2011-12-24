@@ -1,5 +1,4 @@
 import unittest
-import io
 
 class TestThreadedTaskDispatcher(unittest.TestCase):
     def _makeOne(self):
@@ -455,6 +454,8 @@ class DummyParser(object):
     path = '/'
     query = None
     url_scheme = 'http'
+    expect_continue = False
+    headers_finished = False
     def __init__(self):
         self.headers = {}
     def getBodyStream(self):

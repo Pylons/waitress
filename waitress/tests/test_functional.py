@@ -270,9 +270,46 @@ class PipeliningTests(SubprocessTests, unittest.TestCase):
             headers = parse_headers(fp)
             length = int(headers.get('content-length')) or None
             response_body = fp.read(length)
-            assert int(status) ==  200
-            assert length == len(response_body)
-            assert response_body == expect_body
+            self.assertEqual(int(status), 200)
+            self.assertEqual(length, len(response_body))
+            self.assertEqual(response_body, expect_body)
+
+class ExpectContinueTests(SubprocessTests, unittest.TestCase):
+    def setUp(self):
+        echo = os.path.join(here, 'fixtureapps', 'echo.py')
+        self.start_subprocess([self.exe, echo])
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def test_expect_continue(self):
+        # specifying Connection: close explicitly
+        data = "I have expectations"
+        to_send = tobytes(
+            "GET / HTTP/1.1\n"
+             "Connection: close\n"
+             "Content-Length: %d\n"
+             "Expect: 100-continue\n"
+             "\n"
+             "%s" % (len(data), data)
+             )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # continue status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        self.assertEqual(int(status), 100)
+        self.assertEqual(reason, b'Continue')
+        self.assertEqual(version, b'HTTP/1.1')
+        fp.readline() # blank line
+        line = fp.readline() # next status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        length = int(headers.get('content-length')) or None
+        response_body = fp.read(length)
+        self.assertEqual(int(status), 200)
+        self.assertEqual(length, len(response_body))
+        self.assertEqual(response_body, tobytes(data))
 
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
