@@ -141,15 +141,13 @@ Known Issues
 
 - The server does not support the ``wsgi.file_wrapper`` protocol.
 
-.. _PasteDeploy: http://pythonpaste.org/deploy/
-
 Differences from ``zope.server``
 --------------------------------
 
-- Has no dependencies.
+- Has no non-stdlib dependencies.
 
-- No support for non-WSGI servers (no FTP, plain-HTTP, etc); refactored as a
-  result.
+- No support for non-WSGI servers (no FTP, plain-HTTP, etc); refactorings and
+  slight interface changes as a result.  Non-WSGI-supporting code removed.
 
 - Slight cleanup in the way application response headers are handled (no more
   "accumulated headers").
@@ -165,9 +163,11 @@ Differences from ``zope.server``
 
 - Python 3 compatible.
 
-- Better test coverage.
+- More test coverage (unit tests added, functional tests refactored and more
+  added).
 
 - Supports convenience ``waitress.serve`` function (e.g. ``from waitress
   import serve; serve(app)`` and convenience ``server.serve()`` function.
 
-- Slight interface changes
+.. _PasteDeploy: http://pythonpaste.org/deploy/
+

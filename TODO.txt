@@ -6,8 +6,6 @@
 
 - 0.0.0.0 / IPv6.
 
-- Validate chunked encoding works as expected.
-
 - add unit test for addResponseHeader.
 
 - Documentation.
@@ -19,26 +17,6 @@
 - Speed tweaking.
 
 - Coverage.
-
-- # But note that "...a URI must be separated into its components before the
-  # escaped characters within those components can be safely decoded."
-  # http://www.ietf.org/rfc/rfc2396.txt, sec 2.4.2 Therefore, "/this%2Fpath"
-  # becomes "/this%2Fpath", not "/this/path".
-
-- comma_separated_headers = [ntob(h) for h in
-    ['Accept', 'Accept-Charset', 'Accept-Encoding',
-     'Accept-Language', 'Accept-Ranges', 'Allow', 'Cache-Control',
-     'Connection', 'Content-Encoding', 'Content-Language', 'Expect',
-     'If-Match', 'If-None-Match', 'Pragma', 'Proxy-Authenticate', 'TE',
-     'Trailer', 'Transfer-Encoding', 'Upgrade', 'Vary', 'Via', 'Warning',
-     'WWW-Authenticate']]
-
--  elif "content-length" not in hkeys:
-            # "All 1xx (informational), 204 (no content),
-            # and 304 (not modified) responses MUST NOT
-            # include a message-body." So no point chunking.
-            if status < 200 or status in (204, 205, 304):
-                pass
 
 - Waitress Version number in header.
 
