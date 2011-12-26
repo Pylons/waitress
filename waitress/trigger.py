@@ -209,4 +209,4 @@ else:
             self.trigger.close()
 
         def _physical_pull(self):
-            self.trigger.send('x')
+            self.trigger.send(b'x')
