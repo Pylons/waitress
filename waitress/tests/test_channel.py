@@ -379,7 +379,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.received(b'GET / HTTP/1.1\n\n')
         self.assertEqual(inst.proto_request, preq)
         self.assertEqual(inst.server.tasks, [])
-        self.assertEqual(inst.outbuf.get(100), '')
+        self.assertEqual(inst.outbuf.get(100), b'')
 
     def test_received_headers_finished_expect_continue(self):
         inst, sock, map = self._makeOneWithMap()
