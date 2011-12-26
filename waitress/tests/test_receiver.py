@@ -36,6 +36,94 @@ class TestFixedStreamReceiver(unittest.TestCase):
         inst = self._makeOne(10, buf)
         self.assertEqual(inst.getfile(), buf)
 
+class TestChunkedReceiver(unittest.TestCase):
+    def _makeOne(self, buf):
+        from waitress.receiver import ChunkedReceiver
+        return ChunkedReceiver(buf)
+
+    def test_alreadycompleted(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        inst.completed = True
+        result = inst.received(b'a')
+        self.assertEqual(result, 0)
+        self.assertEqual(inst.completed, True)
+
+    def test_received_remain_gt_zero(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        inst.chunk_remainder = 100
+        result = inst.received(b'a')
+        self.assertEqual(inst.chunk_remainder, 99)
+        self.assertEqual(result, 1)
+        self.assertEqual(inst.completed, False)
+
+    def test_received_control_line_notfinished(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        result = inst.received(b'a')
+        self.assertEqual(inst.control_line, b'a')
+        self.assertEqual(result, 1)
+        self.assertEqual(inst.completed, False)
+
+    def test_received_control_line_finished_all_chunks_not_received(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        result = inst.received(b'a;discard\n')
+        self.assertEqual(inst.control_line, b'')
+        self.assertEqual(inst.chunk_remainder, 10)
+        self.assertEqual(inst.all_chunks_received, False)
+        self.assertEqual(result, 10)
+        self.assertEqual(inst.completed, False)
+
+    def test_received_control_line_finished_all_chunks_received(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        result = inst.received(b'0;discard\n')
+        self.assertEqual(inst.control_line, b'')
+        self.assertEqual(inst.all_chunks_received, True)
+        self.assertEqual(result, 10)
+        self.assertEqual(inst.completed, False)
+
+    def test_received_trailer_startswith_crlf(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        inst.all_chunks_received = True
+        result = inst.received(b'\r\n')
+        self.assertEqual(result, 2)
+        self.assertEqual(inst.completed, True)
+
+    def test_received_trailer_startswith_lf(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        inst.all_chunks_received = True
+        result = inst.received(b'\n')
+        self.assertEqual(result, 1)
+        self.assertEqual(inst.completed, True)
+
+    def test_received_trailer_not_finished(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        inst.all_chunks_received = True
+        result = inst.received(b'a')
+        self.assertEqual(result, 1)
+        self.assertEqual(inst.completed, False)
+
+    def test_received_trailer_finished(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        inst.all_chunks_received = True
+        result = inst.received(b'abc\r\n\r\n')
+        self.assertEqual(inst.trailer, 'abc\r\n\r\n')
+        self.assertEqual(result, 7)
+        self.assertEqual(inst.completed, True)
+
+    def test_getfile(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        self.assertEqual(inst.getfile(), buf)
+    
+
 class DummyBuffer(object):
     def __init__(self):
         self.data = []
