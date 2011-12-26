@@ -3,7 +3,8 @@ import unittest
 class TestHTTPServerChannel(unittest.TestCase):
     def _makeOne(self, sock, addr, adj=None, map=None):
         from waitress.channel import HTTPServerChannel
-        return HTTPServerChannel(None, sock, addr, adj=adj, map=map)
+        server = DummyServer()
+        return HTTPServerChannel(server, sock, addr, adj=adj, map=map)
 
     def _makeOneWithMap(self, adj=None):
         sock = DummySock()
@@ -158,12 +159,11 @@ class TestHTTPServerChannel(unittest.TestCase):
     def test_set_async(self):
         inst, sock, map = self._makeOneWithMap()
         inst.async_mode = False
-        inst.trigger = DummyTrigger()
         inst.last_activity = 0
         inst.set_async()
         self.assertEqual(inst.async_mode, True)
         self.assertNotEqual(inst.last_activity, 0)
-        self.assertTrue(inst.trigger.pulled)
+        self.assertTrue(inst.server.trigger_pulled)
 
     def test_write_empty_byte(self):
         inst, sock, map = self._makeOneWithMap()
@@ -253,11 +253,10 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.connected = True
         inst.outbuf.append(b'abc')
         inst.async_mode = False
-        inst.trigger = DummyTrigger()
         inst.close_when_done()
         self.assertEqual(inst.will_close, True)
         self.assertEqual(inst.async_mode, True)
-        self.assertEqual(inst.trigger.pulled, True)
+        self.assertEqual(inst.server.trigger_pulled, True)
 
     def test_close_async_mode(self):
         inst, sock, map = self._makeOneWithMap()
@@ -537,16 +536,14 @@ class DummyBuffer(object):
     def skip(self, num, x):
         self.skipped = num
 
-class DummyTrigger(object):
-    pulled = False
-    def pull_trigger(self):
-        self.pulled = True
-
 class DummyServer(object):
+    trigger_pulled = False
     def __init__(self):
         self.tasks = []
     def addTask(self, task):
         self.tasks.append(task)
+    def pull_trigger(self):
+        self.trigger_pulled = True
 
 class DummyParser(object):
     version = 1
@@ -571,4 +568,3 @@ class DummyTask(object):
             raise self.toraise
     def cancel(self):
         self.cancelled = True
-        

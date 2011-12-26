@@ -1,7 +1,5 @@
 - Expose more adjustments to serve().
 
-- Test on Windows.
-
 - Content-Length guessing as per PEP.
 
 - 0.0.0.0 / IPv6.
@@ -24,3 +22,4 @@
 
 - Ensure upload streams can not exceed a maximum size.
 
+- Test paste server runner on windows.

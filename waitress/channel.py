@@ -18,7 +18,6 @@ import socket
 import sys
 import time
 
-from waitress import trigger
 from waitress.compat import thread
 from waitress.adjustments import Adjustments
 from waitress.buffers import OverflowableBuffer
@@ -38,7 +37,6 @@ class HTTPServerChannel(asyncore.dispatcher, object):
     task_class = HTTPTask
     parser_class = HTTPRequestParser
 
-    trigger = trigger.trigger()
     task_lock = thread.allocate_lock() # syncs access to task-related attrs
 
     active_channels = {}        # Class-specific channel tracker
@@ -238,7 +236,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
         The main thread will begin calling received() again.
         """
         self.async_mode = True
-        self.trigger.pull_trigger()
+        self.server.pull_trigger()
         self.last_activity = time.time()
 
     #
@@ -288,7 +286,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             # For safety, don't close the socket until the
             # main thread calls handle_write().
             self.async_mode = True
-            self.trigger.pull_trigger()
+            self.server.pull_trigger()
 
     def close(self):
         # Always close in asynchronous mode.  If the connection is

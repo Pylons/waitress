@@ -20,6 +20,7 @@ import sys
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPServerChannel
 from waitress.compat import reraise
+from waitress import trigger
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
     """
@@ -60,6 +61,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         if adj is None:
             adj = Adjustments()
         self.adj = adj
+        self.trigger = trigger.trigger(map)
         asyncore.dispatcher.__init__(self, sock, map=map)
         self.port = port
         self.task_dispatcher = task_dispatcher
@@ -188,6 +190,9 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             asyncore.loop()
         except (SystemError, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
+
+    def pull_trigger(self):
+        self.trigger.pull_trigger()
 
 def fakeWrite(body):
     raise NotImplementedError(
