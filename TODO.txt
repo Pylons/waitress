@@ -1,16 +1,10 @@
 - Expose more adjustments to serve().
 
-- Content-Length guessing as per PEP.
-
 - 0.0.0.0 / IPv6.
-
-- add unit test for addResponseHeader.
 
 - Documentation.
 
-- Don't read past Content-Length when sending.
-
-- Figure out what to do when we have less data than Content-Length.
+- Figure out what to do when we have less data than Content-Length (close?)
 
 - Speed tweaking.
 
@@ -25,3 +19,5 @@
 - Test paste server runner on windows.
 
 - SERVER_IDENT -> ident
+
+- PEP-8.
