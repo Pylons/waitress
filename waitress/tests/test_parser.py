@@ -144,7 +144,17 @@ foo: bar"""
         data = b"GET /foobar HTTP/8.4\ncontent-length: abc"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv, None)
+
+    def test_parse_header_11_te_chunked(self):
+        data = b"GET /foobar HTTP/1.1\ntransfer-encoding: chunked"
+        self.parser.parse_header(data)
+        self.assertEqual(self.parser.body_rcv.__class__.__name__,
+                         'ChunkedReceiver')
         
+    def test_parse_header_11_expect_continue(self):
+        data = b"GET /foobar HTTP/1.1\nexpect: 100-continue"
+        self.parser.parse_header(data)
+        self.assertEqual(self.parser.expect_continue, True)
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
 
