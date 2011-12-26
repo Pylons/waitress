@@ -215,6 +215,10 @@ class IServer(Interface):
                         overridden.
                         """)
 
+    def getsockname():
+        """ Return the IP-address, port number pair to which this server's
+        socket is bound"""
+
 
 class IDispatcherLogging(Interface):
     """This interface provides methods through which the Dispatcher will

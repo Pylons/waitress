@@ -33,7 +33,6 @@ class HTTPServerChannel(asyncore.dispatcher, object):
     Call set_async() to give the channel back to the thread handling
     the main loop.
     """
-
     task_class = HTTPTask
     parser_class = HTTPRequestParser
 

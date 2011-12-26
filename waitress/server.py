@@ -25,10 +25,10 @@ from waitress import trigger
 class WSGIHTTPServer(asyncore.dispatcher, object):
     """
     if __name__ == '__main__':
-        from waitress.taskthreads import ThreadedTaskDispatcher
+        from waitress.task import ThreadedTaskDispatcher
         td = ThreadedTaskDispatcher()
         td.setThreadCount(4)
-        server = WSGIHTTPServer('', 8080, task_dispatcher=td)
+        server = WSGIHTTPServer(app, '', 8080, task_dispatcher=td)
         server.run()
     """
 
@@ -80,19 +80,19 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         else:
             server_name = str(self.socketmod.gethostname())
         # Convert to a host name if necessary.
-        is_hostname = False
         for c in server_name:
             if c != '.' and not c.isdigit():
-                is_hostname = True
-                break
-        if not is_hostname:
-            try:
-                if server_name == '0.0.0.0':
-                    return 'localhost'
-                server_name = self.socketmod.gethostbyaddr(server_name)[0]
-            except socket.error: # pragma: no cover
-                pass
+                return server_name
+        try:
+            if server_name == '0.0.0.0':
+                return 'localhost'
+            server_name = self.socketmod.gethostbyaddr(server_name)[0]
+        except socket.error: # pragma: no cover
+            pass
         return server_name
+
+    def getsockname(self):
+        return self.socket.getsockname()
 
     def accept_connections(self):
         self.accepting = True

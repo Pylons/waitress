@@ -23,3 +23,5 @@
 - Ensure upload streams can not exceed a maximum size.
 
 - Test paste server runner on windows.
+
+- SERVER_IDENT -> ident
