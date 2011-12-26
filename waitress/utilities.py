@@ -120,9 +120,12 @@ rfc850_reg = re.compile(rfc850_date)
 # they actually unpack the same way
 def unpack_rfc850(m):
     g = m.group
+    yr = g(4)
+    if len(yr) == 2:
+        yr = '19'+yr
     return (
-            int(g(4)),           # year
-            monmap[g(3)],      # month
+            int(yr),           # year
+            monmap[g(3)],        # month
             int(g(2)),           # day
             int(g(5)),           # hour
             int(g(6)),           # minute
