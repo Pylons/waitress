@@ -127,17 +127,6 @@ class TestHTTPTask(unittest.TestCase):
         inst = self._makeOne()
         self.assertEqual(inst.defer(), None)
 
-    def test_setResponseStatus(self):
-        inst = self._makeOne()
-        inst.setResponseStatus('one', 'two')
-        self.assertEqual(inst.status, 'one')
-        self.assertEqual(inst.reason, 'two')
-
-    def test_appendResponseHeader(self):
-        inst = self._makeOne()
-        inst.appendResponseHeader('x-forwarded-for', 'fred')
-        self.assertEqual(inst.response_headers, [('X-Forwarded-For', 'fred')])
-
     def test_buildResponseHeader_v10_keepalive_no_content_length(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
@@ -298,6 +287,19 @@ class TestHTTPTask(unittest.TestCase):
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: abc')
         self.assertEqual(lines[4], b'Via: hithere')
+
+    def test_buildResponseHeader_date_exists(self):
+        inst = self._makeOne()
+        inst.request_data = DummyParser()
+        inst.version = '1.0'
+        inst.response_headers = [('Date',  'date')]
+        result = inst.buildResponseHeader()
+        lines = filter_lines(result)
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: hithere')
 
     def test_getEnviron_already_cached(self):
         inst = self._makeOne()

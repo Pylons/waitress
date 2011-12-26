@@ -20,7 +20,6 @@ import traceback
 from waitress.utilities import build_http_date
 
 from waitress.compat import (
-    tostr,
     tobytes,
     Queue,
     Empty,
@@ -185,23 +184,6 @@ class HTTPTask(object):
     def defer(self):
         """See waitress.interfaces.ITask"""
         pass
-
-    def setResponseStatus(self, status, reason):
-        """See waitress.interfaces.http.IHeaderOutput"""
-        self.status = status
-        self.reason = reason
-
-    def appendResponseHeader(self, name, value):
-        if not isinstance(name, str):
-            raise ValueError(
-                'Header name %r is not a string in %s' % (name, (name, value))
-                )
-        if not isinstance(value, str):
-            raise ValueError(
-                'Header value %r is not a string in %s' % (value, (name, value))
-                )
-        name = '-'.join([x.capitalize() for x in name.split('-')])
-        self.response_headers.append((tostr(name), tostr(value)))
 
     def buildResponseHeader(self):
         version = self.version

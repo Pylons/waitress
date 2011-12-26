@@ -19,7 +19,10 @@ import sys
 
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPServerChannel
-from waitress.compat import reraise
+from waitress.compat import (
+    tostr,
+    reraise,
+    )
 from waitress import trigger
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
@@ -165,10 +168,20 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
                 raise ValueError('status %s is not a string' % status)
 
             status, reason = re.match('([0-9]*) (.*)', status).groups()
-            task.setResponseStatus(status, reason)
+            task.status = status
+            task.reason = reason
 
             for k, v in headers:
-                task.appendResponseHeader(k, v)
+                if not isinstance(k, str):
+                    raise ValueError(
+                        'Header name %r is not a string in %s' % (k, (k, v))
+                        )
+                if not isinstance(v, str):
+                    raise ValueError(
+                        'Header value %r is not a string in %s' % (v, (k, v))
+                        )
+                k = '-'.join([x.capitalize() for x in k.split('-')])
+                task.response_headers.append((tostr(k), tostr(v)))
 
             # Return the write method used to write the response data.
             return fakeWrite
