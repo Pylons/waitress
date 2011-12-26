@@ -271,9 +271,11 @@ class HTTPTask(object):
             cl = self.content_length
             if cl != -1:
                 if self.content_bytes_written != cl:
+                    # close the connection so the client isn't sitting around
+                    # waiting for more data
                     self.close_on_finish = True
                     self.channel.server.log_info(
-                        'app_iter returned a number of bytes (%s) too short '
+                        'app_iter returned too few bytes (%s) '
                         'for specified Content-Length (%s)' % (
                             self.content_bytes_written,
                             cl)

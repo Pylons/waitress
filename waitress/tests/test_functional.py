@@ -317,17 +317,37 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
     def tearDown(self):
         self.stop_subprocess()
 
-    def test_short_cl(self):
-        self.conn.request('GET', '/short')
+    def test_short_body(self):
+        # check to see if server closes connection when body is too short
+        # for cl header
+        to_send = tobytes(
+            "GET /short_body HTTP/1.0\n"
+             "Connection: Keep-Alive\n"
+             "Content-Length: 0\n"
+             "\n"
+             )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        content_length = int(headers.get('content-length')) or None
+        response_body = fp.read(content_length)
+        self.assertEqual(int(status), 200)
+        self.assertNotEqual(content_length, len(response_body))
+        self.assertEqual(len(response_body), content_length-1)
+        self.assertEqual(response_body, tobytes('abcdefghi'))
+        # remote closed connection (despite keepalive header); not sure why
+        # first send succeeds
+        self.sock.send(to_send[:5])
+        self.assertRaises(socket.error, self.sock.send, to_send[5:])
+
+    def test_long_body(self):
+        self.conn.request('GET', '/long_body',
+                          headers={'Connection': 'Keep-Alive'})
         resp = self.getresponse()
         self.assertEqual(resp.getheader('Content-Length'), '8')
-        resp.read()
-
-    def test_long_cl(self):
-        self.conn.request('GET', '/long')
-        resp = self.getresponse()
-        self.assertEqual(resp.getheader('Content-Length'), '10')
-        self.assertRaises(httplib.IncompleteRead, resp.read)
 
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
