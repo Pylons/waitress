@@ -56,6 +56,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         la = inst.last_activity
         inst.async_mode = True
         inst.outbuf = DummyBuffer(b'abc')
+        inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
         self.assertNotEqual(inst.last_activity, la)
@@ -69,6 +70,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         L = []
         inst.log_info = lambda *x: L.append(x)
         inst.outbuf = DummyBuffer(b'abc', socket.error)
+        inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
         self.assertNotEqual(inst.last_activity, la)
@@ -81,6 +83,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.async_mode = True
         inst.outbuf = None
         inst.will_close = True
+        inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
         self.assertEqual(inst.connected, False)
@@ -129,6 +132,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.recv = lambda *arg: 'abc'
         L = []
         inst.received = lambda data: L.append(data)
+        inst.last_activity = 0
         result = inst.handle_read()
         self.assertEqual(result, None)
         self.assertNotEqual(inst.last_activity, la)
@@ -160,6 +164,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         la = inst.last_activity
         inst.async_mode = False
         inst.trigger = DummyTrigger()
+        inst.last_activity = 0
         inst.set_async()
         self.assertEqual(inst.async_mode, True)
         self.assertNotEqual(inst.last_activity, la)
