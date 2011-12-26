@@ -143,8 +143,7 @@ class HTTPTask(object):
 
     instream = None
     close_on_finish = False
-    status = '200'
-    reason = 'OK'
+    status = '200 OK'
     wrote_header = False
     accumulated_headers = None
     bytes_written = 0
@@ -229,7 +228,7 @@ class HTTPTask(object):
             elif transfer_encoding_header:
                 if transfer_encoding_header != 'chunked':
                     close_on_finish()
-            elif self.status == '304':
+            elif self.status[:3] == '304':
                 # Replying with headers only.
                 pass
             elif not content_length_header:
@@ -249,7 +248,7 @@ class HTTPTask(object):
         if not date_header:
             response_headers.append(('Date', build_http_date(self.start_time)))
 
-        first_line = 'HTTP/%s %s %s' % (self.version, self.status, self.reason)
+        first_line = 'HTTP/%s %s' % (self.version, self.status)
         next_lines = ['%s: %s' % hv for hv in sorted(self.response_headers)]
         lines = [first_line] + next_lines
         res = '%s\r\n\r\n' % '\r\n'.join(lines)

@@ -13,7 +13,6 @@
 ##############################################################################
 
 import asyncore
-import re
 import socket
 import sys
 
@@ -158,7 +157,6 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
                         reraise(exc_info[0], exc_info[1], exc_info[2])
                     else:
                         # As per WSGI spec existing headers must be cleared
-                        task.accumulated_headers = None
                         task.response_headers = {}
                 finally:
                     exc_info = None
@@ -167,9 +165,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             if not isinstance(status, str):
                 raise ValueError('status %s is not a string' % status)
 
-            status, reason = re.match('([0-9]*) (.*)', status).groups()
             task.status = status
-            task.reason = reason
 
             for k, v in headers:
                 if not isinstance(k, str):

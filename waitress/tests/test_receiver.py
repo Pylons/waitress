@@ -114,7 +114,7 @@ class TestChunkedReceiver(unittest.TestCase):
         inst = self._makeOne(buf)
         inst.all_chunks_received = True
         result = inst.received(b'abc\r\n\r\n')
-        self.assertEqual(inst.trailer, 'abc\r\n\r\n')
+        self.assertEqual(inst.trailer, b'abc\r\n\r\n')
         self.assertEqual(result, 7)
         self.assertEqual(inst.completed, True)
 

@@ -236,7 +236,7 @@ class TestHTTPTask(unittest.TestCase):
     def test_buildResponseHeader_v11_304_headersonly(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
-        inst.status = '304'
+        inst.status = '304 OK'
         inst.version = '1.1'
         result = inst.buildResponseHeader()
         lines = filter_lines(result)

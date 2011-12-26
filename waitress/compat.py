@@ -44,8 +44,7 @@ if PY3: # pragma: no cover
     def tobytes(s):
         return bytes(s, 'latin-1')
 else:
-    def tostr(s):
-        return str(s)
+    tostr = str
     def tobytes(s):
         return s
 
