@@ -102,17 +102,21 @@ class TestHTTPTask(unittest.TestCase):
 
     def test_service(self):
         inst = self._makeOne()
+        def execute():
+            inst.executed = True
+        inst.execute = execute
         inst.service()
         self.assertTrue(inst.start_time)
         self.assertTrue(inst.channel.closed_when_done)
         self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.channel.server.executed, [inst])
+        self.assertEqual(inst.executed, True)
 
     def test_service_server_raises_socket_error(self):
         import socket
-        server = DummyServer(socket.error)
-        channel = DummyChannel(server)
-        inst = self._makeOne(channel=channel)
+        inst = self._makeOne()
+        def execute():
+            raise socket.error
+        inst.execute = execute
         self.assertRaises(socket.error, inst.service)
         self.assertTrue(inst.start_time)
         self.assertTrue(inst.channel.closed_when_done)
@@ -389,15 +393,19 @@ class TestHTTPTask(unittest.TestCase):
         inst.wrote_header = True
         inst.write(b'abc')
         self.assertEqual(inst.channel.written, b'abc')
-        self.assertEqual(inst.bytes_written, 3)
 
     def test_write_header_not_written(self):
         inst = self._makeOne()
         inst.wrote_header = False
         inst.write(b'abc')
         self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.bytes_written, 95)
         self.assertEqual(inst.wrote_header, True)
+
+    def test_execute_start_response_uncalled(self):
+        inst = self._makeOne()
+        inst.channel.server.application = lambda *arg: None
+        self.assertRaises(RuntimeError, inst.execute)
+
 
 class DummyTask(object):
     serviced = False
@@ -430,6 +438,10 @@ class DummyServer(object):
         self.executed.append(task)
         if self.toraise:
             raise self.toraise
+
+    def application(self, environ, start_response):
+        start_response('200 OK', [])
+        return [b'abc']
 
 class DummyAdj(object):
     log_socket_errors = True

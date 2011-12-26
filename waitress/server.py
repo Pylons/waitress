@@ -18,10 +18,6 @@ import sys
 
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPServerChannel
-from waitress.compat import (
-    tostr,
-    reraise,
-    )
 from waitress import trigger
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
@@ -140,60 +136,6 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             conn.setsockopt(level, optname, value)
         self.channel_class(self, conn, addr, self.adj, map=self._map)
 
-    def executeRequest(self, task):
-        env = task.getEnvironment()
-
-        def start_response(status, headers, exc_info=None):
-            if task.wrote_header and not exc_info:
-                raise AssertionError("start_response called a second time "
-                                     "without providing exc_info.")
-            if exc_info:
-                try:
-                    if task.wrote_header:
-                        # higher levels will catch and handle raised exception:
-                        # 1. "service" method in task.py
-                        # 2. "service" method in channel.py
-                        # 3. "handlerThread" method in task.py
-                        reraise(exc_info[0], exc_info[1], exc_info[2])
-                    else:
-                        # As per WSGI spec existing headers must be cleared
-                        task.response_headers = {}
-                finally:
-                    exc_info = None
-
-            # Prepare the headers for output
-            if not isinstance(status, str):
-                raise ValueError('status %s is not a string' % status)
-
-            task.status = status
-
-            for k, v in headers:
-                if not isinstance(k, str):
-                    raise ValueError(
-                        'Header name %r is not a string in %s' % (k, (k, v))
-                        )
-                if not isinstance(v, str):
-                    raise ValueError(
-                        'Header value %r is not a string in %s' % (v, (k, v))
-                        )
-                k = '-'.join([x.capitalize() for x in k.split('-')])
-                task.response_headers.append((tostr(k), tostr(v)))
-
-            # Return the write method used to write the response data.
-            return fakeWrite
-
-        # Call the application to handle the request and write a response
-        app_iter = self.application(env, start_response)
-
-        # By iterating manually at this point, we execute task.write()
-        # multiple times, allowing partial data to be sent.
-        try:
-            for value in app_iter:
-                task.write(value)
-        finally:
-            if hasattr(app_iter, 'close'):
-                app_iter.close()
-
     def run(self):
         try:
             asyncore.loop(map=self._map)
@@ -202,8 +144,3 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
 
     def pull_trigger(self):
         self.trigger.pull_trigger()
-
-def fakeWrite(body):
-    raise NotImplementedError(
-        "the waitress HTTP Server does not support the WSGI write() function.")
-

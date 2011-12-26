@@ -157,8 +157,18 @@ class DummyTaskDispatcher(object):
 
 class DummyTask(object):
     serviced = False
+    start_response_called = False
+    wrote_header = False
+    status = '200 OK'
+    def __init__(self):
+        self.response_headers = {}
+        self.written = ''
     def service(self): # pragma: no cover
         self.serviced = True
+    def write(self, val):
+        self.written += val
+    def getEnvironment(self):
+        return {}
 
 class DummyAdj:
     connection_limit = 1

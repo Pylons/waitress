@@ -17,13 +17,17 @@ import sys
 import time
 import traceback
 
-from waitress.utilities import build_http_date
+from waitress.utilities import (
+    build_http_date,
+    )
 
 from waitress.compat import (
     tobytes,
     Queue,
     Empty,
     thread,
+    reraise,
+    tostr,
     )
 
 rename_headers = {
@@ -146,9 +150,11 @@ class HTTPTask(object):
     status = '200 OK'
     wrote_header = False
     accumulated_headers = None
-    bytes_written = 0
     start_time = 0
     environ = None
+    start_response_called = False
+    content_length = -1
+    content_bytes_written = 0
 
     def __init__(self, channel, request_data):
         self.channel = channel
@@ -166,7 +172,7 @@ class HTTPTask(object):
         try:
             try:
                 self.start()
-                self.channel.server.executeRequest(self)
+                self.execute()
                 self.finish()
             except socket.error:
                 self.close_on_finish = True
@@ -184,6 +190,90 @@ class HTTPTask(object):
         """See waitress.interfaces.ITask"""
         pass
 
+    def execute(self):
+        env = self.getEnvironment()
+
+        def start_response(status, headers, exc_info=None):
+            self.start_response_called = True
+            if self.wrote_header and not exc_info:
+                raise AssertionError("start_response called a second time "
+                                     "without providing exc_info.")
+            if exc_info:
+                try:
+                    if self.wrote_header:
+                        # higher levels will catch and handle raised exception:
+                        # 1. "service" method in task.py
+                        # 2. "service" method in channel.py
+                        # 3. "handlerThread" method in task.py
+                        reraise(exc_info[0], exc_info[1], exc_info[2])
+                    else:
+                        # As per WSGI spec existing headers must be cleared
+                        self.response_headers = []
+                finally:
+                    exc_info = None
+
+            # Prepare the headers for output
+            if not isinstance(status, str):
+                raise ValueError('status %s is not a string' % status)
+
+            self.status = status
+
+            for k, v in headers:
+                if not isinstance(k, str):
+                    raise ValueError(
+                        'Header name %r is not a string in %s' % (k, (k, v))
+                        )
+                if not isinstance(v, str):
+                    raise ValueError(
+                        'Header value %r is not a string in %s' % (v, (k, v))
+                        )
+                k = '-'.join([x.capitalize() for x in k.split('-')])
+                self.response_headers.append((tostr(k), tostr(v)))
+
+            # Return the write method used to write the response data.
+            return fakeWrite
+
+        # Call the application to handle the request and write a response
+        app_iter = self.channel.server.application(env, start_response)
+
+        if not self.start_response_called:
+            raise RuntimeError('start_response was not called before app_iter '
+                               'returned')
+
+        # Set a Content-Length header if one is not supplied.
+        cl = dict(self.response_headers).get('Content-Length')
+        if cl is None:
+            app_iter_len = len(app_iter)
+            if app_iter_len == 1:
+                self.content_length = len(app_iter[0])
+
+        # By iterating manually at this point, we execute task.write()
+        # multiple times, allowing partial data to be sent.
+        cl = self.content_length
+        has_content_length = cl != -1
+        bytes_written = 0
+        try:
+            for value in app_iter:
+                towrite = value
+                if has_content_length:
+                    towrite = value[:cl-self.content_bytes_written]
+                bytes_written += len(towrite)
+                self.write(towrite)
+                if towrite != value:
+                    self.log_info(
+                        'warning: app_iter content exceeded the number '
+                        'of bytes specified by Content-Length header (%s)' % cl)
+                    break
+            if has_content_length:
+                if bytes_written != cl:
+                    self.log_info('warning: app_iter returned a number of '
+                                  'bytes (%s) too short for specified '
+                                  'Content-Length (%s)'  % (bytes_written, cl))
+        finally:
+            if hasattr(app_iter, 'close'):
+                app_iter.close()
+
+
     def buildResponseHeader(self):
         version = self.version
         # Figure out whether the connection should be closed.
@@ -200,12 +290,19 @@ class HTTPTask(object):
                 connection_header = headerval.lower()
             if headername == 'Content-Length':
                 content_length_header = headerval
+                self.content_length = int(headerval)
             if headername == 'Transfer-Encoding':
                 transfer_encoding_header = headerval.lower()
             if headername == 'Date':
                 date_header = headerval
             if headername == 'Server':
                 server_header = headerval
+
+        if content_length_header is None and self.content_length != -1:
+            content_length_header = str(self.content_length)
+            self.response_headers.append(
+                ('Content-Length',content_length_header)
+                )
 
         def close_on_finish():
             if connection_header != 'close':
@@ -314,8 +411,11 @@ class HTTPTask(object):
         if not self.wrote_header:
             rh = self.buildResponseHeader()
             channel.write(rh)
-            self.bytes_written += len(rh)
             self.wrote_header = True
         if data:
-            self.bytes_written += channel.write(data)
+            channel.write(data)
+
+def fakeWrite(body):
+    raise NotImplementedError(
+        "the waitress HTTP Server does not support the WSGI write() function.")
 
