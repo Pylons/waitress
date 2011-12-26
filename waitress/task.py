@@ -247,32 +247,26 @@ class HTTPTask(object):
             for chunk in app_iter:
                 if first_chunk_len is None:
                     first_chunk_len = len(chunk)
+                    # Set a Content-Length header if one is not supplied.
+                    # start_response may not have been called until first
+                    # iteration as per PEP, so we must reinterrogate
+                    # self.content_length here
+                    cl = self.content_length
+                    has_content_length = cl != -1
+                    if not has_content_length and app_iter_len == 1:
+                        cl = self.content_length = first_chunk_len
                 # transmit headers only after first iteration of the iterable
                 # that returns a non-empty bytestring (PEP 3333)
                 if not chunk:
                     continue
-                # Set a Content-Length header if one is not supplied.
-                # start_response may not have been called until first iteration
-                # as per PEP
-                cl = self.content_length
-                has_content_length = cl != -1
-                if not has_content_length and app_iter_len == 1:
-                    cl = self.content_length = first_chunk_len
-                towrite = chunk
-                if has_content_length:
-                    towrite = chunk[:cl-self.content_bytes_written]
-                self.write(towrite)
-                if towrite != chunk:
-                    self.channel.server.log_info(
-                        'app_iter content exceeded the number of bytes '
-                        'specified by Content-Length header (%s)' % cl)
-                    break
+                self.write(chunk)
 
             cl = self.content_length
             if cl != -1:
                 if self.content_bytes_written != cl:
                     # close the connection so the client isn't sitting around
-                    # waiting for more data
+                    # waiting for more data when there are too few bytes
+                    # to service content-length
                     self.close_on_finish = True
                     self.channel.server.log_info(
                         'app_iter returned too few bytes (%s) '
@@ -294,8 +288,18 @@ class HTTPTask(object):
             channel.write(rh)
             self.wrote_header = True
         if data:
-            self.content_bytes_written += len(data)
-            channel.write(data)
+            towrite = data
+            cl = self.content_length
+            if cl != -1:
+                towrite = data[:cl-self.content_bytes_written]
+            if towrite != data:
+                # XXX warn instead of relog
+                self.channel.server.log_info(
+                    'written content exceeded the number of bytes '
+                    'specified by Content-Length header (%s)' % cl)
+            if towrite:
+                self.content_bytes_written += len(towrite)
+                channel.write(towrite)
 
     def build_response_header(self):
         version = self.version
@@ -323,7 +327,7 @@ class HTTPTask(object):
         if content_length_header is None and self.content_length != -1:
             content_length_header = str(self.content_length)
             self.response_headers.append(
-                ('Content-Length',content_length_header)
+                ('Content-Length', content_length_header)
                 )
 
         def close_on_finish():

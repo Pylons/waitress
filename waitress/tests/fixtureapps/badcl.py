@@ -1,5 +1,5 @@
 def app(environ, start_response):
-    body = 'abcdefghi'
+    body = b'abcdefghi'
     cl = len(body)
     if environ['PATH_INFO'] == '/short_body':
         cl = len(body) +1

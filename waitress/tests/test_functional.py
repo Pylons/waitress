@@ -373,6 +373,153 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
         response_body = fp.read(content_length)
         self.assertEqual(int(status), 200)
 
+class NoContentLengthTests(SubprocessTests, unittest.TestCase):
+    def setUp(self):
+        echo = os.path.join(here, 'fixtureapps', 'nocl.py')
+        self.start_subprocess([self.exe, echo])
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def test_generator(self):
+        self.conn.request("GET", "/generator",
+                          headers={"Connection": "Keep-Alive",
+                                   "Content-Length": "0"})
+        resp = self.getresponse()
+        self.assertEqual(resp.getheader('Content-Length'), None)
+        self.assertEqual(resp.getheader('Connection'), 'close')
+        self.assertEqual(resp.read(), b'abcdefghi')
+
+    def test_list(self):
+        self.conn.request("GET", "/list",
+                          headers={"Connection": "Keep-Alive",
+                                   "Content-Length": "0"})
+        resp = self.getresponse()
+        self.assertEqual(resp.getheader('Content-Length'), '9')
+        self.assertEqual(resp.getheader('Connection'), None)
+        self.assertEqual(resp.read(), b'abcdefghi')
+
+class WriteCallbackTests(SubprocessTests, unittest.TestCase):
+    def setUp(self):
+        echo = os.path.join(here, 'fixtureapps', 'writecb.py')
+        self.start_subprocess([self.exe, echo])
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def test_short_body(self):
+        # check to see if server closes connection when body is too short
+        # for cl header
+        to_send = tobytes(
+            "GET /short_body HTTP/1.0\n"
+             "Connection: Keep-Alive\n"
+             "Content-Length: 0\n"
+             "\n"
+             )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        content_length = int(headers.get('content-length')) or None
+        self.assertEqual(content_length, 9)
+        response_body = fp.read(content_length)
+        self.assertEqual(int(status), 200)
+        self.assertNotEqual(content_length, len(response_body))
+        self.assertEqual(len(response_body), content_length-1)
+        self.assertEqual(response_body, tobytes('abcdefgh'))
+        # remote closed connection (despite keepalive header); not sure why
+        # first send succeeds
+        self.sock.send(to_send[:5])
+        self.assertRaises(socket.error, self.sock.send, to_send[5:])
+
+    def test_long_body(self):
+        # check server doesnt close connection when body is too long
+        # for cl header
+        to_send = tobytes(
+            "GET /long_body HTTP/1.0\n"
+             "Connection: Keep-Alive\n"
+             "Content-Length: 0\n"
+             "\n"
+             )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        content_length = int(headers.get('content-length')) or None
+        self.assertEqual(content_length, 9)
+        response_body = fp.read(content_length)
+        self.assertEqual(int(status), 200)
+        self.assertEqual(content_length, len(response_body))
+        self.assertEqual(response_body, tobytes('abcdefghi'))
+        # remote does not close connection (keepalive header)
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        content_length = int(headers.get('content-length')) or None
+        response_body = fp.read(content_length)
+        self.assertEqual(int(status), 200)
+
+    def test_equal_body(self):
+        # check server doesnt close connection when body is equal to
+        # cl header
+        to_send = tobytes(
+            "GET /equal_body HTTP/1.0\n"
+             "Connection: Keep-Alive\n"
+             "Content-Length: 0\n"
+             "\n"
+             )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        content_length = int(headers.get('content-length')) or None
+        self.assertEqual(content_length, 9)
+        response_body = fp.read(content_length)
+        self.assertEqual(int(status), 200)
+        self.assertEqual(content_length, len(response_body))
+        self.assertEqual(response_body, tobytes('abcdefghi'))
+        # remote does not close connection (keepalive header)
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        content_length = int(headers.get('content-length')) or None
+        response_body = fp.read(content_length)
+        self.assertEqual(int(status), 200)
+
+    def test_no_content_length(self):
+        # wtf happens when there's no content-length
+        to_send = tobytes(
+            "GET /no_content_length HTTP/1.0\n"
+             "Connection: Keep-Alive\n"
+             "Content-Length: 0\n"
+             "\n"
+             )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line = fp.readline() # status line
+        version, status, reason = (x.strip() for x in line.split(None, 2))
+        headers = parse_headers(fp)
+        content_length = headers.get('content-length')
+        self.assertEqual(content_length, None)
+        response_body = fp.read()
+        self.assertEqual(int(status), 200)
+        self.assertEqual(response_body, tobytes('abcdefghi'))
+        # remote closed connection (despite keepalive header); not sure why
+        # first send succeeds
+        self.sock.send(to_send[:5])
+        self.assertRaises(socket.error, self.sock.send, to_send[5:])
+
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
 
