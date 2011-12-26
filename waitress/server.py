@@ -25,7 +25,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
     if __name__ == '__main__':
         from waitress.task import ThreadedTaskDispatcher
         td = ThreadedTaskDispatcher()
-        td.setThreadCount(4)
+        td.set_thread_count(4)
         server = WSGIHTTPServer(app, '', 8080, task_dispatcher=td)
         server.run()
     """
@@ -96,9 +96,9 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
         self.accepting = True
         self.socket.listen(self.adj.backlog)  # Get around asyncore NT limit
 
-    def addTask(self, task):
+    def add_task(self, task):
         """See waitress.interfaces.ITaskDispatcher"""
-        self.task_dispatcher.addTask(task)
+        self.task_dispatcher.add_task(task)
 
     def readable(self):
         """See waitress.interfaces.IDispatcher"""

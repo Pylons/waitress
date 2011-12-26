@@ -540,7 +540,7 @@ class DummyServer(object):
     trigger_pulled = False
     def __init__(self):
         self.tasks = []
-    def addTask(self, task):
+    def add_task(self, task):
         self.tasks.append(task)
     def pull_trigger(self):
         self.trigger_pulled = True

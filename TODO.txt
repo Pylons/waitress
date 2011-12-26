@@ -20,4 +20,3 @@
 
 - SERVER_IDENT -> ident
 
-- PEP-8.

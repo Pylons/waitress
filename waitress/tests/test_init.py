@@ -86,6 +86,6 @@ class DummyServerFactory(object):
         self.ran = True
         
 class DummyTaskDispatcher(object):
-    def setThreadCount(self, num):
+    def set_thread_count(self, num):
         self.threads = num
         

@@ -53,7 +53,7 @@ class ThreadedTaskDispatcher(object):
         self.queue = Queue()
         self.thread_mgmt_lock = thread.allocate_lock()
 
-    def handlerThread(self, thread_no):
+    def handler_thread(self, thread_no):
         threads = self.threads
         try:
             while threads.get(thread_no):
@@ -77,7 +77,7 @@ class ThreadedTaskDispatcher(object):
             finally:
                 mlock.release()
 
-    def setThreadCount(self, count):
+    def set_thread_count(self, count):
         """See waitress.interfaces.ITaskDispatcher"""
         mlock = self.thread_mgmt_lock
         mlock.acquire()
@@ -91,7 +91,7 @@ class ThreadedTaskDispatcher(object):
                     thread_no = thread_no + 1
                 threads[thread_no] = 1
                 running += 1
-                self.start_new_thread(self.handlerThread, (thread_no,))
+                self.start_new_thread(self.handler_thread, (thread_no,))
                 thread_no = thread_no + 1
             if running > count:
                 # Stop threads.
@@ -103,7 +103,7 @@ class ThreadedTaskDispatcher(object):
         finally:
             mlock.release()
 
-    def addTask(self, task):
+    def add_task(self, task):
         """See waitress.interfaces.ITaskDispatcher"""
         try:
             task.defer()
@@ -114,7 +114,7 @@ class ThreadedTaskDispatcher(object):
 
     def shutdown(self, cancel_pending=True, timeout=5):
         """See waitress.interfaces.ITaskDispatcher"""
-        self.setThreadCount(0)
+        self.set_thread_count(0)
         # Ensure the threads shut down.
         threads = self.threads
         expiration = time.time() + timeout
@@ -191,7 +191,7 @@ class HTTPTask(object):
         pass
 
     def execute(self):
-        env = self.getEnvironment()
+        env = self.get_environment()
 
         def start_response(status, headers, exc_info=None):
             self.start_response_called = True
@@ -204,7 +204,7 @@ class HTTPTask(object):
                         # higher levels will catch and handle raised exception:
                         # 1. "service" method in task.py
                         # 2. "service" method in channel.py
-                        # 3. "handlerThread" method in task.py
+                        # 3. "handler_thread" method in task.py
                         reraise(exc_info[0], exc_info[1], exc_info[2])
                     else:
                         # As per WSGI spec existing headers must be cleared
@@ -233,7 +233,7 @@ class HTTPTask(object):
                     self.content_length = int(v)
 
             # Return the write method used to write the response data.
-            return fakeWrite
+            return fake_write
 
         # Call the application to handle the request and write a response
         app_iter = self.channel.server.application(env, start_response)
@@ -244,16 +244,17 @@ class HTTPTask(object):
 
         # Set a Content-Length header if one is not supplied.
         cl = self.content_length
-        if cl is None:
+        if cl == -1:
             app_iter_len = len(app_iter)
             if app_iter_len == 1:
-                self.content_length = len(app_iter[0])
+                cl = self.content_length = len(app_iter[0])
 
-        # By iterating manually at this point, we execute task.write()
-        # multiple times, allowing partial data to be sent.
         has_content_length = cl != -1
         bytes_written = 0
+
         try:
+            # By iterating manually at this point, we execute task.write()
+            # multiple times, allowing partial data to be sent.
             for value in app_iter:
                 towrite = value
                 if has_content_length:
@@ -265,6 +266,7 @@ class HTTPTask(object):
                         'warning: app_iter content exceeded the number '
                         'of bytes specified by Content-Length header (%s)' % cl)
                     break
+
             if has_content_length:
                 if bytes_written != cl:
                     self.log_info('warning: app_iter returned a number of '
@@ -275,7 +277,7 @@ class HTTPTask(object):
                 app_iter.close()
 
 
-    def buildResponseHeader(self):
+    def build_response_header(self):
         version = self.version
         # Figure out whether the connection should be closed.
         connection = self.request_data.headers.get('CONNECTION', '').lower()
@@ -351,7 +353,7 @@ class HTTPTask(object):
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
         return tobytes(res)
 
-    def getEnvironment(self):
+    def get_environment(self):
         """Returns a WSGI environment."""
         environ = self.environ
         if environ is not None:
@@ -409,13 +411,13 @@ class HTTPTask(object):
     def write(self, data):
         channel = self.channel
         if not self.wrote_header:
-            rh = self.buildResponseHeader()
+            rh = self.build_response_header()
             channel.write(rh)
             self.wrote_header = True
         if data:
             channel.write(data)
 
-def fakeWrite(body):
+def fake_write(body):
     raise NotImplementedError(
         "the waitress HTTP Server does not support the WSGI write() function.")
 

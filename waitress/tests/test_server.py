@@ -51,10 +51,10 @@ class TestWSGIHTTPServer(unittest.TestCase):
         result = inst.computeServerName('fred.flintstone.com')
         self.assertEqual(result, 'fred.flintstone.com')
 
-    def test_addTask(self):
+    def test_add_task(self):
         task = DummyTask()
         inst = self._makeOneWithMap()
-        inst.addTask(task)
+        inst.add_task(task)
         self.assertEqual(inst.task_dispatcher.tasks, [task])
         self.assertFalse(task.serviced)
 
@@ -152,7 +152,7 @@ class DummySock(object):
 class DummyTaskDispatcher(object):
     def __init__(self):
         self.tasks = []
-    def addTask(self, task):
+    def add_task(self, task):
         self.tasks.append(task)
 
 class DummyTask(object):
@@ -167,7 +167,7 @@ class DummyTask(object):
         self.serviced = True
     def write(self, val):
         self.written += val
-    def getEnvironment(self):
+    def get_environment(self):
         return {}
 
 class DummyAdj:

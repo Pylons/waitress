@@ -33,7 +33,7 @@ def serve(
     port = int(port)
     threads = int(threads)
     task_dispatcher = dispatcher()
-    task_dispatcher.setThreadCount(threads)
+    task_dispatcher.set_thread_count(threads)
     adj = Adjustments()
     adj.url_scheme = url_scheme
     adj.connection_limit = int(connection_limit)

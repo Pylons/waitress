@@ -308,7 +308,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             self.task_lock.release()
         if start:
             self.set_sync()
-            self.server.addTask(self)
+            self.server.add_task(self)
 
     #
     # ITask implementation.  Delegates to the queued tasks.
@@ -333,7 +333,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
                 task.service()
             except:
                 # propagate the exception, but keep executing tasks
-                self.server.addTask(self)
+                self.server.add_task(self)
                 raise
 
     def cancel(self):

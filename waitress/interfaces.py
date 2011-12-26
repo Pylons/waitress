@@ -88,11 +88,11 @@ class ITaskDispatcher(Interface):
     """An object that accepts tasks and dispatches them to threads.
     """
 
-    def setThreadCount(count):
+    def set_thread_count(count):
         """Sets the number of handler threads.
         """
 
-    def addTask(task):
+    def add_task(task):
         """Receives a task and dispatches it to a thread.
 
         Note that, depending on load, a task may have to wait a

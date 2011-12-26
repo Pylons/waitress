@@ -5,15 +5,15 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         from waitress.task import ThreadedTaskDispatcher
         return ThreadedTaskDispatcher()
 
-    def test_handlerThread_task_is_None(self):
+    def test_handler_thread_task_is_None(self):
         inst = self._makeOne()
         inst.threads[0] = True
         inst.queue.put(None)
-        inst.handlerThread(0)
+        inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
         self.assertEqual(inst.threads, {})
 
-    def test_handlerThread_task_raises(self):
+    def test_handler_thread_task_raises(self):
         from waitress.compat import NativeIO
         from waitress.task import JustTesting
         inst = self._makeOne()
@@ -21,52 +21,52 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.stderr = NativeIO()
         task = DummyTask(JustTesting)
         inst.queue.put(task)
-        inst.handlerThread(0)
+        inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
         self.assertEqual(inst.threads, {})
         self.assertTrue(inst.stderr.getvalue())
 
-    def test_setThread_count_increase(self):
+    def test_set_thread_count_increase(self):
         inst = self._makeOne()
         L = []
         inst.start_new_thread = lambda *x: L.append(x)
-        inst.setThreadCount(1)
-        self.assertEqual(L, [(inst.handlerThread, (0,))])
+        inst.set_thread_count(1)
+        self.assertEqual(L, [(inst.handler_thread, (0,))])
 
-    def test_setThread_count_increase_with_existing(self):
+    def test_set_thread_count_increase_with_existing(self):
         inst = self._makeOne()
         L = []
         inst.threads = {0:1}
         inst.start_new_thread = lambda *x: L.append(x)
-        inst.setThreadCount(2)
-        self.assertEqual(L, [(inst.handlerThread, (1,))])
+        inst.set_thread_count(2)
+        self.assertEqual(L, [(inst.handler_thread, (1,))])
 
-    def test_setThread_count_decrease(self):
+    def test_set_thread_count_decrease(self):
         inst = self._makeOne()
         inst.threads = {'a':1, 'b':2}
-        inst.setThreadCount(1)
+        inst.set_thread_count(1)
         self.assertEqual(inst.queue.qsize(), 1)
         self.assertEqual(inst.queue.get(), None)
 
-    def test_setThread_count_same(self):
+    def test_set_thread_count_same(self):
         inst = self._makeOne()
         L = []
         inst.start_new_thread = lambda *x: L.append(x)
         inst.threads = {0:1}
-        inst.setThreadCount(1)
+        inst.set_thread_count(1)
         self.assertEqual(L, [])
 
-    def test_addTask(self):
+    def test_add_task(self):
         task = DummyTask()
         inst = self._makeOne()
-        inst.addTask(task)
+        inst.add_task(task)
         self.assertEqual(inst.queue.qsize(), 1)
         self.assertTrue(task.deferred)
 
-    def test_addTask_defer_raises(self):
+    def test_add_task_defer_raises(self):
         task = DummyTask(ValueError)
         inst = self._makeOne()
-        self.assertRaises(ValueError, inst.addTask, task)
+        self.assertRaises(ValueError, inst.add_task, task)
         self.assertEqual(inst.queue.qsize(), 0)
         self.assertTrue(task.deferred)
         self.assertTrue(task.cancelled)
@@ -131,12 +131,12 @@ class TestHTTPTask(unittest.TestCase):
         inst = self._makeOne()
         self.assertEqual(inst.defer(), None)
 
-    def test_buildResponseHeader_v10_keepalive_no_content_length(self):
+    def test_build_response_header_v10_keepalive_no_content_length(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.request_data.headers['CONNECTION'] = 'keep-alive'
         inst.version = '1.0'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
@@ -146,13 +146,13 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
-    def test_buildResponseHeader_v10_keepalive_with_content_length(self):
+    def test_build_response_header_v10_keepalive_with_content_length(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.request_data.headers['CONNECTION'] = 'keep-alive'
         inst.response_headers = [('Content-Length', '10')]
         inst.version = '1.0'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
@@ -162,12 +162,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[4], b'Server: hithere')
         self.assertEqual(inst.close_on_finish, False)
 
-    def test_buildResponseHeader_v11_connection_closed_by_app(self):
+    def test_build_response_header_v11_connection_closed_by_app(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '1.1'
         inst.response_headers = [('Connection', 'close')]
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
@@ -177,12 +177,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
-    def test_buildResponseHeader_v11_connection_closed_by_client(self):
+    def test_build_response_header_v11_connection_closed_by_client(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '1.1'
         inst.request_data.headers['CONNECTION'] = 'close'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
@@ -192,12 +192,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
-    def test_buildResponseHeader_v11_connection_keepalive_by_client(self):
+    def test_build_response_header_v11_connection_keepalive_by_client(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.request_data.headers['CONNECTION'] = 'keep-alive'
         inst.version = '1.1'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
@@ -207,12 +207,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
-    def test_buildResponseHeader_v11_transfer_encoding_nonchunked(self):
+    def test_build_response_header_v11_transfer_encoding_nonchunked(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.response_headers = [('Transfer-Encoding', 'notchunked')]
         inst.version = '1.1'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
@@ -223,12 +223,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
-    def test_buildResponseHeader_v11_transfer_encoding_chunked(self):
+    def test_build_response_header_v11_transfer_encoding_chunked(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.response_headers = [('Transfer-Encoding', 'chunked')]
         inst.version = '1.1'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
@@ -237,12 +237,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[3], b'Transfer-Encoding: chunked')
         self.assertEqual(inst.close_on_finish, False)
 
-    def test_buildResponseHeader_v11_304_headersonly(self):
+    def test_build_response_header_v11_304_headersonly(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.status = '304 OK'
         inst.version = '1.1'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], b'HTTP/1.1 304 OK')
@@ -250,11 +250,11 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[2], b'Server: hithere')
         self.assertEqual(inst.close_on_finish, False)
 
-    def test_buildResponseHeader_v11_200_no_content_length(self):
+    def test_build_response_header_v11_200_no_content_length(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '1.1'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
@@ -264,11 +264,11 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
-    def test_buildResponseHeader_unrecognized_http_version(self):
+    def test_build_response_header_unrecognized_http_version(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '8.1'
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/8.1 200 OK')
@@ -278,12 +278,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
-    def test_buildResponseHeader_via_added(self):
+    def test_build_response_header_via_added(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '1.0'
         inst.response_headers = [('Server',  'abc')]
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
@@ -292,12 +292,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[3], b'Server: abc')
         self.assertEqual(lines[4], b'Via: hithere')
 
-    def test_buildResponseHeader_date_exists(self):
+    def test_build_response_header_date_exists(self):
         inst = self._makeOne()
         inst.request_data = DummyParser()
         inst.version = '1.0'
         inst.response_headers = [('Date',  'date')]
-        result = inst.buildResponseHeader()
+        result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
@@ -308,14 +308,14 @@ class TestHTTPTask(unittest.TestCase):
     def test_getEnviron_already_cached(self):
         inst = self._makeOne()
         inst.environ = object()
-        self.assertEqual(inst.getEnvironment(), inst.environ)
+        self.assertEqual(inst.get_environment(), inst.environ)
 
     def test_getEnviron_path_startswith_more_than_one_slash(self):
         inst = self._makeOne()
         request_data = DummyParser()
         request_data.path = '///abc'
         inst.request_data = request_data
-        environ = inst.getEnvironment()
+        environ = inst.get_environment()
         self.assertEqual(environ['PATH_INFO'], '/abc')
 
     def test_getEnviron_path_empty(self):
@@ -323,14 +323,14 @@ class TestHTTPTask(unittest.TestCase):
         request_data = DummyParser()
         request_data.path = ''
         inst.request_data = request_data
-        environ = inst.getEnvironment()
+        environ = inst.get_environment()
         self.assertEqual(environ['PATH_INFO'], '/')
 
     def test_getEnviron_no_query(self):
         inst = self._makeOne()
         request_data = DummyParser()
         inst.request_data = request_data
-        environ = inst.getEnvironment()
+        environ = inst.get_environment()
         self.assertFalse('QUERY_STRING' in environ)
 
     def test_getEnviron_with_query(self):
@@ -338,7 +338,7 @@ class TestHTTPTask(unittest.TestCase):
         request_data = DummyParser()
         request_data.query = 'abc'
         inst.request_data = request_data
-        environ = inst.getEnvironment()
+        environ = inst.get_environment()
         self.assertEqual(environ['QUERY_STRING'], 'abc')
 
     def test_getEnviron_values(self):
@@ -349,7 +349,7 @@ class TestHTTPTask(unittest.TestCase):
                                 'X_FOO':'BAR'}
         request_data.query = 'abc'
         inst.request_data = request_data
-        environ = inst.getEnvironment()
+        environ = inst.get_environment()
         self.assertEqual(environ['REQUEST_METHOD'], 'GET')
         self.assertEqual(environ['SERVER_PORT'], '80')
         self.assertEqual(environ['SERVER_NAME'], 'localhost')
