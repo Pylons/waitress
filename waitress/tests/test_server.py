@@ -118,7 +118,7 @@ class TestWSGIHTTPServer(unittest.TestCase):
         inst.socket = DummySock(acceptresult=(innersock, None))
         inst.adj = DummyAdj
         L = []
-        inst.channel_class = lambda *arg: L.append(arg)
+        inst.channel_class = lambda *arg, **kw: L.append(arg)
         inst.handle_accept()
         self.assertEqual(inst.socket.accepted, True)
         self.assertEqual(innersock.opts, [('level', 'optname', 'value')])

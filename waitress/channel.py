@@ -57,10 +57,8 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             sock,
             addr,
             adj=None,
-            map=None,  # test shim
+            map=None,
             ):
-        if map is None: # pragma: no cover
-            map = asyncore.socket_map
         self.addr = addr
         if adj is None:
             adj = Adjustments()

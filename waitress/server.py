@@ -43,8 +43,8 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
                  task_dispatcher,
                  ident=None,
                  adj=None,
+                 map=None,
                  start=True, # test shim
-                 map=None,   # test shim
                  sock=None   # test shim
                  ): 
 
@@ -136,7 +136,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             return
         for (level, optname, value) in self.adj.socket_options:
             conn.setsockopt(level, optname, value)
-        self.channel_class(self, conn, addr, self.adj)
+        self.channel_class(self, conn, addr, self.adj, map=self._map)
 
     def executeRequest(self, task):
         env = task.getEnvironment()
@@ -187,7 +187,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
 
     def run(self):
         try:
-            asyncore.loop()
+            asyncore.loop(map=self._map)
         except (SystemError, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
 
