@@ -45,27 +45,25 @@ class TestHTTPServerChannel(unittest.TestCase):
 
     def test_handle_write_sync_mode(self):
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = False
+        inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
-        self.assertEqual(inst.last_activity, la)
+        self.assertEqual(inst.last_activity, 0)
 
     def test_handle_write_async_mode_with_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = True
         inst.outbuf = DummyBuffer(b'abc')
         inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
-        self.assertNotEqual(inst.last_activity, la)
+        self.assertNotEqual(inst.last_activity, 0)
         self.assertEqual(sock.sent, b'abc')
 
     def test_handle_write_async_mode_with_outbuf_raises_socketerror(self):
         import socket
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = True
         L = []
         inst.log_info = lambda *x: L.append(x)
@@ -73,13 +71,12 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
-        self.assertNotEqual(inst.last_activity, la)
+        self.assertNotEqual(inst.last_activity, 0)
         self.assertEqual(sock.sent, b'')
         self.assertEqual(len(L), 1)
 
     def test_handle_write_async_mode_no_outbuf_will_close(self):
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = True
         inst.outbuf = None
         inst.will_close = True
@@ -88,7 +85,7 @@ class TestHTTPServerChannel(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(inst.connected, False)
         self.assertEqual(sock.closed, True)
-        self.assertNotEqual(inst.last_activity, la)
+        self.assertNotEqual(inst.last_activity, 0)
 
     def test_readable_async_mode_not_will_close(self):
         inst, sock, map = self._makeOneWithMap()
@@ -109,24 +106,23 @@ class TestHTTPServerChannel(unittest.TestCase):
 
     def test_handle_read_sync_mode(self):
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = False
+        inst.last_activity = 0
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertEqual(inst.last_activity, la)
+        self.assertEqual(inst.last_activity, 0)
 
     def test_handle_read_async_mode_will_close(self):
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = True
         inst.will_close = True
+        inst.last_activity = 0
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertEqual(inst.last_activity, la)
+        self.assertEqual(inst.last_activity, 0)
 
     def test_handle_read_async_mode_no_error(self):
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = True
         inst.will_close = False
         inst.recv = lambda *arg: 'abc'
@@ -135,22 +131,22 @@ class TestHTTPServerChannel(unittest.TestCase):
         inst.last_activity = 0
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertNotEqual(inst.last_activity, la)
+        self.assertNotEqual(inst.last_activity, 0)
         self.assertEqual(L, ['abc'])
 
     def test_handle_read_async_mode_error(self):
         import socket
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = True
         inst.will_close = False
         def recv(b): raise socket.error
         inst.recv = recv
         L = []
         inst.log_info = lambda *x: L.append(x)
+        inst.last_activity = 0
         result = inst.handle_read()
         self.assertEqual(result, None)
-        self.assertEqual(inst.last_activity, la)
+        self.assertEqual(inst.last_activity, 0)
         self.assertEqual(len(L), 1)
 
     def test_set_sync(self):
@@ -161,13 +157,12 @@ class TestHTTPServerChannel(unittest.TestCase):
 
     def test_set_async(self):
         inst, sock, map = self._makeOneWithMap()
-        la = inst.last_activity
         inst.async_mode = False
         inst.trigger = DummyTrigger()
         inst.last_activity = 0
         inst.set_async()
         self.assertEqual(inst.async_mode, True)
-        self.assertNotEqual(inst.last_activity, la)
+        self.assertNotEqual(inst.last_activity, 0)
         self.assertTrue(inst.trigger.pulled)
 
     def test_write_empty_byte(self):
