@@ -45,8 +45,6 @@ if PY3: # pragma: no cover
         return bytes(s, 'latin-1')
 else:
     def tostr(s):
-        if isinstance(s, text_type):
-            s = s.encode('latin-1')
         return str(s)
     def tobytes(s):
         return s
@@ -56,7 +54,7 @@ try:
         Queue,
         Empty,
         )
-except ImportError:
+except ImportError: # pragma: no cover
     from queue import (
         Queue,
         Empty,
@@ -64,7 +62,7 @@ except ImportError:
 
 try:
     import thread
-except ImportError:
+except ImportError: # pragma: no cover
     import _thread as thread
     
 
@@ -108,6 +106,6 @@ except ImportError: # pragma: no cover
 
 try:
     import httplib
-except ImportError:
+except ImportError: # pragma: no cover
     from http import client as httplib
     
