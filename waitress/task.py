@@ -229,6 +229,8 @@ class HTTPTask(object):
                         )
                 k = '-'.join([x.capitalize() for x in k.split('-')])
                 self.response_headers.append((tostr(k), tostr(v)))
+                if k == 'Content-Length':
+                    self.content_length = int(v)
 
             # Return the write method used to write the response data.
             return fakeWrite
@@ -241,7 +243,7 @@ class HTTPTask(object):
                                'returned')
 
         # Set a Content-Length header if one is not supplied.
-        cl = dict(self.response_headers).get('Content-Length')
+        cl = self.content_length
         if cl is None:
             app_iter_len = len(app_iter)
             if app_iter_len == 1:
@@ -249,7 +251,6 @@ class HTTPTask(object):
 
         # By iterating manually at this point, we execute task.write()
         # multiple times, allowing partial data to be sent.
-        cl = self.content_length
         has_content_length = cl != -1
         bytes_written = 0
         try:
@@ -290,7 +291,6 @@ class HTTPTask(object):
                 connection_header = headerval.lower()
             if headername == 'Content-Length':
                 content_length_header = headerval
-                self.content_length = int(headerval)
             if headername == 'Transfer-Encoding':
                 transfer_encoding_header = headerval.lower()
             if headername == 'Date':
