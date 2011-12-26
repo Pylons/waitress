@@ -120,11 +120,10 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             response.read()
 
     def test_chunking_request_without_content(self):
-        h = httplib.HTTPConnection(self.host, self.port)
-        h.request("GET", "/", headers={"Accept": "text/plain",
-                                       "Transfer-Encoding": "chunked"})
-        h.send(b"0\r\n\r\n")
-        response = h.getresponse()
+        self.conn.request("GET", "/", headers={"Accept": "text/plain",
+                                               "Transfer-Encoding": "chunked"})
+        self.conn.send(b"0\r\n\r\n")
+        response = self.conn.getresponse()
         self.assertEqual(int(response.status), 200)
         response_body = response.read()
         self.assertEqual(response_body, b'')
@@ -134,14 +133,13 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         s = b'This string has 32 characters.\r\n'
         expect = s * 12
 
-        h = httplib.HTTPConnection(self.host, self.port)
-        h.request("GET", "/", headers={"Accept": "text/plain",
-                                       "Transfer-Encoding": "chunked"})
+        self.conn.request("GET", "/", headers={"Accept": "text/plain",
+                                               "Transfer-Encoding": "chunked"})
         for n in range(12):
-            h.send(control_line)
-            h.send(s)
-        h.send(b"0\r\n\r\n")
-        response = h.getresponse()
+            self.conn.send(control_line)
+            self.conn.send(s)
+        self.conn.send(b"0\r\n\r\n")
+        response = self.conn.getresponse()
         self.assertEqual(int(response.status), 200)
         response_body = response.read()
         self.assertEqual(response_body, expect)
