@@ -105,6 +105,7 @@ class TestHTTPTask(unittest.TestCase):
         def execute():
             inst.executed = True
         inst.execute = execute
+        inst.start_response_called = True
         inst.service()
         self.assertTrue(inst.start_time)
         self.assertTrue(inst.channel.closed_when_done)
@@ -305,12 +306,12 @@ class TestHTTPTask(unittest.TestCase):
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: hithere')
 
-    def test_getEnviron_already_cached(self):
+    def test_get_environment_already_cached(self):
         inst = self._makeOne()
         inst.environ = object()
         self.assertEqual(inst.get_environment(), inst.environ)
 
-    def test_getEnviron_path_startswith_more_than_one_slash(self):
+    def test_get_environment_path_startswith_more_than_one_slash(self):
         inst = self._makeOne()
         request_data = DummyParser()
         request_data.path = '///abc'
@@ -318,7 +319,7 @@ class TestHTTPTask(unittest.TestCase):
         environ = inst.get_environment()
         self.assertEqual(environ['PATH_INFO'], '/abc')
 
-    def test_getEnviron_path_empty(self):
+    def test_get_environment_path_empty(self):
         inst = self._makeOne()
         request_data = DummyParser()
         request_data.path = ''
@@ -326,14 +327,14 @@ class TestHTTPTask(unittest.TestCase):
         environ = inst.get_environment()
         self.assertEqual(environ['PATH_INFO'], '/')
 
-    def test_getEnviron_no_query(self):
+    def test_get_environment_no_query(self):
         inst = self._makeOne()
         request_data = DummyParser()
         inst.request_data = request_data
         environ = inst.get_environment()
         self.assertFalse('QUERY_STRING' in environ)
 
-    def test_getEnviron_with_query(self):
+    def test_get_environment_with_query(self):
         inst = self._makeOne()
         request_data = DummyParser()
         request_data.query = 'abc'
@@ -341,7 +342,7 @@ class TestHTTPTask(unittest.TestCase):
         environ = inst.get_environment()
         self.assertEqual(environ['QUERY_STRING'], 'abc')
 
-    def test_getEnviron_values(self):
+    def test_get_environment_values(self):
         import sys
         inst = self._makeOne()
         request_data = DummyParser()
@@ -379,6 +380,7 @@ class TestHTTPTask(unittest.TestCase):
     def test_finish_didnt_write_header(self):
         inst = self._makeOne()
         inst.wrote_header = False
+        inst.start_response_called = True
         inst.finish()
         self.assertTrue(inst.channel.written)
 
@@ -391,20 +393,21 @@ class TestHTTPTask(unittest.TestCase):
     def test_write_wrote_header(self):
         inst = self._makeOne()
         inst.wrote_header = True
+        inst.start_response_called = True
         inst.write(b'abc')
         self.assertEqual(inst.channel.written, b'abc')
 
     def test_write_header_not_written(self):
         inst = self._makeOne()
         inst.wrote_header = False
+        inst.start_response_called = True
         inst.write(b'abc')
         self.assertTrue(inst.channel.written)
         self.assertEqual(inst.wrote_header, True)
 
-    def test_execute_start_response_uncalled(self):
+    def test_write_start_response_uncalled(self):
         inst = self._makeOne()
-        inst.channel.server.application = lambda *arg: None
-        self.assertRaises(RuntimeError, inst.execute)
+        self.assertRaises(RuntimeError, inst.write, b'')
 
 
 class DummyTask(object):

@@ -311,6 +311,26 @@ class ExpectContinueTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(length, len(response_body))
         self.assertEqual(response_body, tobytes(data))
 
+class BadContentLengthTests(SubprocessTests, unittest.TestCase):
+    def setUp(self):
+        echo = os.path.join(here, 'fixtureapps', 'badcl.py')
+        self.start_subprocess([self.exe, echo])
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def test_short_cl(self):
+        self.conn.request('GET', '/short')
+        resp = self.getresponse()
+        self.assertEqual(resp.getheader('Content-Length'), '8')
+        resp.read()
+
+    def test_long_cl(self):
+        self.conn.request('GET', '/long')
+        resp = self.getresponse()
+        self.assertEqual(resp.getheader('Content-Length'), '10')
+        self.assertRaises(httplib.IncompleteRead, resp.read)
+
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
 

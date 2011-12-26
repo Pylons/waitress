@@ -140,8 +140,6 @@ class ThreadedTaskDispatcher(object):
 class HTTPTask(object):
     """An HTTP task accepts a request and writes to a channel.
 
-       Subclass this and override the execute() method.
-
        See ITask, IHeaderOutput.
     """
 
@@ -233,49 +231,69 @@ class HTTPTask(object):
                     self.content_length = int(v)
 
             # Return the write method used to write the response data.
-            return fake_write
+            return self.write
 
         # Call the application to handle the request and write a response
         app_iter = self.channel.server.application(env, start_response)
 
-        if not self.start_response_called:
-            raise RuntimeError('start_response was not called before app_iter '
-                               'returned')
-
-        # Set a Content-Length header if one is not supplied.
-        cl = self.content_length
-        if cl == -1:
+        app_iter_len = None
+        if hasattr(app_iter, '__len__'):
             app_iter_len = len(app_iter)
-            if app_iter_len == 1:
-                cl = self.content_length = len(app_iter[0])
-
-        has_content_length = cl != -1
-        bytes_written = 0
 
         try:
             # By iterating manually at this point, we execute task.write()
             # multiple times, allowing partial data to be sent.
-            for value in app_iter:
-                towrite = value
+            first_chunk_len = None
+            for chunk in app_iter:
+                if first_chunk_len is None:
+                    first_chunk_len = len(chunk)
+                # transmit headers only after first iteration of the iterable
+                # that returns a non-empty bytestring (PEP 3333)
+                if not chunk:
+                    continue
+                # Set a Content-Length header if one is not supplied.
+                # start_response may not have been called until first iteration
+                # as per PEP
+                cl = self.content_length
+                has_content_length = cl != -1
+                if not has_content_length and app_iter_len == 1:
+                    cl = self.content_length = first_chunk_len
+                towrite = chunk
                 if has_content_length:
-                    towrite = value[:cl-self.content_bytes_written]
-                bytes_written += len(towrite)
+                    towrite = chunk[:cl-self.content_bytes_written]
                 self.write(towrite)
-                if towrite != value:
-                    self.log_info(
-                        'warning: app_iter content exceeded the number '
-                        'of bytes specified by Content-Length header (%s)' % cl)
+                if towrite != chunk:
+                    self.channel.server.log_info(
+                        'app_iter content exceeded the number of bytes '
+                        'specified by Content-Length header (%s)' % cl)
                     break
 
-            if has_content_length:
-                if bytes_written != cl:
-                    self.log_info('warning: app_iter returned a number of '
-                                  'bytes (%s) too short for specified '
-                                  'Content-Length (%s)'  % (bytes_written, cl))
+            cl = self.content_length
+            if cl != -1:
+                if self.content_bytes_written != cl:
+                    self.close_on_finish = True
+                    self.channel.server.log_info(
+                        'app_iter returned a number of bytes (%s) too short '
+                        'for specified Content-Length (%s)' % (
+                            self.content_bytes_written,
+                            cl)
+                        )
         finally:
             if hasattr(app_iter, 'close'):
                 app_iter.close()
 
+    def write(self, data):
+        if not self.start_response_called:
+            raise RuntimeError('start_response was not called before body '
+                               'written')
+        channel = self.channel
+        if not self.wrote_header:
+            rh = self.build_response_header()
+            channel.write(rh)
+            self.wrote_header = True
+        if data:
+            self.content_bytes_written += len(data)
+            channel.write(data)
 
     def build_response_header(self):
         version = self.version
@@ -407,15 +425,6 @@ class HTTPTask(object):
     def finish(self):
         if not self.wrote_header:
             self.write(b'')
-
-    def write(self, data):
-        channel = self.channel
-        if not self.wrote_header:
-            rh = self.build_response_header()
-            channel.write(rh)
-            self.wrote_header = True
-        if data:
-            channel.write(data)
 
 def fake_write(body):
     raise NotImplementedError(

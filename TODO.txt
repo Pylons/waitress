@@ -4,8 +4,6 @@
 
 - Documentation.
 
-- Figure out what to do when we have less data than Content-Length (close?)
-
 - Speed tweaking.
 
 - Coverage.
@@ -20,3 +18,4 @@
 
 - SERVER_IDENT -> ident
 
+- Logging.

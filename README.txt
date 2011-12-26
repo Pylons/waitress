@@ -136,9 +136,6 @@ known to work fairly well.
 Known Issues
 ------------
 
-- The server returns a ``write`` callable from ``start_response`` which
-  raises a ``NotImplementedError`` exception when called.
-
 - The server does not support the ``wsgi.file_wrapper`` protocol.
 
 Differences from ``zope.server``
@@ -168,6 +165,18 @@ Differences from ``zope.server``
 
 - Supports convenience ``waitress.serve`` function (e.g. ``from waitress
   import serve; serve(app)`` and convenience ``server.serve()`` function.
+
+- Returns a "real" write method from start_response.
+
+- Provides a getsockname method of the server FBO figuring out which port the
+  server is listening on when it's bound to port 0.
+
+- Warns when app_iter bytestream numbytes less than or greater than specified
+  Content-Length.
+
+- Set content-length header if len(app_iter) == 1 and none provided.
+
+- Raise an exception if start_response isnt called before any body write.
 
 .. _PasteDeploy: http://pythonpaste.org/deploy/
 
