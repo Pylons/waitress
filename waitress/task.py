@@ -22,6 +22,7 @@ from waitress.utilities import (
     )
 
 from waitress.compat import (
+    PY3,
     tobytes,
     Queue,
     Empty,
@@ -210,12 +211,12 @@ class HTTPTask(object):
 
             self.start_response_called = True
 
-            # Prepare the headers for output
             if not isinstance(status, str):
                 raise ValueError('status %s is not a string' % status)
 
             self.status = status
 
+            # Prepare the headers for output
             for k, v in headers:
                 if not isinstance(k, str):
                     raise ValueError(
@@ -225,8 +226,7 @@ class HTTPTask(object):
                     raise ValueError(
                         'Header value %r is not a string in %s' % (v, (k, v))
                         )
-                k = '-'.join([x.capitalize() for x in k.split('-')])
-                self.response_headers.append((tostr(k), tostr(v)))
+                self.response_headers.append((k, v))
                 if k == 'Content-Length':
                     self.content_length = int(v)
 
@@ -251,10 +251,8 @@ class HTTPTask(object):
                     # start_response may not have been called until first
                     # iteration as per PEP, so we must reinterrogate
                     # self.content_length here
-                    cl = self.content_length
-                    has_content_length = cl != -1
-                    if not has_content_length and app_iter_len == 1:
-                        cl = self.content_length = first_chunk_len
+                    if self.content_length == -1 and app_iter_len == 1:
+                        self.content_length = first_chunk_len
                 # transmit headers only after first iteration of the iterable
                 # that returns a non-empty bytestring (PEP 3333)
                 if not chunk:
@@ -312,7 +310,10 @@ class HTTPTask(object):
         date_header = None
         server_header = None
 
-        for headername, headerval in response_headers:
+        for i, (headername, headerval) in enumerate(response_headers):
+            headername = '-'.join(
+                [x.capitalize() for x in headername.split('-')]
+                )
             if headername == 'Connection':
                 connection_header = headerval.lower()
             if headername == 'Content-Length':
@@ -323,6 +324,8 @@ class HTTPTask(object):
                 date_header = headerval
             if headername == 'Server':
                 server_header = headerval
+            # replace with properly capitalized version
+            response_headers[i] = (headername, headerval)
 
         if content_length_header is None and self.content_length != -1:
             content_length_header = str(self.content_length)
