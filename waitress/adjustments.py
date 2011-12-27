@@ -35,9 +35,6 @@ class Adjustments(object):
     # wsgi url scheme
     url_scheme = 'http'
 
-    # verbose
-    verbose = True
-
     # ident
     ident = 'waitress'
 
@@ -86,32 +83,32 @@ class Adjustments(object):
         for k, v in kw.items():
             if k == 'host':
                 v = str(v)
-            if k == 'port':
+            elif k == 'port':
                 v = int(v)
-            if k == 'threads':
+            elif k == 'threads':
                 v = int(v)
-            if k == 'url_scheme':
+            elif k == 'url_scheme':
                 v = str(v)
-            if k == 'backlog':
+            elif k == 'backlog':
                 v = int(v)
-            if k == 'recv_bytes':
+            elif k == 'recv_bytes':
                 v = int(v)
-            if k == 'send_bytes':
+            elif k == 'send_bytes':
                 v = int(v)
-            if k == 'outbuf_overflow':
+            elif k == 'outbuf_overflow':
                 v = int(v)
-            if k == 'inbuf_overflow':
+            elif k == 'inbuf_overflow':
                 v = int(v)
-            if k == 'connection_limit':
+            elif k == 'connection_limit':
                 v = int(v)
-            if k == 'cleanup_interval':
+            elif k == 'cleanup_interval':
                 v = int(v)
-            if k == 'channel_timeout':
+            elif k == 'channel_timeout':
                 v = int(v)
-            if k == 'log_socket_errors':
+            elif k == 'log_socket_errors':
                 v = asbool(v)
-            if k == 'verbose':
-                v = asbool(v)
+            else:
+                raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, v)
         if (sys.platform[:3] == "win" and
             self.host == 'localhost' ): # pragma: no cover

@@ -10,5 +10,5 @@ def app(environ, start_response):
 
 if __name__ == '__main__':
     from waitress import serve
-    serve(app, port=61523, verbose=False)
+    serve(app, port=61523, _quiet=True)
     

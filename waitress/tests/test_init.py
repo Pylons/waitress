@@ -8,7 +8,7 @@ class Test_serve(unittest.TestCase):
     def test_it(self):
         server = DummyServerFactory()
         app = object()
-        result = self._callFUT(app, _server=server)
+        result = self._callFUT(app, _server=server, _quiet=True)
         self.assertEqual(server.app, app)
         self.assertEqual(result, None)
         self.assertEqual(server.ran, True)
@@ -21,7 +21,7 @@ class Test_serve_paste(unittest.TestCase):
     def test_it(self):
         server = DummyServerFactory()
         app = object()
-        result = self._callFUT(app, _server=server)
+        result = self._callFUT(app, _server=server, _quiet=True)
         self.assertEqual(server.app, app)
         self.assertEqual(result, 0)
         self.assertEqual(server.ran, True)

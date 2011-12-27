@@ -42,14 +42,13 @@ class TestAdjustments(unittest.TestCase):
         from waitress.adjustments import Adjustments
         return Adjustments(**kw)
     
-    def test_it(self):
+    def test_goodvars(self):
         inst = self._makeOne(
             host='host', port='8080', threads='5',
             url_scheme='https', backlog='20', recv_bytes='200',
             send_bytes='300', outbuf_overflow='400', inbuf_overflow='500',
             connection_limit='1000', cleanup_interval='1100',
-            channel_timeout='1200', log_socket_errors='true',
-            verbose='false')
+            channel_timeout='1200', log_socket_errors='true')
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
@@ -63,5 +62,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.cleanup_interval, 1100)
         self.assertEqual(inst.channel_timeout, 1200)
         self.assertEqual(inst.log_socket_errors, True)
-        self.assertEqual(inst.verbose, False)
+
+    def test_badvar(self):
+        self.assertRaises(ValueError, self._makeOne, nope=True)
 

@@ -1,9 +1,10 @@
 from waitress.server import WSGIServer
 
-def serve(app, _server=WSGIServer, **kw):
-    # _server is a test shim
+def serve(app, **kw):
+    _server = kw.pop('_server', WSGIServer) # test shim
+    _quiet = kw.pop('_quiet', False)
     server = _server(app, **kw)
-    if server.adj.verbose: # pragma: no cover
+    if not _quiet: # pragma: no cover
         print('serving on http://%s:%s' % (server.effective_host,
                                            server.effective_port))
     server.run()
