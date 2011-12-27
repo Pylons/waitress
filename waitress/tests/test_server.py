@@ -85,14 +85,15 @@ class TestWSGIServer(unittest.TestCase):
         self.assertTrue(inst.readable())
 
     def test_readable_maintenance_false(self):
-        import sys
+        import time
         inst = self._makeOneWithMap()
-        inst.next_channel_cleanup = sys.maxint
+        then = time.time() + 1000
+        inst.next_channel_cleanup = then
         L = []
         inst.maintenance = lambda t: L.append(t)
         inst.readable()
         self.assertEqual(L, [])
-        self.assertEqual(inst.next_channel_cleanup, sys.maxint)
+        self.assertEqual(inst.next_channel_cleanup, then)
 
     def test_readable_maintenance_true(self):
         inst = self._makeOneWithMap()
@@ -153,8 +154,7 @@ class TestWSGIServer(unittest.TestCase):
     def test_maintenance(self):
         inst = self._makeOneWithMap()
         class DummyChannel(object):
-            def close(self):
-                self.closed = True
+            pass
         zombie = DummyChannel()
         zombie.last_activity = 0
         zombie.running_tasks = False

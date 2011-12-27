@@ -1,9 +1,7 @@
 import unittest
 
 class TestHTTPChannel(unittest.TestCase):
-    def _makeOne(self, sock, addr, adj=None, map=None):
-        if adj is None:
-            adj = DummyAdjustments()
+    def _makeOne(self, sock, addr, adj, map=None):
         from waitress.channel import HTTPChannel
         server = DummyServer()
         return HTTPChannel(server, sock, addr, adj=adj, map=map)
@@ -13,7 +11,7 @@ class TestHTTPChannel(unittest.TestCase):
             adj = DummyAdjustments()
         sock = DummySock()
         map = {}
-        inst = self._makeOne(sock, '127.0.0.1', adj=adj, map=map)
+        inst = self._makeOne(sock, '127.0.0.1', adj, map=map)
         return inst, sock, map
 
     def test_ctor(self):
