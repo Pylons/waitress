@@ -23,15 +23,15 @@ class TestHTTPRequestParser(unittest.TestCase):
         my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)
 
-    def test_getBodyStream_None(self):
+    def test_get_body_stream_None(self):
         self.parser.body_recv = None
-        result = self.parser.getBodyStream()
+        result = self.parser.get_body_stream()
         self.assertEqual(result.getvalue(), b'')
 
-    def test_getBodyStream_nonNone(self):
+    def test_get_body_stream_nonNone(self):
         body_rcv = DummyBodyStream()
         self.parser.body_rcv = body_rcv
-        result = self.parser.getBodyStream()
+        result = self.parser.get_body_stream()
         self.assertEqual(result, body_rcv)
 
     def test_split_uri_unquoting_unneeded(self):
@@ -197,7 +197,7 @@ Hello.
         self.assertEqual(parser.query, None)
         self.assertEqual(parser.proxy_scheme, '')
         self.assertEqual(parser.proxy_netloc, '')
-        self.assertEqual(parser.getBodyStream().getvalue(), b'Hello.\n')
+        self.assertEqual(parser.get_body_stream().getvalue(), b'Hello.\n')
 
     def testComplexGET(self):
         data = b"""\
@@ -223,7 +223,7 @@ Hello mickey.
                          text_(b'/foo/a++/\xc3\xa4=&a:int', 'utf-8'))
         self.assertEqual(parser.query,
                          'd=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6')
-        self.assertEqual(parser.getBodyStream().getvalue(), b'Hello mick')
+        self.assertEqual(parser.get_body_stream().getvalue(), b'Hello mick')
 
     def testProxyGET(self):
         data = b"""\
@@ -246,7 +246,7 @@ Hello.
         self.assertEqual(parser.proxy_netloc, 'example.com:8080')
         self.assertEqual(parser.command, 'GET')
         self.assertEqual(parser.query, None)
-        self.assertEqual(parser.getBodyStream().getvalue(), b'Hello.\n')
+        self.assertEqual(parser.get_body_stream().getvalue(), b'Hello.\n')
 
     def testDuplicateHeaders(self):
         # Ensure that headers with the same key get concatenated as per

@@ -14,8 +14,6 @@
 
 - Test paste server runner on windows.
 
-- SERVER_IDENT -> ident
-
 - Logging.
 
 - Warn instead of relog in task.py.

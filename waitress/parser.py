@@ -202,7 +202,7 @@ class HTTPRequestParser(object):
         if self.query == '':
             self.query = None
 
-    def getBodyStream(self):
+    def get_body_stream(self):
         body_rcv = self.body_rcv
         if body_rcv is not None:
             return body_rcv.getfile()

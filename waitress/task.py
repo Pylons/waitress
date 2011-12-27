@@ -418,10 +418,10 @@ class HTTPTask(object):
         environ['wsgi.version'] = (1,0)
         environ['wsgi.url_scheme'] = request_data.url_scheme
         environ['wsgi.errors'] = sys.stderr # apps should use the logging module
-        environ['wsgi.multithread'] = True    # XXX base on dispatcher
-        environ['wsgi.multiprocess'] = False  # XXX base on dispatcher
+        environ['wsgi.multithread'] = True
+        environ['wsgi.multiprocess'] = False
         environ['wsgi.run_once'] = False
-        environ['wsgi.input'] = request_data.getBodyStream()
+        environ['wsgi.input'] = request_data.get_body_stream()
 
         self.environ = environ
         return environ

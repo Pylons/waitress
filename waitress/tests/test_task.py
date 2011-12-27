@@ -467,7 +467,7 @@ class DummyParser(object):
     headers_finished = False
     def __init__(self):
         self.headers = {}
-    def getBodyStream(self):
+    def get_body_stream(self):
         return 'stream'
 
 def filter_lines(s):
