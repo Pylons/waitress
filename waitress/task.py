@@ -210,34 +210,31 @@ class WSGITask(object):
 
             self.start_response_called = True
 
-            if not isinstance(status, str):
+            if not status.__class__ is str:
                 raise ValueError('status %s is not a string' % status)
 
             self.status = status
 
             # Prepare the headers for output
             for k, v in headers:
-                if not isinstance(k, str):
+                if not k.__class__ is str:
                     raise ValueError(
                         'Header name %r is not a string in %s' % (k, (k, v))
                         )
-                if not isinstance(v, str):
+                if not k.__class__ is str:
                     raise ValueError(
                         'Header value %r is not a string in %s' % (v, (k, v))
                         )
-                self.response_headers.append((k, v))
                 if k == 'Content-Length':
                     self.content_length = int(v)
+
+            self.response_headers.extend(headers)
 
             # Return a method used to write the response data.
             return self.write
 
         # Call the application to handle the request and write a response
         app_iter = self.channel.server.application(env, start_response)
-
-        app_iter_len = None
-        if hasattr(app_iter, '__len__'):
-            app_iter_len = len(app_iter)
 
         try:
             # By iterating manually at this point, we execute task.write()
@@ -250,8 +247,12 @@ class WSGITask(object):
                     # start_response may not have been called until first
                     # iteration as per PEP, so we must reinterrogate
                     # self.content_length here
-                    if self.content_length == -1 and app_iter_len == 1:
-                        self.content_length = first_chunk_len
+                    if self.content_length == -1:
+                        app_iter_len = None
+                        if hasattr(app_iter, '__len__'):
+                            app_iter_len = len(app_iter)
+                        if app_iter_len == 1:
+                            self.content_length = first_chunk_len
                 # transmit headers only after first iteration of the iterable
                 # that returns a non-empty bytestring (PEP 3333)
                 if not chunk:
@@ -399,7 +400,7 @@ class WSGITask(object):
         environ['SERVER_PORT'] = str(server.effective_port)
         environ['SERVER_NAME'] = server.server_name
         environ['SERVER_SOFTWARE'] = server.adj.ident
-        environ['SERVER_PROTOCOL'] = "HTTP/%s" % self.version
+        environ['SERVER_PROTOCOL'] = 'HTTP/%s' % self.version
         environ['SCRIPT_NAME'] = ''
         environ['PATH_INFO'] = '/' + path
         query = request_data.query
