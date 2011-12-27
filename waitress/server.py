@@ -125,7 +125,7 @@ class WSGIServer(logging_dispatcher, object):
     def run(self):
         try:
             asyncore.loop(map=self._map)
-        except (SystemError, KeyboardInterrupt):
+        except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
 
     def pull_trigger(self):
