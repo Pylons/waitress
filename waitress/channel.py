@@ -19,7 +19,6 @@ import sys
 import time
 
 from waitress.compat import thread
-from waitress.adjustments import Adjustments
 from waitress.buffers import OverflowableBuffer
 from waitress.dispatcher import logging_dispatcher
 from waitress.parser import HTTPRequestParser
@@ -61,8 +60,6 @@ class HTTPChannel(logging_dispatcher, object):
             map=None,
             ):
         self.addr = addr
-        if adj is None:
-            adj = Adjustments()
         self.adj = adj
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
         self.creation_time = time.time()

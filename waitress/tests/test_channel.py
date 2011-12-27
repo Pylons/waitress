@@ -2,11 +2,15 @@ import unittest
 
 class TestHTTPChannel(unittest.TestCase):
     def _makeOne(self, sock, addr, adj=None, map=None):
+        if adj is None:
+            adj = DummyAdjustments()
         from waitress.channel import HTTPChannel
         server = DummyServer()
         return HTTPChannel(server, sock, addr, adj=adj, map=map)
 
     def _makeOneWithMap(self, adj=None):
+        if adj is None:
+            adj = DummyAdjustments()
         sock = DummySock()
         map = {}
         inst = self._makeOne(sock, '127.0.0.1', adj=adj, map=map)
@@ -549,3 +553,15 @@ class DummyTask(object):
             raise self.toraise
     def cancel(self):
         self.cancelled = True
+
+class DummyAdjustments(object):
+    outbuf_overflow = 1048576
+    cleanup_interval = 900
+    send_bytes = 9000
+    url_scheme = 'http'
+    channel_timeout = 300
+    log_socket_errors = True
+    recv_bytes = 8192
+
+    
+    
