@@ -56,7 +56,7 @@ class HTTPChannel(logging_dispatcher, object):
             server,
             sock,
             addr,
-            adj=None,
+            adj,
             map=None,
             ):
         self.addr = addr
