@@ -64,10 +64,10 @@ class Adjustments(object):
     connection_limit = 1000
 
     # Minimum seconds between cleaning up inactive channels.
-    cleanup_interval = 300
+    cleanup_interval = 30
 
     # Maximum seconds to leave an inactive connection open.
-    channel_timeout = 900
+    channel_timeout = 60
 
     # Boolean: turn off to not log premature client disconnects.
     log_socket_errors = True
