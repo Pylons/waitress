@@ -6,7 +6,7 @@
 
 - Coverage.
 
-- Waitress Version number in header.
+- Waitress version number in header.
 
 - Put maintenance check on server rather than channel to avoid DOS.
 
@@ -14,8 +14,6 @@
 
 - Test paste server runner on windows.
 
-- Logging.
-
-- Warn instead of relog in task.py.
-
 - Get rid of dual-moded-ness.
+
+- "Verbose".

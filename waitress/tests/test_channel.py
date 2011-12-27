@@ -1,10 +1,10 @@
 import unittest
 
-class TestHTTPServerChannel(unittest.TestCase):
+class TestHTTPChannel(unittest.TestCase):
     def _makeOne(self, sock, addr, adj=None, map=None):
-        from waitress.channel import HTTPServerChannel
+        from waitress.channel import HTTPChannel
         server = DummyServer()
-        return HTTPServerChannel(server, sock, addr, adj=adj, map=map)
+        return HTTPChannel(server, sock, addr, adj=adj, map=map)
 
     def _makeOneWithMap(self, adj=None):
         sock = DummySock()

@@ -2,12 +2,12 @@ import errno
 import socket
 import unittest
 
-class TestWSGIHTTPServer(unittest.TestCase):
+class TestWSGIServer(unittest.TestCase):
     def _makeOne(self, application, host='127.0.0.1', port=62122,
                  _dispatcher=None, adj=None, map=None, _start=True, 
                  _sock=None):
-        from waitress.server import WSGIHTTPServer
-        class TestServer(WSGIHTTPServer):
+        from waitress.server import WSGIServer
+        class TestServer(WSGIServer):
             def bind(self, v):
                 pass
         return TestServer(
@@ -155,6 +155,8 @@ class DummySock(object):
         return 1
     def listen(self, num):
         self.listened = num
+    def getsockname(self):
+        return '127.0.0.1', 80
 
 class DummyTaskDispatcher(object):
     def __init__(self):

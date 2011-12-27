@@ -17,16 +17,16 @@ import sys
 import time
 import traceback
 
-from waitress.utilities import (
-    build_http_date,
-    )
-
 from waitress.compat import (
     tobytes,
     Queue,
     Empty,
     thread,
     reraise,
+    )
+
+from waitress.utilities import (
+    build_http_date,
     )
 
 rename_headers = {
@@ -136,8 +136,8 @@ class ThreadedTaskDispatcher(object):
             return True
         return False
 
-class HTTPTask(object):
-    """An HTTP task accepts a request and writes to a channel.
+class WSGITask(object):
+    """A WSGI task accepts a request and writes to a channel.
 
        See ITask, IHeaderOutput.
     """
@@ -151,6 +151,7 @@ class HTTPTask(object):
     start_response_called = False
     content_length = -1
     content_bytes_written = 0
+    logged_write_excess = False
 
     def __init__(self, channel, request_data):
         self.channel = channel
@@ -288,11 +289,11 @@ class HTTPTask(object):
             cl = self.content_length
             if cl != -1:
                 towrite = data[:cl-self.content_bytes_written]
-            if towrite != data:
-                # XXX warn instead of relog
+            if towrite != data and not self.logged_write_excess:
                 self.channel.server.log_info(
                     'written content exceeded the number of bytes '
                     'specified by Content-Length header (%s)' % cl)
+                self.logged_write_excess = True
             if towrite:
                 self.content_bytes_written += len(towrite)
                 channel.write(towrite)
@@ -395,7 +396,7 @@ class HTTPTask(object):
 
         environ = {}
         environ['REQUEST_METHOD'] = request_data.command.upper()
-        environ['SERVER_PORT'] = str(server.adj.port)
+        environ['SERVER_PORT'] = str(server.effective_port)
         environ['SERVER_NAME'] = server.server_name
         environ['SERVER_SOFTWARE'] = server.adj.ident
         environ['SERVER_PROTOCOL'] = "HTTP/%s" % self.version

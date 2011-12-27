@@ -38,7 +38,7 @@ class FakeSocket: # pragma: no cover
 
 
 def zombies_test():
-    """Regression test for HTTPServerChannel.maintenance method
+    """Regression test for HTTPChannel.maintenance method
 
     Bug: This method checks for channels that have been "inactive" for a
     configured time. The bug was that last_activity is set at creation time
@@ -60,9 +60,9 @@ def zombies_test():
     First we confirm the correct behavior, where a channel with no activity
     for the timeout duration gets closed.
 
-    >>> from waitress.channel import HTTPServerChannel
+    >>> from waitress.channel import HTTPChannel
     >>> socket = FakeSocket(42)
-    >>> channel = HTTPServerChannel(sb, socket, ('localhost', 42))
+    >>> channel = HTTPChannel(sb, socket, ('localhost', 42))
 
     >>> channel.connected
     True
@@ -73,7 +73,7 @@ def zombies_test():
     ...     config.cleanup_interval) - 1
 
     >>> socket2 = FakeSocket(7)
-    >>> channel2 = HTTPServerChannel(sb, socket2, ('localhost', 7))
+    >>> channel2 = HTTPChannel(sb, socket2, ('localhost', 7))
 
     >>> channel.connected
     False
@@ -95,7 +95,7 @@ def zombies_test():
     ...     config.cleanup_interval) - 1
 
     >>> socket3 = FakeSocket(3)
-    >>> channel3 = HTTPServerChannel(sb, socket3, ('localhost', 3))
+    >>> channel3 = HTTPChannel(sb, socket3, ('localhost', 3))
 
     >>> channel2.connected
     True
@@ -119,7 +119,7 @@ def zombies_test():
     ...     config.cleanup_interval) - 1
 
     >>> socket4 = FakeSocket(4)
-    >>> channel4 = HTTPServerChannel(sb, socket4, ('localhost', 4))
+    >>> channel4 = HTTPChannel(sb, socket4, ('localhost', 4))
 
     >>> channel3.connected
     True

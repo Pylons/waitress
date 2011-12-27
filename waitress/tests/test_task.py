@@ -91,14 +91,14 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(inst.shutdown(cancel_pending=False, timeout=.01),
                          False)
 
-class TestHTTPTask(unittest.TestCase):
+class TestWSGITask(unittest.TestCase):
     def _makeOne(self, channel=None, request_data=None):
         if channel is None:
             channel = DummyChannel()
         if request_data is None:
             request_data = DummyParser()
-        from waitress.task import HTTPTask
-        return HTTPTask(channel, request_data)
+        from waitress.task import WSGITask
+        return WSGITask(channel, request_data)
 
     def test_service(self):
         inst = self._makeOne()
@@ -438,6 +438,7 @@ class DummyAdj(object):
 
 class DummyServer(object):
     server_name = 'localhost'
+    effective_port = 80
     def __init__(self):
         self.adj = DummyAdj()
 

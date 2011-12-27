@@ -16,21 +16,19 @@ import asyncore
 import socket
 
 from waitress.adjustments import Adjustments
-from waitress.channel import HTTPServerChannel
+from waitress.channel import HTTPChannel
+from waitress.dispatcher import logging_dispatcher
 from waitress.task import ThreadedTaskDispatcher
 from waitress import trigger
 
-class WSGIHTTPServer(asyncore.dispatcher, object):
+class WSGIServer(logging_dispatcher, object):
     """
     if __name__ == '__main__':
-        from waitress.task import ThreadedTaskDispatcher
-        td = ThreadedTaskDispatcher()
-        td.set_thread_count(4)
-        server = WSGIHTTPServer(app, '', 8080, task_dispatcher=td)
+        server = WSGIServer(app)
         server.run()
     """
 
-    channel_class = HTTPServerChannel
+    channel_class = HTTPChannel
     socketmod = socket # test shim
 
     def __init__(self,
@@ -54,6 +52,7 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind((self.adj.host, self.adj.port))
+        self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.adj.host)
         if _start:
             self.accept_connections()
@@ -131,3 +130,4 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
 
     def pull_trigger(self):
         self.trigger.pull_trigger()
+

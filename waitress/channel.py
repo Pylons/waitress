@@ -21,10 +21,11 @@ import time
 from waitress.compat import thread
 from waitress.adjustments import Adjustments
 from waitress.buffers import OverflowableBuffer
+from waitress.dispatcher import logging_dispatcher
 from waitress.parser import HTTPRequestParser
-from waitress.task import HTTPTask
+from waitress.task import WSGITask
 
-class HTTPServerChannel(asyncore.dispatcher, object):
+class HTTPChannel(logging_dispatcher, object):
     """Channel that switches between asynchronous and synchronous mode.
 
     Call set_sync() before using a channel in a thread other than
@@ -33,7 +34,7 @@ class HTTPServerChannel(asyncore.dispatcher, object):
     Call set_async() to give the channel back to the thread handling
     the main loop.
     """
-    task_class = HTTPTask
+    task_class = WSGITask
     parser_class = HTTPRequestParser
 
     task_lock = thread.allocate_lock() # syncs access to task-related attrs
