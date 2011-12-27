@@ -147,7 +147,6 @@ class HTTPTask(object):
     close_on_finish = False
     status = '200 OK'
     wrote_header = False
-    accumulated_headers = None
     start_time = 0
     environ = None
     start_response_called = False
@@ -192,13 +191,12 @@ class HTTPTask(object):
         env = self.get_environment()
 
         def start_response(status, headers, exc_info=None):
-            self.start_response_called = True
-            if self.wrote_header and not exc_info:
+            if self.start_response_called and not exc_info:
                 raise AssertionError("start_response called a second time "
                                      "without providing exc_info.")
             if exc_info:
                 try:
-                    if self.wrote_header:
+                    if self.start_response_called:
                         # higher levels will catch and handle raised exception:
                         # 1. "service" method in task.py
                         # 2. "service" method in channel.py
@@ -209,6 +207,8 @@ class HTTPTask(object):
                         self.response_headers = []
                 finally:
                     exc_info = None
+
+            self.start_response_called = True
 
             # Prepare the headers for output
             if not isinstance(status, str):
