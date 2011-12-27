@@ -14,10 +14,10 @@
 
 import asyncore
 import socket
-import sys
 
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPServerChannel
+from waitress.task import ThreadedTaskDispatcher
 from waitress import trigger
 
 class WSGIHTTPServer(asyncore.dispatcher, object):
@@ -31,48 +31,35 @@ class WSGIHTTPServer(asyncore.dispatcher, object):
     """
 
     channel_class = HTTPServerChannel
-    SERVER_IDENT = 'waitress'
     socketmod = socket # test shim
 
     def __init__(self,
                  application,
-                 ip,
-                 port,
-                 task_dispatcher,
-                 ident=None,
-                 adj=None,
                  map=None,
-                 start=True, # test shim
-                 sock=None   # test shim
-                 ): 
+                 _start=True, # test shim
+                 _sock=None,  # test shim
+                 _dispatcher=None, # test shim
+                 **kw # adjustments
+                 ):
 
         self.application = application
-
-        if ident is not None:
-            self.SERVER_IDENT = ident
-
-        if sys.platform[:3] == "win" and ip == 'localhost':
-            ip = ''
-
-        self.ip = ip or '127.0.0.1'
-
-        if adj is None:
-            adj = Adjustments()
-        self.adj = adj
+        self.adj = Adjustments(**kw)
         self.trigger = trigger.trigger(map)
-        asyncore.dispatcher.__init__(self, sock, map=map)
-        self.port = port
-        self.task_dispatcher = task_dispatcher
-        if sock is None:
+        if _dispatcher is None:
+            _dispatcher = ThreadedTaskDispatcher()
+            _dispatcher.set_thread_count(self.adj.threads)
+        self.task_dispatcher = _dispatcher
+        asyncore.dispatcher.__init__(self, _sock, map=map)
+        if _sock is None:
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
-        self.bind((ip, port))
-        self.server_name = self.computeServerName(ip)
-        if start:
+        self.bind((self.adj.host, self.adj.port))
+        self.server_name = self.get_server_name(self.adj.host)
+        if _start:
             self.accept_connections()
 
-    def computeServerName(self, ip):
-        """Given an IP, try to determine the server name."""
+    def get_server_name(self, ip):
+        """Given an IP or hostname, try to determine the server name."""
         if ip:
             server_name = str(ip)
         else:

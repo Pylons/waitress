@@ -209,12 +209,6 @@ class IServer(Interface):
                         for more information.
                               """)
 
-    SERVER_IDENT = Attribute("""
-                        This string identifies the server. By default
-                        this is 'zope.server.' and should be
-                        overridden.
-                        """)
-
     def getsockname():
         """ Return the IP-address, port number pair to which this server's
         socket is bound"""

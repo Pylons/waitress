@@ -3,52 +3,59 @@ import socket
 import unittest
 
 class TestWSGIHTTPServer(unittest.TestCase):
-    def _makeOne(self, application, ip, port, task_dispatcher=None, adj=None,
-                 start=True, map=None, sock=None):
+    def _makeOne(self, application, host='127.0.0.1', port=62122,
+                 _dispatcher=None, adj=None, map=None, _start=True, 
+                 _sock=None):
         from waitress.server import WSGIHTTPServer
         class TestServer(WSGIHTTPServer):
             def bind(self, v):
                 pass
         return TestServer(
             application,
-            ip,
-            port,
-            task_dispatcher=task_dispatcher,
-            adj=adj,
-            start=start,
+            host=host,
+            port=port,
             map=map,
-            sock=sock)
+            _dispatcher=_dispatcher,
+            _start=_start,
+            _sock=_sock)
     
-    def _makeOneWithMap(self, adj=None, start=True, ip='127.0.0.1', port=62122,
-                        app=None):
+    def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
+                        port=62122, app=None):
         sock = DummySock()
         task_dispatcher = DummyTaskDispatcher()
         map = {}
-        return self._makeOne(app, ip, port, task_dispatcher=task_dispatcher,
-                             start=start, map=map, sock=sock)
+        return self._makeOne(
+            app,
+            host=host,
+            port=port,
+            map=map,
+            _sock=sock,
+            _dispatcher=task_dispatcher,
+            _start=_start,
+            )
 
     def test_ctor_start_true(self):
-        inst = self._makeOneWithMap(start=True)
+        inst = self._makeOneWithMap(_start=True)
         self.assertEqual(inst.accepting, True)
         self.assertEqual(inst.socket.listened, 1024)
 
     def test_ctor_start_false(self):
-        inst = self._makeOneWithMap(start=False)
+        inst = self._makeOneWithMap(_start=False)
         self.assertEqual(inst.accepting, False)
 
-    def test_computeServerName_empty(self):
-        inst = self._makeOneWithMap(start=False)
-        result = inst.computeServerName('')
+    def test_get_server_name_empty(self):
+        inst = self._makeOneWithMap(_start=False)
+        result = inst.get_server_name('')
         self.assertTrue(result)
 
-    def test_computeServerName_with_ip(self):
-        inst = self._makeOneWithMap(start=False)
-        result = inst.computeServerName('127.0.0.1')
+    def test_get_server_name_with_ip(self):
+        inst = self._makeOneWithMap(_start=False)
+        result = inst.get_server_name('127.0.0.1')
         self.assertTrue(result)
 
-    def test_computeServerName_with_hostname(self):
-        inst = self._makeOneWithMap(start=False)
-        result = inst.computeServerName('fred.flintstone.com')
+    def test_get_server_name_with_hostname(self):
+        inst = self._makeOneWithMap(_start=False)
+        result = inst.get_server_name('fred.flintstone.com')
         self.assertEqual(result, 'fred.flintstone.com')
 
     def test_add_task(self):
@@ -165,10 +172,6 @@ class DummyTask(object):
         self.written = ''
     def service(self): # pragma: no cover
         self.serviced = True
-    def write(self, val):
-        self.written += val
-    def get_environment(self):
-        return {}
 
 class DummyAdj:
     connection_limit = 1

@@ -143,7 +143,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
@@ -160,7 +160,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[1], b'Connection: Keep-Alive')
         self.assertEqual(lines[2], b'Content-Length: 10')
         self.assertTrue(lines[3].startswith(b'Date:'))
-        self.assertEqual(lines[4], b'Server: hithere')
+        self.assertEqual(lines[4], b'Server: waitress')
         self.assertEqual(inst.close_on_finish, False)
 
     def test_build_response_header_v11_connection_closed_by_app(self):
@@ -174,7 +174,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
@@ -189,7 +189,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
@@ -204,7 +204,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
@@ -219,7 +219,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
         self.assertEqual(lines[4], b'Transfer-Encoding: notchunked')
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
@@ -234,7 +234,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertTrue(lines[1].startswith(b'Date:'))
-        self.assertEqual(lines[2], b'Server: hithere')
+        self.assertEqual(lines[2], b'Server: waitress')
         self.assertEqual(lines[3], b'Transfer-Encoding: chunked')
         self.assertEqual(inst.close_on_finish, False)
 
@@ -248,7 +248,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], b'HTTP/1.1 304 OK')
         self.assertTrue(lines[1].startswith(b'Date:'))
-        self.assertEqual(lines[2], b'Server: hithere')
+        self.assertEqual(lines[2], b'Server: waitress')
         self.assertEqual(inst.close_on_finish, False)
 
     def test_build_response_header_v11_200_no_content_length(self):
@@ -261,7 +261,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
@@ -275,7 +275,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/8.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
@@ -291,7 +291,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: abc')
-        self.assertEqual(lines[4], b'Via: hithere')
+        self.assertEqual(lines[4], b'Via: waitress')
 
     def test_build_response_header_date_exists(self):
         inst = self._makeOne()
@@ -304,7 +304,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(lines[0], b'HTTP/1.0 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: hithere')
+        self.assertEqual(lines[3], b'Server: waitress')
 
     def test_get_environment_already_cached(self):
         inst = self._makeOne()
@@ -354,7 +354,7 @@ class TestHTTPTask(unittest.TestCase):
         self.assertEqual(environ['REQUEST_METHOD'], 'GET')
         self.assertEqual(environ['SERVER_PORT'], '80')
         self.assertEqual(environ['SERVER_NAME'], 'localhost')
-        self.assertEqual(environ['SERVER_SOFTWARE'], 'hithere')
+        self.assertEqual(environ['SERVER_SOFTWARE'], 'waitress')
         self.assertEqual(environ['SERVER_PROTOCOL'], 'HTTP/1.0')
         self.assertEqual(environ['SCRIPT_NAME'], '')
         self.assertEqual(environ['PATH_INFO'], '/')
@@ -430,24 +430,16 @@ class DummyTask(object):
     def cancel(self):
         self.cancelled = True
 
-class DummyServer(object):
-    SERVER_IDENT = 'hithere'
-    server_name = 'localhost'
-    port = 80
-    def __init__(self, toraise=None):
-        self.toraise = toraise
-        self.executed = []
-    def executeRequest(self, task):
-        self.executed.append(task)
-        if self.toraise:
-            raise self.toraise
-
-    def application(self, environ, start_response):
-        start_response('200 OK', [])
-        return [b'abc']
-
 class DummyAdj(object):
     log_socket_errors = True
+    ident = 'waitress'
+    host = '127.0.0.1'
+    port = 80
+
+class DummyServer(object):
+    server_name = 'localhost'
+    def __init__(self):
+        self.adj = DummyAdj()
 
 class DummyChannel(object):
     closed_when_done = False

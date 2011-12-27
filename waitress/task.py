@@ -364,7 +364,7 @@ class HTTPTask(object):
 
         # Set the Server and Date field, if not yet specified. This is needed
         # if the server is used as a proxy.
-        ident = self.channel.server.SERVER_IDENT
+        ident = self.channel.server.adj.ident
         if not server_header:
             response_headers.append(('Server', ident))
         else:
@@ -395,9 +395,9 @@ class HTTPTask(object):
 
         environ = {}
         environ['REQUEST_METHOD'] = request_data.command.upper()
-        environ['SERVER_PORT'] = str(server.port)
+        environ['SERVER_PORT'] = str(server.adj.port)
         environ['SERVER_NAME'] = server.server_name
-        environ['SERVER_SOFTWARE'] = server.SERVER_IDENT
+        environ['SERVER_SOFTWARE'] = server.adj.ident
         environ['SERVER_PROTOCOL'] = "HTTP/%s" % self.version
         environ['SCRIPT_NAME'] = ''
         environ['PATH_INFO'] = '/' + path
