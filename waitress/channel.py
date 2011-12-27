@@ -222,6 +222,13 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             # Ignore socket errors.
             self.close()
 
+    def close(self):
+        # Always close in asynchronous mode.  If the connection is
+        # closed in a thread, the main loop can end up with a bad file
+        # descriptor.
+        assert self.async_mode
+        self.connected = False
+        asyncore.dispatcher.close(self)
 
     #
     # SYNCHRONOUS METHODS
@@ -242,15 +249,9 @@ class HTTPServerChannel(asyncore.dispatcher, object):
 
     def write(self, data):
         wrote = 0
-        if isinstance(data, bytes):
-            if data:
-                self.outbuf.append(data)
-                wrote = len(data)
-        else:
-            for v in data:
-                if v:
-                    self.outbuf.append(v)
-                    wrote += len(v)
+        if data:
+            self.outbuf.append(data)
+            wrote = len(data)
 
         while len(self.outbuf) >= self.adj.send_bytes:
             # Send what we can without blocking.
@@ -284,14 +285,6 @@ class HTTPServerChannel(asyncore.dispatcher, object):
             # main thread calls handle_write().
             self.async_mode = True
             self.server.pull_trigger()
-
-    def close(self):
-        # Always close in asynchronous mode.  If the connection is
-        # closed in a thread, the main loop can end up with a bad file
-        # descriptor.
-        assert self.async_mode
-        self.connected = False
-        asyncore.dispatcher.close(self)
 
     def queue_task(self, task):
         """Queue a channel-related task to be executed in another thread."""

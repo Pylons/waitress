@@ -17,7 +17,6 @@ from setuptools import setup, find_packages
 def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
-
 setup(
     name='waitress',
     version='0.0',
@@ -32,7 +31,7 @@ setup(
         read('CHANGES.txt')
         ),
     license='ZPL 2.1',
-    keywords=('waitress wsgi server http'),
+    keywords='waitress wsgi server http',
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',

@@ -175,16 +175,6 @@ class TestHTTPServerChannel(unittest.TestCase):
         wrote = inst.write(b'a')
         self.assertEqual(wrote, 1)
 
-    def test_write_list_with_empty(self):
-        inst, sock, map = self._makeOneWithMap()
-        wrote = inst.write([b''])
-        self.assertEqual(wrote, 0)
-
-    def test_write_list_with_full(self):
-        inst, sock, map = self._makeOneWithMap()
-        wrote = inst.write([b'a', b'b'])
-        self.assertEqual(wrote, 2)
-
     def test_write_outbuf_gt_send_bytes_has_data(self):
         from waitress.adjustments import Adjustments
         class DummyAdj(Adjustments):
@@ -202,15 +192,6 @@ class TestHTTPServerChannel(unittest.TestCase):
         self.connected = False
         wrote = inst.write(b'')
         self.assertEqual(wrote, 0)
-
-    def test_write_channels_accept_iterables(self):
-        inst, sock, map = self._makeOneWithMap()
-        self.assertEqual(inst.write(b'First'), 5)
-        self.assertEqual(inst.write([b"\n", b"Second", b"\n", b"Third"]), 13)
-        def count():
-            yield b'\n1\n2\n3\n'
-            yield b'I love to count. Ha ha ha.'
-        self.assertEqual(inst.write(count()), 33)
 
     def test__flush_some_notconnected(self):
         inst, sock, map = self._makeOneWithMap()

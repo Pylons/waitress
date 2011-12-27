@@ -178,5 +178,7 @@ Differences from ``zope.server``
 
 - Raise an exception if start_response isnt called before any body write.
 
+- channel.write does not accept non-byte-sequences.
+
 .. _PasteDeploy: http://pythonpaste.org/deploy/
 

@@ -22,13 +22,11 @@ from waitress.utilities import (
     )
 
 from waitress.compat import (
-    PY3,
     tobytes,
     Queue,
     Empty,
     thread,
     reraise,
-    tostr,
     )
 
 rename_headers = {
@@ -230,7 +228,7 @@ class HTTPTask(object):
                 if k == 'Content-Length':
                     self.content_length = int(v)
 
-            # Return the write method used to write the response data.
+            # Return a method used to write the response data.
             return self.write
 
         # Call the application to handle the request and write a response
