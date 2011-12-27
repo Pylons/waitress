@@ -19,3 +19,5 @@
 - SERVER_IDENT -> ident
 
 - Logging.
+
+- Move capitalize out of start_response.
