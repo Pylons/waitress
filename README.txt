@@ -180,5 +180,8 @@ Differences from ``zope.server``
 
 - channel.write does not accept non-byte-sequences.
 
+- Put maintenance check on server rather than channel to avoid a class of
+  DOS.
+
 .. _PasteDeploy: http://pythonpaste.org/deploy/
 

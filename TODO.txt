@@ -8,8 +8,6 @@
 
 - Waitress version number in header.
 
-- Put maintenance check on server rather than channel to avoid DOS.
-
 - Ensure upload streams can not exceed a maximum size.
 
 - Test paste server runner on windows.

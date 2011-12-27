@@ -258,57 +258,17 @@ class TestHTTPChannel(unittest.TestCase):
     def test_add_channel(self):
         inst, sock, map = self._makeOneWithMap()
         fileno = inst._fileno
-        try:
-            inst.add_channel(map)
-            self.assertEqual(map[fileno], inst)
-            self.assertEqual(inst.__class__.active_channels[fileno], inst)
-        finally:
-            inst.__class__.active_channels.pop(fileno, None)
+        inst.add_channel(map)
+        self.assertEqual(map[fileno], inst)
+        self.assertEqual(inst.server.active_channels[fileno], inst)
 
     def test_del_channel(self):
         inst, sock, map = self._makeOneWithMap()
         fileno = inst._fileno
-        try:
-            inst.__class__.active_channels[fileno] = True
-            inst.del_channel(map)
-            self.assertEqual(map.get(fileno), None)
-            self.assertEqual(inst.__class__.active_channels.get(fileno),
-                             None)
-        finally:
-            inst.__class__.active_channels.pop(fileno, None)
-
-    def test_check_maintenance_false(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.__class__.next_channel_cleanup = [10]
-        result = inst.check_maintenance(5)
-        self.assertEqual(result, False)
-
-    def test_check_maintenance_true(self):
-        inst, sock, map = self._makeOneWithMap()
-        ncc = inst.__class__.next_channel_cleanup
-        try:
-            inst.__class__.next_channel_cleanup = [10]
-            inst.maintenance = lambda *arg: True
-            self.assertEqual(inst.check_maintenance(20), True)
-            self.assertEqual(inst.__class__.next_channel_cleanup,
-                             [inst.adj.cleanup_interval + 20])
-        finally:
-            inst.__class__.next_channel_cleanup = ncc
-
-    def test_maintenance(self):
-        inst, sock, map = self._makeOneWithMap()
-        class DummyChannel(object):
-            def close(self):
-                self.closed = True
-        zombie = DummyChannel()
-        zombie.last_activity = 0
-        zombie.running_tasks = False
-        try:
-            inst.__class__.active_channels[100] = zombie
-            inst.maintenance()
-            self.assertEqual(zombie.closed, True)
-        finally:
-            inst.__class__.active_channels.pop(100, None)
+        inst.server.active_channels[fileno] = True
+        inst.del_channel(map)
+        self.assertEqual(map.get(fileno), None)
+        self.assertEqual(inst.server.active_channels.get(fileno), None)
 
     def test_received(self):
         inst, sock, map = self._makeOneWithMap()
@@ -525,6 +485,7 @@ class DummyServer(object):
     trigger_pulled = False
     def __init__(self):
         self.tasks = []
+        self.active_channels = {}
     def add_task(self, task):
         self.tasks.append(task)
     def pull_trigger(self):
@@ -562,6 +523,3 @@ class DummyAdjustments(object):
     channel_timeout = 300
     log_socket_errors = True
     recv_bytes = 8192
-
-    
-    

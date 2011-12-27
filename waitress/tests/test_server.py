@@ -84,6 +84,25 @@ class TestWSGIServer(unittest.TestCase):
         inst._map = {}
         self.assertTrue(inst.readable())
 
+    def test_readable_maintenance_false(self):
+        import sys
+        inst = self._makeOneWithMap()
+        inst.next_channel_cleanup = sys.maxint
+        L = []
+        inst.maintenance = lambda t: L.append(t)
+        inst.readable()
+        self.assertEqual(L, [])
+        self.assertEqual(inst.next_channel_cleanup, sys.maxint)
+
+    def test_readable_maintenance_true(self):
+        inst = self._makeOneWithMap()
+        inst.next_channel_cleanup = 0
+        L = []
+        inst.maintenance = lambda t: L.append(t)
+        inst.readable()
+        self.assertEqual(len(L), 1)
+        self.assertNotEqual(inst.next_channel_cleanup, 0)
+
     def test_writable(self):
         inst = self._makeOneWithMap()
         self.assertFalse(inst.writable())
@@ -130,6 +149,18 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(inst.socket.accepted, True)
         self.assertEqual(innersock.opts, [('level', 'optname', 'value')])
         self.assertEqual(L, [(inst, innersock, None, inst.adj)])
+
+    def test_maintenance(self):
+        inst = self._makeOneWithMap()
+        class DummyChannel(object):
+            def close(self):
+                self.closed = True
+        zombie = DummyChannel()
+        zombie.last_activity = 0
+        zombie.running_tasks = False
+        inst.active_channels[100] = zombie
+        inst.maintenance(10000)
+        self.assertEqual(zombie.will_close, True)
 
 class DummySock(object):
     accepted = False
@@ -179,4 +210,8 @@ class DummyAdj:
     connection_limit = 1
     log_socket_errors = True
     socket_options = [('level', 'optname', 'value')]
+    cleanup_interval = 900
+    channel_timeout= 300
+    
+    
 

@@ -14,6 +14,7 @@
 
 import asyncore
 import socket
+import time
 
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
@@ -29,6 +30,7 @@ class WSGIServer(logging_dispatcher, object):
     """
 
     channel_class = HTTPChannel
+    next_channel_cleanup = 0
     socketmod = socket # test shim
 
     def __init__(self,
@@ -54,6 +56,7 @@ class WSGIServer(logging_dispatcher, object):
         self.bind((self.adj.host, self.adj.port))
         self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.adj.host)
+        self.active_channels = {}
         if _start:
             self.accept_connections()
 
@@ -88,6 +91,10 @@ class WSGIServer(logging_dispatcher, object):
 
     def readable(self):
         """See waitress.interfaces.IDispatcher"""
+        now = time.time()
+        if now >= self.next_channel_cleanup:
+            self.next_channel_cleanup = now + self.adj.cleanup_interval
+            self.maintenance(now)
         return (self.accepting and len(self._map) < self.adj.connection_limit)
 
     def writable(self):
@@ -130,4 +137,15 @@ class WSGIServer(logging_dispatcher, object):
 
     def pull_trigger(self):
         self.trigger.pull_trigger()
+
+    def maintenance(self, now):
+        """
+        Closes channels that have not had any activity in a while.
+
+        The timeout is configured through adj.channel_timeout (seconds).
+        """
+        cutoff = now - self.adj.channel_timeout
+        for channel in self.active_channels.values():
+            if not channel.running_tasks and channel.last_activity < cutoff:
+                channel.will_close = True
 

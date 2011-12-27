@@ -38,8 +38,6 @@ class HTTPChannel(logging_dispatcher, object):
 
     task_lock = thread.allocate_lock() # syncs access to task-related attrs
 
-    active_channels = {}        # Class-specific channel tracker
-    next_channel_cleanup = [0]  # Class-specific cleanup time
     proto_request = None        # A request parser instance
     last_activity = 0           # Time of last activity
     tasks = None                # List of channel-related tasks to execute
@@ -59,14 +57,12 @@ class HTTPChannel(logging_dispatcher, object):
             adj,
             map=None,
             ):
+        self.server = server
         self.addr = addr
         self.adj = adj
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
-        self.creation_time = time.time()
+        self.creation_time = self.last_activity = time.time()
         asyncore.dispatcher.__init__(self, sock, map=map)
-        self.server = server
-        self.last_activity = t = self.creation_time
-        self.check_maintenance(t)
 
     def handle_close(self):
         self.close()
@@ -89,7 +85,6 @@ class HTTPChannel(logging_dispatcher, object):
         self.last_activity = time.time()
 
     def readable(self):
-        self.check_maintenance(time.time())
         if not self.async_mode:
             return False
         return not self.will_close
@@ -118,7 +113,7 @@ class HTTPChannel(logging_dispatcher, object):
         This hook keeps track of opened channels.
         """
         asyncore.dispatcher.add_channel(self, map)
-        self.__class__.active_channels[self._fileno] = self
+        self.server.active_channels[self._fileno] = self
 
     def del_channel(self, map=None):
         """See asyncore.dispatcher
@@ -127,39 +122,9 @@ class HTTPChannel(logging_dispatcher, object):
         """
         fd = self._fileno # next line sets this to None
         asyncore.dispatcher.del_channel(self, map)
-        ac = self.__class__.active_channels
+        ac = self.server.active_channels
         if fd in ac:
             del ac[fd]
-
-    def check_maintenance(self, now):
-        """
-        Performs maintenance if necessary.
-        """
-        ncc = self.__class__.next_channel_cleanup
-        if now < ncc[0]:
-            return False
-        ncc[0] = now + self.adj.cleanup_interval
-        return self.maintenance()
-
-    def maintenance(self):
-        """
-        Closes connections that have not had any activity in a while.
-
-        The timeout is configured through adj.channel_timeout (seconds).
-
-        CM: the maintenance method never closes the channel upon which it is
-        called, it closes any other channel that is a) not running a task and
-        b) has exceeded its inactivity timeout.  Since channel maintenance is
-        only done at channel creation time, this means that an inactive
-        channel will not be closed until at least one other channel is
-        created.
-        """
-        now = time.time()
-        cutoff = now - self.adj.channel_timeout
-        for channel in self.__class__.active_channels.values():
-            if (channel is not self and not channel.running_tasks and
-                channel.last_activity < cutoff):
-                channel.close()
 
     def received(self, data):
         """
