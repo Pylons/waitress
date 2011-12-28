@@ -4,8 +4,6 @@
 
 - Speed tweaking.
 
-- Coverage.
-
 - Waitress version number in header.
 
 - Test paste server runner on windows.
