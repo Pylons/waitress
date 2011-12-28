@@ -127,6 +127,50 @@ GET /foobar HTTP/8.4
         result = self.parser.received(b'a')
         self.assertEqual(result, 0)
 
+    def test_received_cl_too_large(self):
+        from waitress.parser import RequestEntityTooLarge
+        self.parser.adj.max_request_body_size = 2
+        data = b"""\
+GET /foobar HTTP/8.4
+Content-Length: 10
+
+"""
+        result =self.parser.received(data)
+        self.assertEqual(result, 41)
+        self.assertTrue(self.parser.completed)
+        self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
+
+    def test_received_headers_too_large(self):
+        from waitress.parser import RequestHeaderFieldsTooLarge
+        self.parser.adj.max_request_header_size = 2
+        data = b"""\
+GET /foobar HTTP/8.4
+X-Foo: 1
+"""
+        result =self.parser.received(data)
+        self.assertEqual(result, 30)
+        self.assertTrue(self.parser.completed)
+        self.assertTrue(isinstance(self.parser.error,
+                                   RequestHeaderFieldsTooLarge))
+
+    def test_received_body_too_large(self):
+        from waitress.parser import RequestEntityTooLarge
+        self.parser.adj.max_request_body_size = 2
+        data = b"""\
+GET /foobar HTTP/1.1
+Transfer-Encoding: chunked
+X-Foo: 1
+
+20;\r
+This string has 32 characters\r
+0\r\n\r\n"""
+        result = self.parser.received(data)
+        self.assertEqual(result, 58)
+        self.parser.received(data[result:])
+        self.assertTrue(self.parser.completed)
+        self.assertTrue(isinstance(self.parser.error,
+                                   RequestEntityTooLarge))
+
     def test_parse_header_gardenpath(self):
         data = b"""\
 GET /foobar HTTP/8.4
@@ -155,6 +199,11 @@ foo: bar"""
         data = b"GET /foobar HTTP/1.1\nexpect: 100-continue"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.expect_continue, True)
+
+    def test_parse_header_connection_close(self):
+        data = b"GET /foobar HTTP/1.1\nConnection: close\n\n"
+        self.parser.parse_header(data)
+        self.assertEqual(self.parser.connection_close, True)
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
 
@@ -267,6 +316,15 @@ Hello.
                 'X_FORWARDED_FOR':
                     '10.11.12.13, unknown,127.0.0.1, 255.255.255.255',
                 })
+
+class TestTooLarge(unittest.TestCase):
+    def _makeOne(self):
+        from waitress.parser import TooLarge
+        return TooLarge(1)
+
+    def test_it(self):
+        inst = self._makeOne()
+        self.assertEqual(inst.bytes, 1)
 
 class DummyBodyStream(object):
     def getfile(self):
