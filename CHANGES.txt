@@ -1,4 +1,5 @@
 Next release
-------------------
+------------
 
-- Initial fork from zope.server.
+- Initial fork from zope.server, see "differences" in the docs.
+
