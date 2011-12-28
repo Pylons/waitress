@@ -180,9 +180,10 @@ Known Issues
 
 - Does not support the ``wsgi.file_wrapper`` protocol.
 
-- Does not do transfer-encoding: chunked responses.
+- Does not do transfer-encoding: chunked responses (although handles chunked
+  requests fine).
 
-- Does not support IPv6.
+- Does not yet support IPv6.
 
 .. _PasteDeploy: http://pythonpaste.org/deploy/
 

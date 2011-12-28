@@ -24,7 +24,7 @@ class Adjustments(object):
     change its attributes, and pass it to the channel constructors.
     """
     # hostname or IP address
-    host = '127.0.0.1'
+    host = '0.0.0.0'
 
     # TCP port
     port = 8080
