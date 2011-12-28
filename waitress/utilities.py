@@ -14,9 +14,13 @@
 """Utility functions
 """
 
+import asyncore
+import logging
 import re
 import time
 import calendar
+
+logger = logging.getLogger('waitress')
 
 def find_double_newline(s):
     """Returns the position just after a double newline in the given string."""
@@ -162,3 +166,11 @@ def parse_http_date(d):
             return 0
     return retval
 
+class logging_dispatcher(asyncore.dispatcher):
+    def log_info(self, message, type='info'):
+        severity = {
+            'info': logging.INFO,
+            'warning': logging.WARN,
+            'error': logging.ERROR,
+            }
+        logger.log(severity.get(type, logging.INFO), message)

@@ -14,3 +14,10 @@
 
 - Get rid of dual-moded-ness.
 
+- Anticipate multivalue and single-value-only headers in request headers in
+  parser.py.
+
+- Get rid of expectations that applications can set transfer-encoding and
+  other hop-by-hop headers.
+
+- Logging docs.

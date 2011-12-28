@@ -162,7 +162,6 @@ class WSGITask(object):
             # fall back to a version we support.
             version = '1.0'
         self.version = version
-        self.expect_continue = self.request_data.expect_continue
 
     def service(self):
         """See waitress.interfaces.ITask"""

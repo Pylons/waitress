@@ -16,11 +16,11 @@ import asyncore
 import socket
 import time
 
+from waitress import trigger
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
-from waitress.dispatcher import logging_dispatcher
 from waitress.task import ThreadedTaskDispatcher
-from waitress import trigger
+from waitress.utilities import logging_dispatcher
 
 class WSGIServer(logging_dispatcher, object):
     """

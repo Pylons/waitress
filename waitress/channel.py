@@ -20,9 +20,9 @@ import time
 
 from waitress.compat import thread
 from waitress.buffers import OverflowableBuffer
-from waitress.dispatcher import logging_dispatcher
 from waitress.parser import HTTPRequestParser
 from waitress.task import WSGITask
+from waitress.utilities import logging_dispatcher
 
 class HTTPChannel(logging_dispatcher, object):
     """Channel that switches between asynchronous and synchronous mode.
