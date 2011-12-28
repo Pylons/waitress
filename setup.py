@@ -26,7 +26,7 @@ setup(
     maintainer_email="chrism@plope.com",
     description='Waitress WSGI server',
     long_description=(
-        read('README.txt')
+        read('README.rst')
         + '\n\n' +
         read('CHANGES.txt')
         ),
