@@ -32,6 +32,7 @@ class WSGIServer(logging_dispatcher, object):
     channel_class = HTTPChannel
     next_channel_cleanup = 0
     socketmod = socket # test shim
+    asyncore = asyncore
 
     def __init__(self,
                  application,
@@ -49,7 +50,7 @@ class WSGIServer(logging_dispatcher, object):
             _dispatcher = ThreadedTaskDispatcher()
             _dispatcher.set_thread_count(self.adj.threads)
         self.task_dispatcher = _dispatcher
-        asyncore.dispatcher.__init__(self, _sock, map=map)
+        self.asyncore.dispatcher.__init__(self, _sock, map=map)
         if _sock is None:
             self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
@@ -131,7 +132,7 @@ class WSGIServer(logging_dispatcher, object):
 
     def run(self):
         try:
-            asyncore.loop(map=self._map)
+            self.asyncore.loop(map=self._map)
         except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
 

@@ -39,6 +39,11 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(inst.accepting, True)
         self.assertEqual(inst.socket.listened, 1024)
 
+    def test_ctor_makes_dispatcher(self):
+        inst = self._makeOne(None, _start=False, map={})
+        self.assertEqual(inst.task_dispatcher.__class__.__name__,
+                         'ThreadedTaskDispatcher')
+
     def test_ctor_start_false(self):
         inst = self._makeOneWithMap(_start=False)
         self.assertEqual(inst.accepting, False)
@@ -57,6 +62,24 @@ class TestWSGIServer(unittest.TestCase):
         inst = self._makeOneWithMap(_start=False)
         result = inst.get_server_name('fred.flintstone.com')
         self.assertEqual(result, 'fred.flintstone.com')
+
+    def test_get_server_name_0000(self):
+        inst = self._makeOneWithMap(_start=False)
+        result = inst.get_server_name('0.0.0.0')
+        self.assertEqual(result, 'localhost')
+
+    def test_run(self):
+        inst = self._makeOneWithMap(_start=False)
+        inst.asyncore = DummyAsyncore()
+        inst.task_dispatcher = DummyTaskDispatcher()
+        inst.run()
+        self.assertTrue(inst.task_dispatcher.was_shutdown)
+
+    def test_pull_trigger(self):
+        inst = self._makeOneWithMap(_start=False)
+        inst.trigger = DummyTrigger()
+        inst.pull_trigger()
+        self.assertEqual(inst.trigger.pulled, True)
 
     def test_add_task(self):
         task = DummyTask()
@@ -194,6 +217,8 @@ class DummyTaskDispatcher(object):
         self.tasks = []
     def add_task(self, task):
         self.tasks.append(task)
+    def shutdown(self):
+        self.was_shutdown = True
 
 class DummyTask(object):
     serviced = False
@@ -213,5 +238,11 @@ class DummyAdj:
     cleanup_interval = 900
     channel_timeout= 300
     
+class DummyAsyncore(object):
+    def loop(self, map):
+        raise SystemExit
     
-
+class DummyTrigger(object):
+    def pull_trigger(self):
+        self.pulled = True
+        

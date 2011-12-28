@@ -336,18 +336,18 @@ class WSGITask(Task):
             self.complete = True
 
             if not status.__class__ is str:
-                raise ValueError('status %s is not a string' % status)
+                raise AssertionError('status %s is not a string' % status)
 
             self.status = status
 
             # Prepare the headers for output
             for k, v in headers:
                 if not k.__class__ is str:
-                    raise ValueError(
+                    raise AssertionError(
                         'Header name %r is not a string in %s' % (k, (k, v))
                         )
-                if not k.__class__ is str:
-                    raise ValueError(
+                if not v.__class__ is str:
+                    raise AssertionError(
                         'Header value %r is not a string in %s' % (v, (k, v))
                         )
                 if k in ('content-length', 'Content-Length', 'Content-length',
