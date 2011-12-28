@@ -105,7 +105,7 @@ class TestWSGITask(unittest.TestCase):
         def execute():
             inst.executed = True
         inst.execute = execute
-        inst.start_response_called = True
+        inst.complete = True
         inst.service()
         self.assertTrue(inst.start_time)
         self.assertTrue(inst.channel.closed_when_done)
@@ -332,7 +332,7 @@ class TestWSGITask(unittest.TestCase):
         request_data = DummyParser()
         inst.request_data = request_data
         environ = inst.get_environment()
-        self.assertFalse('QUERY_STRING' in environ)
+        self.assertEqual(environ['QUERY_STRING'], '')
 
     def test_get_environment_with_query(self):
         inst = self._makeOne()
@@ -380,7 +380,7 @@ class TestWSGITask(unittest.TestCase):
     def test_finish_didnt_write_header(self):
         inst = self._makeOne()
         inst.wrote_header = False
-        inst.start_response_called = True
+        inst.complete = True
         inst.finish()
         self.assertTrue(inst.channel.written)
 
@@ -393,14 +393,14 @@ class TestWSGITask(unittest.TestCase):
     def test_write_wrote_header(self):
         inst = self._makeOne()
         inst.wrote_header = True
-        inst.start_response_called = True
+        inst.complete = True
         inst.write(b'abc')
         self.assertEqual(inst.channel.written, b'abc')
 
     def test_write_header_not_written(self):
         inst = self._makeOne()
         inst.wrote_header = False
-        inst.start_response_called = True
+        inst.complete = True
         inst.write(b'abc')
         self.assertTrue(inst.channel.written)
         self.assertEqual(inst.wrote_header, True)

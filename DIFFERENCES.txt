@@ -45,3 +45,7 @@ Differences from ``zope.server``
 
 - wsgi.multiprocess set (correctly) to False.
 
+- Ensures header total can not exceed a maximum size.
+
+- Ensures body total can not exceed a maximum size.
+

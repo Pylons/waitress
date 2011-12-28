@@ -136,22 +136,15 @@ class ThreadedTaskDispatcher(object):
             return True
         return False
 
-class WSGITask(object):
-    """A WSGI task accepts a request and writes to a channel.
-
-       See ITask, IHeaderOutput.
-    """
-
-    instream = None
+class Task(object):
     close_on_finish = False
     status = '200 OK'
     wrote_header = False
     start_time = 0
-    environ = None
-    start_response_called = False
     content_length = -1
     content_bytes_written = 0
     logged_write_excess = False
+    complete = False
 
     def __init__(self, channel, request_data):
         self.channel = channel
@@ -185,118 +178,6 @@ class WSGITask(object):
     def defer(self):
         """See waitress.interfaces.ITask"""
         pass
-
-    def execute(self):
-        env = self.get_environment()
-
-        def start_response(status, headers, exc_info=None):
-            if self.start_response_called and not exc_info:
-                raise AssertionError("start_response called a second time "
-                                     "without providing exc_info.")
-            if exc_info:
-                try:
-                    if self.start_response_called:
-                        # higher levels will catch and handle raised exception:
-                        # 1. "service" method in task.py
-                        # 2. "service" method in channel.py
-                        # 3. "handler_thread" method in task.py
-                        reraise(exc_info[0], exc_info[1], exc_info[2])
-                    else:
-                        # As per WSGI spec existing headers must be cleared
-                        self.response_headers = []
-                finally:
-                    exc_info = None
-
-            self.start_response_called = True
-
-            if not status.__class__ is str:
-                raise ValueError('status %s is not a string' % status)
-
-            self.status = status
-
-            # Prepare the headers for output
-            for k, v in headers:
-                if not k.__class__ is str:
-                    raise ValueError(
-                        'Header name %r is not a string in %s' % (k, (k, v))
-                        )
-                if not k.__class__ is str:
-                    raise ValueError(
-                        'Header value %r is not a string in %s' % (v, (k, v))
-                        )
-                if k == 'Content-Length':
-                    self.content_length = int(v)
-
-            self.response_headers.extend(headers)
-
-            # Return a method used to write the response data.
-            return self.write
-
-        # Call the application to handle the request and write a response
-        app_iter = self.channel.server.application(env, start_response)
-
-        try:
-            # By iterating manually at this point, we execute task.write()
-            # multiple times, allowing partial data to be sent.
-            first_chunk_len = None
-            for chunk in app_iter:
-                if first_chunk_len is None:
-                    first_chunk_len = len(chunk)
-                    # Set a Content-Length header if one is not supplied.
-                    # start_response may not have been called until first
-                    # iteration as per PEP, so we must reinterrogate
-                    # self.content_length here
-                    if self.content_length == -1:
-                        app_iter_len = None
-                        if hasattr(app_iter, '__len__'):
-                            app_iter_len = len(app_iter)
-                        if app_iter_len == 1:
-                            self.content_length = first_chunk_len
-                # transmit headers only after first iteration of the iterable
-                # that returns a non-empty bytestring (PEP 3333)
-                if not chunk:
-                    continue
-                self.write(chunk)
-
-            cl = self.content_length
-            if cl != -1:
-                if self.content_bytes_written != cl:
-                    # close the connection so the client isn't sitting around
-                    # waiting for more data when there are too few bytes
-                    # to service content-length
-                    self.close_on_finish = True
-                    self.channel.server.log_info(
-                        'app_iter returned too few bytes (%s) '
-                        'for specified Content-Length (%s)' % (
-                            self.content_bytes_written,
-                            cl)
-                        )
-        finally:
-            if hasattr(app_iter, 'close'):
-                app_iter.close()
-
-    def write(self, data):
-        if not self.start_response_called:
-            raise RuntimeError('start_response was not called before body '
-                               'written')
-        channel = self.channel
-        if not self.wrote_header:
-            rh = self.build_response_header()
-            channel.write(rh)
-            self.wrote_header = True
-        if data:
-            towrite = data
-            cl = self.content_length
-            if cl != -1:
-                towrite = data[:cl-self.content_bytes_written]
-            if towrite != data and not self.logged_write_excess:
-                self.channel.server.log_info(
-                    'written content exceeded the number of bytes '
-                    'specified by Content-Length header (%s)' % cl)
-                self.logged_write_excess = True
-            if towrite:
-                self.content_bytes_written += len(towrite)
-                channel.write(towrite)
 
     def build_response_header(self):
         version = self.version
@@ -379,6 +260,147 @@ class WSGITask(object):
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
         return tobytes(res)
 
+    def start(self):
+        self.start_time = time.time()
+
+    def finish(self):
+        if not self.wrote_header:
+            self.write(b'')
+
+    def write(self, data):
+        if not self.complete:
+            raise RuntimeError('start_response was not called before body '
+                               'written')
+        channel = self.channel
+        if not self.wrote_header:
+            rh = self.build_response_header()
+            channel.write(rh)
+            self.wrote_header = True
+        if data:
+            towrite = data
+            cl = self.content_length
+            if cl != -1:
+                towrite = data[:cl-self.content_bytes_written]
+            if towrite != data and not self.logged_write_excess:
+                self.channel.server.log_info(
+                    'written content exceeded the number of bytes '
+                    'specified by Content-Length header (%s)' % cl)
+                self.logged_write_excess = True
+            if towrite:
+                self.content_bytes_written += len(towrite)
+                channel.write(towrite)
+
+class ErrorTask(Task):
+    """ An error task produces an error response """
+    complete = True
+    def execute(self):
+        e = self.request_data.error
+        body = '%s (%s bytes)' % (e.reason, e.bytes)
+        tag = '\r\n\r\n(generated by waitress)'
+        body = body + tag
+        self.status = '%s %s' % (e.code, e.reason)
+        self.response_headers.append(('Content-Length', str(len(body))))
+        self.response_headers.append(('Content-Type', 'text/plain'))
+        self.response_headers.append(('Connection', 'close'))
+        self.write(tobytes(body))
+
+class WSGITask(Task):
+    """A WSGI task accepts a request and writes to a channel.
+
+       See ITask, IHeaderOutput.
+    """
+
+    environ = None
+
+    def execute(self):
+        env = self.get_environment()
+
+        def start_response(status, headers, exc_info=None):
+            if self.complete and not exc_info:
+                raise AssertionError("start_response called a second time "
+                                     "without providing exc_info.")
+            if exc_info:
+                try:
+                    if self.complete:
+                        # higher levels will catch and handle raised exception:
+                        # 1. "service" method in task.py
+                        # 2. "service" method in channel.py
+                        # 3. "handler_thread" method in task.py
+                        reraise(exc_info[0], exc_info[1], exc_info[2])
+                    else:
+                        # As per WSGI spec existing headers must be cleared
+                        self.response_headers = []
+                finally:
+                    exc_info = None
+
+            self.complete = True
+
+            if not status.__class__ is str:
+                raise ValueError('status %s is not a string' % status)
+
+            self.status = status
+
+            # Prepare the headers for output
+            for k, v in headers:
+                if not k.__class__ is str:
+                    raise ValueError(
+                        'Header name %r is not a string in %s' % (k, (k, v))
+                        )
+                if not k.__class__ is str:
+                    raise ValueError(
+                        'Header value %r is not a string in %s' % (v, (k, v))
+                        )
+                if k == 'Content-Length':
+                    self.content_length = int(v)
+
+            self.response_headers.extend(headers)
+
+            # Return a method used to write the response data.
+            return self.write
+
+        # Call the application to handle the request and write a response
+        app_iter = self.channel.server.application(env, start_response)
+
+        try:
+            # By iterating manually at this point, we execute task.write()
+            # multiple times, allowing partial data to be sent.
+            first_chunk_len = None
+            for chunk in app_iter:
+                if first_chunk_len is None:
+                    first_chunk_len = len(chunk)
+                    # Set a Content-Length header if one is not supplied.
+                    # start_response may not have been called until first
+                    # iteration as per PEP, so we must reinterrogate
+                    # self.content_length here
+                    if self.content_length == -1:
+                        app_iter_len = None
+                        if hasattr(app_iter, '__len__'):
+                            app_iter_len = len(app_iter)
+                        if app_iter_len == 1:
+                            self.content_length = first_chunk_len
+                # transmit headers only after first iteration of the iterable
+                # that returns a non-empty bytestring (PEP 3333)
+                if not chunk:
+                    continue
+                self.write(chunk)
+
+            cl = self.content_length
+            if cl != -1:
+                if self.content_bytes_written != cl:
+                    # close the connection so the client isn't sitting around
+                    # waiting for more data when there are too few bytes
+                    # to service content-length
+                    self.close_on_finish = True
+                    self.channel.server.log_info(
+                        'app_iter returned too few bytes (%s) '
+                        'for specified Content-Length (%s)' % (
+                            self.content_bytes_written,
+                            cl)
+                        )
+        finally:
+            if hasattr(app_iter, 'close'):
+                app_iter.close()
+
     def get_environment(self):
         """Returns a WSGI environment."""
         environ = self.environ
@@ -402,9 +424,7 @@ class WSGITask(object):
         environ['SERVER_PROTOCOL'] = 'HTTP/%s' % self.version
         environ['SCRIPT_NAME'] = ''
         environ['PATH_INFO'] = '/' + path
-        query = request_data.query
-        if query:
-            environ['QUERY_STRING'] = query
+        environ['QUERY_STRING'] = request_data.query or ''
         environ['REMOTE_ADDR'] = channel.addr[0]
 
         for key, value in request_data.headers.items():
@@ -426,15 +446,3 @@ class WSGITask(object):
 
         self.environ = environ
         return environ
-
-    def start(self):
-        self.start_time = time.time()
-
-    def finish(self):
-        if not self.wrote_header:
-            self.write(b'')
-
-def fake_write(body):
-    raise NotImplementedError(
-        "the waitress HTTP Server does not support the WSGI write() function.")
-

@@ -31,6 +31,18 @@ from waitress.receiver import (
     )
 from waitress.utilities import find_double_newline
 
+class TooLarge(object):
+    def __init__(self, bytes):
+        self.bytes = bytes
+
+class RequestHeaderFieldsTooLarge(TooLarge):
+    code = 431
+    reason = 'Request Header Fields Too Large'
+
+class RequestEntityTooLarge(TooLarge):
+    code = 413
+    reason = 'Request Entity Too Large'
+
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
 
@@ -47,7 +59,13 @@ class HTTPRequestParser(object):
     header_plus = b''
     chunked = False
     content_length = 0
+    header_bytes_received = 0
+    body_bytes_received = 0
     body_rcv = None
+    version = '1.0'
+    error = None
+    connection_close = False
+
     # Other attributes: first_line, header, headers, command, uri, version,
     # path, query, fragment
 
@@ -86,20 +104,40 @@ class HTTPRequestParser(object):
                 else:
                     self.parse_header(header_plus)
                     if self.body_rcv is None:
+                        # no content-length header and not a t-e: chunked
+                        # request
                         self.completed = True
+                    if self.content_length > 0:
+                        max_body = self.adj.max_request_body_size
+                        # we won't accept this request if the content-length
+                        # is too large
+                        if self.content_length >= max_body:
+                            self.error = RequestEntityTooLarge(max_body)
+                            self.completed = True
                 self.headers_finished = True
                 return consumed
             else:
                 # Header not finished yet.
+                self.header_bytes_received += datalen
+                max_header = self.adj.max_request_header_size
+                if self.header_bytes_received >= max_header:
+                    self.parse_header(b'GET / HTTP/1.0\n')
+                    self.error = RequestHeaderFieldsTooLarge(max_header)
+                    self.completed = True
                 self.header_plus = s
                 return datalen
         else:
             # In body.
             consumed = br.received(data)
+            self.body_bytes_received += consumed
+            max_body = self.adj.max_request_body_size
+            if self.body_bytes_received >= max_body:
+                # this will only be raised during t-e: chunked requests
+                self.error = RequestEntityTooLarge(max_body)
+                self.completed = True
             if br.completed:
                 self.completed = True
             return consumed
-
 
     def parse_header(self, header_plus):
         """
@@ -140,6 +178,11 @@ class HTTPRequestParser(object):
         self.version = version
         self.split_uri()
         self.url_scheme = self.adj.url_scheme
+        connection = headers.get('CONNECTION', '')
+
+        if version == '1.0':
+            if connection.lower() != 'keep-alive':
+                self.connection_close = True
 
         if version == '1.1':
             te = headers.get('TRANSFER_ENCODING', '')
@@ -149,6 +192,9 @@ class HTTPRequestParser(object):
                 self.body_rcv = ChunkedReceiver(buf)
             expect = headers.get('EXPECT', '').lower()
             self.expect_continue = expect == '100-continue'
+            if connection.lower() == 'close':
+                self.connection_close = True
+
         if not self.chunked:
             try:
                 cl = int(headers.get('CONTENT_LENGTH', 0))

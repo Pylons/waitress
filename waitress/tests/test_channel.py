@@ -497,6 +497,8 @@ class DummyParser(object):
     headers_finished = False
     expect_continue = False
     retval = 1000
+    error = None
+    connection_close = False
     def received(self, data):
         self.data = data
         return self.retval

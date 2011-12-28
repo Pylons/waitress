@@ -21,7 +21,12 @@ import time
 from waitress.compat import thread
 from waitress.buffers import OverflowableBuffer
 from waitress.parser import HTTPRequestParser
-from waitress.task import WSGITask
+
+from waitress.task import (
+    ErrorTask,
+    WSGITask,
+    )
+
 from waitress.utilities import logging_dispatcher
 
 class HTTPChannel(logging_dispatcher, object):
@@ -34,6 +39,7 @@ class HTTPChannel(logging_dispatcher, object):
     the main loop.
     """
     task_class = WSGITask
+    error_task_class = ErrorTask
     parser_class = HTTPRequestParser
 
     task_lock = thread.allocate_lock() # syncs access to task-related attrs
@@ -145,6 +151,8 @@ class HTTPChannel(logging_dispatcher, object):
                 self.proto_request = None
                 if not preq.empty:
                     self.handle_request(preq)
+                if preq.connection_close:
+                    return
                 preq = None
             else:
                 self.proto_request = preq
@@ -153,12 +161,12 @@ class HTTPChannel(logging_dispatcher, object):
             data = data[n:]
 
     def handle_request(self, req):
-        """Creates and queues a task for processing a request.
-
-        Subclasses may override this method to handle some requests
-        immediately in the main async thread.
+        """Creates and queues a task for processing a single request.
         """
-        task = self.task_class(self, req)
+        if req.error:
+            task = self.error_task_class(self, req)
+        else:
+            task = self.task_class(self, req)
         self.queue_task(task)
 
     def handle_error(self, exc_info=None): # exc_info for tests

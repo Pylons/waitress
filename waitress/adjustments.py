@@ -23,19 +23,19 @@ class Adjustments(object):
     all sockets, or you can create a new instance of this class,
     change its attributes, and pass it to the channel constructors.
     """
-    # host
+    # hostname or IP address
     host = '127.0.0.1'
 
-    # port
+    # TCP port
     port = 8080
 
-    # threads
+    # mumber of threads
     threads = 4
 
-    # wsgi url scheme
+    # default wsgi url scheme
     url_scheme = 'http'
 
-    # ident
+    # server identity
     ident = 'waitress'
 
     # backlog is the argument to pass to socket.listen().
@@ -72,6 +72,12 @@ class Adjustments(object):
     # Boolean: turn off to not log premature client disconnects.
     log_socket_errors = True
 
+    # maximum number of bytes of all request headers combined (512K default)
+    max_request_header_size = 524288
+
+    # maximum number of bytes in request body (1GB default)
+    max_request_body_size = 1073741824
+
     # The socket options to set on receiving a connection.  It is a list of
     # (level, optname, value) tuples.  TCP_NODELAY is probably good for Zope,
     # since Zope buffers data itself.
@@ -107,6 +113,10 @@ class Adjustments(object):
                 v = int(v)
             elif k == 'log_socket_errors':
                 v = asbool(v)
+            elif k == 'max_request_header_size':
+                v = int(v)
+            elif k == 'max_request_body_size':
+                v = int(v)
             else:
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, v)

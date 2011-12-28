@@ -8,8 +8,6 @@
 
 - Waitress version number in header.
 
-- Ensure upload streams can not exceed a maximum size.
-
 - Test paste server runner on windows.
 
 - Get rid of dual-moded-ness.
