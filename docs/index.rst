@@ -191,6 +191,7 @@ More
 .. toctree::
    :maxdepth: 1
 
+   differences.rst
    api.rst
    glossary.rst
 
