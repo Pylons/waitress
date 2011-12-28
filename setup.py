@@ -14,8 +14,12 @@
 import os
 from setuptools import setup, find_packages
 
-def read(*rnames):
-    return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
+here = os.path.abspath(os.path.dirname(__file__))
+try:
+    README = open(os.path.join(here, 'README.rst')).read()
+    CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
+except IOError:
+    README = CHANGES = ''
 
 setup(
     name='waitress',
@@ -25,11 +29,7 @@ setup(
     maintainer="Chris McDonough",
     maintainer_email="chrism@plope.com",
     description='Waitress WSGI server',
-    long_description=(
-        read('README.rst')
-        + '\n\n' +
-        read('CHANGES.txt')
-        ),
+    long_description = README +'\n\n' + CHANGES,
     license='ZPL 2.1',
     keywords='waitress wsgi server http',
     classifiers = [
