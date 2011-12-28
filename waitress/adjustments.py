@@ -72,8 +72,8 @@ class Adjustments(object):
     # Boolean: turn off to not log premature client disconnects.
     log_socket_errors = True
 
-    # maximum number of bytes of all request headers combined (512K default)
-    max_request_header_size = 524288
+    # maximum number of bytes of all request headers combined (256K default)
+    max_request_header_size = 262144
 
     # maximum number of bytes in request body (1GB default)
     max_request_body_size = 1073741824
