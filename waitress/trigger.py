@@ -67,10 +67,10 @@ class _triggerbase(object):
         self.thunks = []
 
     def readable(self):
-        return 1
+        return True
 
     def writable(self):
-        return 0
+        return False
 
     def handle_connect(self):
         pass
@@ -88,9 +88,6 @@ class _triggerbase(object):
             self.del_channel()
             self._close()  # subclass does OS-specific stuff
 
-    def _close(self):    # see close() above; subclass must supply
-        raise NotImplementedError
-
     def pull_trigger(self, thunk=None):
         if thunk:
             self.lock.acquire()
@@ -100,15 +97,10 @@ class _triggerbase(object):
                 self.lock.release()
         self._physical_pull()
 
-    # Subclass must supply _physical_pull, which does whatever the OS
-    # needs to do to provoke the "write" end of the trigger.
-    def _physical_pull(self):
-        raise NotImplementedError
-
     def handle_read(self):
         try:
             self.recv(8192)
-        except socket.error:
+        except (OSError, socket.error):
             return
         self.lock.acquire()
         try:
@@ -117,8 +109,9 @@ class _triggerbase(object):
                     thunk()
                 except:
                     nil, t, v, tbinfo = asyncore.compact_traceback()
-                    print ('exception in trigger thunk:'
-                           ' (%s:%s %s)' % (t, v, tbinfo))
+                    self.log_info(
+                        'exception in trigger thunk: (%s:%s %s)' %
+                        (t, v, tbinfo))
             self.thunks = []
         finally:
             self.lock.release()
@@ -141,7 +134,7 @@ if os.name == 'posix':
         def _physical_pull(self):
             os.write(self.trigger, b'x')
 
-else:
+else: # pragma: no cover
     # Windows version; uses just sockets, because a pipe isn't select'able
     # on Windows.
 

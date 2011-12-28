@@ -167,10 +167,11 @@ def parse_http_date(d):
     return retval
 
 class logging_dispatcher(asyncore.dispatcher):
+    logger = logger
     def log_info(self, message, type='info'):
         severity = {
             'info': logging.INFO,
             'warning': logging.WARN,
             'error': logging.ERROR,
             }
-        logger.log(severity.get(type, logging.INFO), message)
+        self.logger.log(severity.get(type, logging.INFO), message)

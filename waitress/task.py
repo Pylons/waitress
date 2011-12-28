@@ -350,7 +350,10 @@ class WSGITask(Task):
                     raise ValueError(
                         'Header value %r is not a string in %s' % (v, (k, v))
                         )
-                if k == 'Content-Length':
+                if k in ('content-length', 'Content-Length', 'Content-length',
+                         'CONTENT-LENGTH'):
+                    # reduce funccalls by not calling .lower at small risk of
+                    # being wrong
                     self.content_length = int(v)
 
             self.response_headers.extend(headers)

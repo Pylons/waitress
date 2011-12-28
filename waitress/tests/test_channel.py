@@ -296,6 +296,18 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.proto_request, None)
         self.assertEqual(inst.server.tasks, [])
 
+    def test_received_preq_completed_connection_close(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        preq = DummyParser()
+        inst.proto_request = preq
+        preq.completed = True
+        preq.empty = True
+        preq.connection_close = True
+        inst.received(b'GET / HTTP/1.1\n\n')
+        self.assertEqual(inst.proto_request, None)
+        self.assertEqual(inst.server.tasks, [])
+
     def test_received_preq_completed_n_lt_data(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
@@ -345,6 +357,17 @@ class TestHTTPChannel(unittest.TestCase):
         inst.handle_request(req)
         self.assertEqual(inst.server.tasks, [inst])
         self.assertEqual(len(inst.tasks), 1)
+        self.assertEqual(inst.tasks[0].__class__.__name__, 'WSGITask')
+
+    def test_handle_request_error(self):
+        req = DummyParser()
+        req.error = True
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        inst.handle_request(req)
+        self.assertEqual(inst.server.tasks, [inst])
+        self.assertEqual(len(inst.tasks), 1)
+        self.assertEqual(inst.tasks[0].__class__.__name__, 'ErrorTask')
 
     def test_handle_error_reraises_SystemExit(self):
         inst, sock, map = self._makeOneWithMap()
