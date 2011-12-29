@@ -67,6 +67,7 @@ class HTTPChannel(logging_dispatcher, object):
         self.addr = addr
         self.adj = adj
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
+        self.inbuf = OverflowableBuffer(adj.inbuf_overflow)
         self.creation_time = self.last_activity = time.time()
         asyncore.dispatcher.__init__(self, sock, map=map)
 
@@ -93,6 +94,8 @@ class HTTPChannel(logging_dispatcher, object):
     def readable(self):
         if not self.async_mode:
             return False
+        if self.inbuf:
+            self.received()
         return not self.will_close
 
     def handle_read(self):
@@ -104,7 +107,7 @@ class HTTPChannel(logging_dispatcher, object):
             self.handle_comm_error()
             return
         self.last_activity = time.time()
-        self.received(data)
+        self.inbuf.append(data)
 
     def set_sync(self):
         """Switches to synchronous mode.
@@ -132,33 +135,34 @@ class HTTPChannel(logging_dispatcher, object):
         if fd in ac:
             del ac[fd]
 
-    def received(self, data):
+    def received(self):
         """
         Receives input asynchronously and send requests to
         handle_request().
         """
+        chunk = self.inbuf.get(self.adj.recv_bytes)
+        if not chunk:
+            return
         preq = self.proto_request
-        while data:
-            if preq is None:
-                preq = self.parser_class(self.adj)
-            n = preq.received(data)
-            if preq.expect_continue and preq.headers_finished:
-                # guaranteed by parser to be a 1.1 request
-                self.write(b'HTTP/1.1 100 Continue\r\n\r\n')
-                preq.expect_continue = False
-            if preq.completed:
-                # The request (with the body) is ready to use.
-                self.proto_request = None
-                if not preq.empty:
-                    self.handle_request(preq)
-                if preq.connection_close:
-                    return
-                preq = None
-            else:
-                self.proto_request = preq
-            if n >= len(data):
-                break
-            data = data[n:]
+        if preq is None:
+            preq = self.parser_class(self.adj)
+        n = preq.received(chunk)
+        if n:
+            self.inbuf.skip(n, True)
+        if preq.expect_continue and preq.headers_finished:
+            # guaranteed by parser to be a 1.1 request
+            self.write(b'HTTP/1.1 100 Continue\r\n\r\n')
+            preq.expect_continue = False
+        if preq.completed:
+            # The request (with the body) is ready to use.
+            self.proto_request = None
+            if not preq.empty:
+                self.handle_request(preq)
+            if preq.connection_close:
+                self.inbuf = OverflowableBuffer(self.adj.inbuf_overflow)
+            preq = None
+        else:
+            self.proto_request = preq
 
     def handle_request(self, req):
         """Creates and queues a task for processing a single request.
@@ -242,7 +246,7 @@ class HTTPChannel(logging_dispatcher, object):
             chunk = outbuf.get(self.adj.send_bytes)
             num_sent = self.send(chunk)
             if num_sent:
-                outbuf.skip(num_sent, 1)
+                outbuf.skip(num_sent, True)
                 return True
         return False
 

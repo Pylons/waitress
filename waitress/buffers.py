@@ -153,7 +153,6 @@ class OverflowableBuffer(object):
             return len(self.strbuf)
 
     def _create_buffer(self):
-        # print 'creating buffer'
         strbuf = self.strbuf
         if len(strbuf) >= self.overflow:
             self._set_large_buffer()
