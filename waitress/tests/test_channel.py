@@ -152,12 +152,6 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.last_activity, 0)
         self.assertEqual(len(L), 1)
 
-    def test_set_sync(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
-        inst.set_sync()
-        self.assertEqual(inst.async_mode, False)
-
     def test_set_async(self):
         inst, sock, map = self._makeOneWithMap()
         inst.async_mode = False
@@ -529,6 +523,7 @@ class DummyParser(object):
 class DummyTask(object):
     serviced = False
     cancelled = False
+    close_on_finish = False
     def __init__(self, toraise=None):
         self.toraise = toraise
     def service(self):
@@ -540,6 +535,7 @@ class DummyTask(object):
 
 class DummyAdjustments(object):
     outbuf_overflow = 1048576
+    inbuf_overflow = 512000
     cleanup_interval = 900
     send_bytes = 9000
     url_scheme = 'http'

@@ -137,7 +137,7 @@ class ThreadedTaskDispatcher(object):
         return False
 
 class Task(object):
-    close_on_finish = False
+    _close_on_finish = False
     status = '200 OK'
     wrote_header = False
     start_time = 0
@@ -156,6 +156,14 @@ class Task(object):
             version = '1.0'
         self.version = version
 
+    def _get_close_on_finish(self):
+        return self._close_on_finish
+
+    def _set_close_on_finish(self, val):
+        self._close_on_finish = val
+
+    close_on_finish = property(_get_close_on_finish, _set_close_on_finish)
+
     def service(self):
         """See waitress.interfaces.ITask"""
         try:
@@ -168,12 +176,12 @@ class Task(object):
                 if self.channel.adj.log_socket_errors:
                     raise
         finally:
-            if self.close_on_finish:
-                self.channel.close_when_done()
+            pass
 
     def cancel(self):
         """See waitress.interfaces.ITask"""
-        self.channel.close_when_done()
+        self.close_on_finish = True
+        #self.channel.close_when_done()
 
     def defer(self):
         """See waitress.interfaces.ITask"""

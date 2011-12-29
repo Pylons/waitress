@@ -147,6 +147,6 @@ class WSGIServer(logging_dispatcher, object):
         """
         cutoff = now - self.adj.channel_timeout
         for channel in self.active_channels.values():
-            if not channel.running_tasks and channel.last_activity < cutoff:
+            if not channel.tasks and channel.last_activity < cutoff:
                 channel.will_close = True
 

@@ -528,6 +528,12 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
     def tearDown(self):
         self.stop_subprocess()
 
+    def assertline(self, line, status, reason, version):
+        v, s, r = (x.strip() for x in line.split(None, 2))
+        self.assertEqual(s, tobytes(status))
+        self.assertEqual(r, tobytes(reason))
+        self.assertEqual(v, tobytes(version))
+
     def test_request_body_too_large_with_wrong_cl_http10(self):
         body = 'a' * 10000
         to_send = ("GET / HTTP/1.0\n"
@@ -537,18 +543,12 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        # first request succeeds (content-length 5)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_wrong_cl_http10_keepalive(self):
         body = 'a' * 10000
@@ -560,27 +560,18 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
+        line, headers, response_body = read_http(fp)
         # first request succeeds (content-length 5)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
-        line = fp.readline()
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        self.assertEqual(reason, b'Request Header Fields Too Large')
-        self.assertEqual(status, b'431')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '431', b'Request Header Fields Too Large',
+                        'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http10(self):
         body = 'a' * 10000
@@ -590,18 +581,12 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        # server trusts the content-length header (assumed zero)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # extra bytes are thrown away (no pipelining), connection closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http10_keepalive(self):
         body = 'a' * 10000
@@ -611,29 +596,20 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
+        line, headers, response_body = read_http(fp)
         # server trusts the content-length header (assumed zero)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
+        line, headers, response_body = read_http(fp)
         # next response overruns because the extra data appears to be
         # header data
-        self.assertEqual(reason, b'Request Header Fields Too Large')
-        self.assertEqual(status, b'431')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        self.assertline(line, '431', 'Request Header Fields Too Large',
+                        'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_wrong_cl_http11(self):
         body = 'a' * 10000
@@ -643,31 +619,21 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        # server trusts the content-length header (5)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.1')
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # server assumes pipelined requests, so remainder body after fifth
         # content byte looks like the header of the subsequent request
-        line = fp.readline()
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        self.assertEqual(reason, b'Request Header Fields Too Large')
-        self.assertEqual(status, b'431')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '431', 'Request Header Fields Too Large', 
+                        'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         self.assertEqual(headers['content-type'], 'text/plain')
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_wrong_cl_http11_connclose(self):
         body = 'a' * 10000
@@ -677,18 +643,13 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
+        line, headers, response_body = read_http(fp)
         # server trusts the content-length header (5)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.1')
-        headers = parse_headers(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http11(self):
         body = 'a' * 10000
@@ -698,31 +659,22 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
+        line, headers, response_body = read_http(fp)
         # server trusts the content-length header (assumed 0)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.1')
-        headers = parse_headers(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # server assumes pipelined requests, so entire body looks like the
         # header of the subsequent request
-        line = fp.readline()
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        self.assertEqual(reason, b'Request Header Fields Too Large')
-        self.assertEqual(status, b'431')
-        self.assertEqual(version, b'HTTP/1.0')
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '431', 'Request Header Fields Too Large',
+                        'HTTP/1.0')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         self.assertEqual(headers['content-type'], 'text/plain')
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http11_connclose(self):
         body = 'a' * 10000
@@ -732,18 +684,13 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
+        line, headers, response_body = read_http(fp)
         # server trusts the content-length header (assumed 0)
-        self.assertEqual(reason, b'OK')
-        self.assertEqual(status, b'200')
-        self.assertEqual(version, b'HTTP/1.1')
-        headers = parse_headers(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_chunked_encoding(self):
         control_line = "20;\r\n"  # 20 hex = 32 dec
@@ -754,20 +701,15 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
+        line, headers, response_body = read_http(fp)
         # body bytes counter caught a max_request_body_size overrun
-        self.assertEqual(reason, b'Request Entity Too Large')
-        self.assertEqual(status, b'413')
-        self.assertEqual(version, b'HTTP/1.1')
-        headers = parse_headers(fp)
+        self.assertline(line, '413', 'Request Entity Too Large', 'HTTP/1.1')
         cl = int(headers['content-length'])
-        response_body = fp.read(cl)
         self.assertEqual(cl, len(response_body))
         self.assertEqual(headers['content-type'], 'text/plain')
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
-        self.assertRaises(socket.error, fp.readline)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
@@ -781,3 +723,60 @@ def parse_headers(fp):
         name, value = line.strip().split(':', 1)
         headers[name.lower().strip()] = value.lower().strip()
     return headers
+
+class ConnectionClosed(Exception):
+    pass
+
+def read_http(fd):
+    try:
+        response_line = fd.readline()
+    except socket.error, exc:
+        if get_errno(exc) == 10053:
+            raise ConnectionClosed
+        raise
+    if not response_line:
+        raise ConnectionClosed
+  
+    header_lines = []
+    while True:
+        line = fd.readline()
+        if line in ('\r\n', b'\n', b''):
+            break
+        else:
+            header_lines.append(line)
+    headers = dict()
+    for x in header_lines:
+        x = x.strip()
+        if not x:
+            continue
+        key, value = x.split(': ', 1)
+        assert key.lower() not in headers, "%s header duplicated" % key
+        headers[key.lower()] = value
+  
+    if 'content-length' in headers:
+        num = int(headers['content-length'])
+        body = fd.read(num)
+    else:
+        # read until EOF
+        body = fd.read()
+  
+    return response_line, headers, body
+    
+def get_errno(exc):
+    """ Get the error code out of socket.error objects.
+    socket.error in <2.5 does not have errno attribute
+    socket.error in 3.x does not allow indexing access
+    e.args[0] works for all.
+    There are cases when args[0] is not errno.
+    i.e. http://bugs.python.org/issue6471
+    Maybe there are cases when errno is set, but it is not the first argument?
+    """
+  
+    try:
+        if exc.errno is not None: return exc.errno
+    except AttributeError:
+        pass
+    try:
+        return exc.args[0]
+    except IndexError:
+        return None

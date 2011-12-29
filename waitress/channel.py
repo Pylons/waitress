@@ -32,10 +32,10 @@ from waitress.utilities import logging_dispatcher
 class HTTPChannel(logging_dispatcher, object):
     """Channel that switches between asynchronous and synchronous mode.
 
-    Call set_sync() before using a channel in a thread other than
+    Set self.async_mode = False before using a channel in a thread other than
     the thread handling the main loop.
 
-    Call set_async() to give the channel back to the thread handling
+    Set self.async_mode = True to give the channel back to the thread handling
     the main loop.
     """
     task_class = WSGITask
@@ -46,8 +46,6 @@ class HTTPChannel(logging_dispatcher, object):
 
     proto_request = None        # A request parser instance
     last_activity = 0           # Time of last activity
-    tasks = None                # List of channel-related tasks to execute
-    running_tasks = False       # True when another thread is running tasks
     will_close = False          # will_close is set to True to close the socket.
     async_mode = True           # boolean: async or sync mode
 
@@ -69,10 +67,8 @@ class HTTPChannel(logging_dispatcher, object):
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
         self.inbuf = OverflowableBuffer(adj.inbuf_overflow)
         self.creation_time = self.last_activity = time.time()
+        self.tasks = []
         asyncore.dispatcher.__init__(self, sock, map=map)
-
-    def handle_close(self):
-        self.close()
 
     def writable(self):
         if not self.async_mode:
@@ -88,7 +84,7 @@ class HTTPChannel(logging_dispatcher, object):
             except socket.error:
                 self.handle_comm_error()
         elif self.will_close:
-            self.close()
+            self.handle_close()
         self.last_activity = time.time()
 
     def readable(self):
@@ -99,7 +95,7 @@ class HTTPChannel(logging_dispatcher, object):
         return not self.will_close
 
     def handle_read(self):
-        if not self.async_mode or self.will_close:
+        if not self.async_mode:
             return
         try:
             data = self.recv(self.adj.recv_bytes)
@@ -108,13 +104,6 @@ class HTTPChannel(logging_dispatcher, object):
             return
         self.last_activity = time.time()
         self.inbuf.append(data)
-
-    def set_sync(self):
-        """Switches to synchronous mode.
-
-        The main thread will stop calling received().
-        """
-        self.async_mode = False
 
     def add_channel(self, map=None):
         """See asyncore.dispatcher
@@ -140,6 +129,8 @@ class HTTPChannel(logging_dispatcher, object):
         Receives input asynchronously and send requests to
         handle_request().
         """
+        if not self.async_mode:
+            return False
         chunk = self.inbuf.get(self.adj.recv_bytes)
         if not chunk:
             return
@@ -157,21 +148,22 @@ class HTTPChannel(logging_dispatcher, object):
             # The request (with the body) is ready to use.
             self.proto_request = None
             if not preq.empty:
-                self.handle_request(preq)
-            if preq.connection_close:
+                if preq.error:
+                    task = self.error_task_class(self, preq)
+                else:
+                    task = self.task_class(self, preq)
+                with self.task_lock:
+                    self.tasks.append(task)
+            if preq.connection_close and self.inbuf:
                 self.inbuf = OverflowableBuffer(self.adj.inbuf_overflow)
             preq = None
         else:
             self.proto_request = preq
-
-    def handle_request(self, req):
-        """Creates and queues a task for processing a single request.
-        """
-        if req.error:
-            task = self.error_task_class(self, req)
+        if self.inbuf:
+            self.server.pull_trigger()
         else:
-            task = self.task_class(self, req)
-        self.queue_task(task)
+            # run those dogs
+            self.server.add_task(self)
 
     def handle_error(self, exc_info=None): # exc_info for tests
         """See async.dispatcher
@@ -195,15 +187,7 @@ class HTTPChannel(logging_dispatcher, object):
             self.handle_error()
         else:
             # Ignore socket errors.
-            self.close()
-
-    def close(self):
-        # Always close in asynchronous mode.  If the connection is
-        # closed in a thread, the main loop can end up with a bad file
-        # descriptor.
-        assert self.async_mode
-        self.connected = False
-        asyncore.dispatcher.close(self)
+            self.handle_close()
 
     #
     # SYNCHRONOUS METHODS
@@ -221,6 +205,14 @@ class HTTPChannel(logging_dispatcher, object):
     #
     # METHODS USED IN BOTH MODES
     #
+
+    def handle_close(self):
+        # Always close in asynchronous mode.  If the connection is
+        # closed in a thread, the main loop can end up with a bad file
+        # descriptor.
+        assert self.async_mode
+        self.connected = False
+        asyncore.dispatcher.close(self)
 
     def write(self, data):
         wrote = 0
@@ -240,7 +232,7 @@ class HTTPChannel(logging_dispatcher, object):
     def _flush_some(self):
         """Flushes data.
 
-        Returns 1 if some data was sent."""
+        Returns True if some data was sent."""
         outbuf = self.outbuf
         if outbuf and self.connected:
             chunk = outbuf.get(self.adj.send_bytes)
@@ -250,72 +242,41 @@ class HTTPChannel(logging_dispatcher, object):
                 return True
         return False
 
-    def close_when_done(self):
-        # Flush all possible.
-        while self._flush_some():
-            pass
-        self.will_close = True
-        if not self.async_mode:
-            # For safety, don't close the socket until the
-            # main thread calls handle_write().
-            self.async_mode = True
-            self.server.pull_trigger()
-
-    def queue_task(self, task):
-        """Queue a channel-related task to be executed in another thread."""
-        start = False
-        self.task_lock.acquire()
-        try:
-            if self.tasks is None:
-                self.tasks = []
-            self.tasks.append(task)
-            if not self.running_tasks:
-                self.running_tasks = True
-                start = True
-        finally:
-            self.task_lock.release()
-        if start:
-            self.set_sync()
-            self.server.add_task(self)
-
     #
     # ITask implementation.  Delegates to the queued tasks.
     #
 
     def service(self):
         """Execute all pending tasks"""
+        self.async_mode = False
         while True:
-            task = None
-            self.task_lock.acquire()
-            try:
+            with self.task_lock:
                 if self.tasks:
                     task = self.tasks.pop(0)
                 else:
-                    # No more tasks
-                    self.running_tasks = False
-                    self.set_async()
                     break
-            finally:
-                self.task_lock.release()
             try:
                 task.service()
+                if task.close_on_finish:
+                    self.will_close = True
             except:
-                # propagate the exception, but keep executing tasks
-                self.server.add_task(self)
+                # allow error to propagate but readd ourselves to the
+                # task queue
+                if self.tasks:
+                    self.server.add_task(self)
                 raise
+        while self._flush_some():
+            pass
+        self.set_async()
 
     def cancel(self):
         """Cancels all pending tasks"""
-        self.task_lock.acquire()
-        try:
+        with self.task_lock:
             if self.tasks:
                 old = self.tasks[:]
             else:
                 old = []
             self.tasks = []
-            self.running_tasks = False
-        finally:
-            self.task_lock.release()
         try:
             for task in old:
                 task.cancel()
