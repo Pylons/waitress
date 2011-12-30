@@ -360,7 +360,7 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
         line = fp.readline() # status line
         version, status, reason = (x.strip() for x in line.split(None, 2))
         headers = parse_headers(fp)
-        content_length = int(headers.get('content-length')) or None
+        content_length = int(headers.get('content-length'))
         response_body = fp.read(content_length)
         self.assertEqual(int(status), 200)
         self.assertNotEqual(content_length, len(response_body))
@@ -368,8 +368,7 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(response_body, tobytes('abcdefghi'))
         # remote closed connection (despite keepalive header); not sure why
         # first send succeeds
-        self.sock.send(to_send[:5])
-        self.assertRaises(socket.error, self.sock.send, to_send[5:])
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_long_body(self):
         # check server doesnt close connection when body is too short
