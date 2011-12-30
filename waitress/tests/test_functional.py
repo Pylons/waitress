@@ -570,7 +570,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         line, headers, response_body = read_http(fp)
-        self.assertline(line, '431', b'Request Header Fields Too Large',
+        self.assertline(line, '431', 'Request Header Fields Too Large',
                         'HTTP/1.0')
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
@@ -700,7 +700,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         s = 'This string has 32 characters.\r\n'
         to_send = "GET / HTTP/1.1\nTransfer-Encoding: chunked\n\n"
         repeat = control_line + s
-        to_send += repeat * ((self.toobig / len(repeat)) + 1)
+        to_send += repeat * ((self.toobig // len(repeat)) + 1)
         to_send = tobytes(to_send)
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
@@ -733,7 +733,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.assertline(line, '500', 'Internal Server Error', 'HTTP/1.0')
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
-        self.assertTrue(response_body.startswith('Internal Server Error'))
+        self.assertTrue(response_body.startswith(b'Internal Server Error'))
         # connection has been closed
         self.assertRaises(ConnectionClosed, read_http, fp)
 
@@ -747,7 +747,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.assertline(line, '500', 'Internal Server Error', 'HTTP/1.0')
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
-        self.assertTrue(response_body.startswith('Internal Server Error'))
+        self.assertTrue(response_body.startswith(b'Internal Server Error'))
         # connection has been closed
         self.assertRaises(ConnectionClosed, read_http, fp)
 
@@ -759,7 +759,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
-        self.assertEqual(response_body, '')
+        self.assertEqual(response_body, b'')
         # connection has been closed
         self.assertRaises(ConnectionClosed, read_http, fp)
 
@@ -771,7 +771,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
-        self.assertEqual(response_body, '')
+        self.assertEqual(response_body, b'')
         # connection has been closed
         self.assertRaises(ConnectionClosed, read_http, fp)
 
@@ -794,7 +794,7 @@ class ConnectionClosed(Exception):
 def read_http(fp):
     try:
         response_line = fp.readline()
-    except socket.error, exc:
+    except socket.error as exc:
         if get_errno(exc) == 10053:
             raise ConnectionClosed
         raise
@@ -804,7 +804,7 @@ def read_http(fp):
     header_lines = []
     while True:
         line = fp.readline()
-        if line in ('\r\n', b'\n', b''):
+        if line in (b'\r\n', b'\n', b''):
             break
         else:
             header_lines.append(line)
@@ -813,9 +813,11 @@ def read_http(fp):
         x = x.strip()
         if not x:
             continue
-        key, value = x.split(': ', 1)
-        assert key.lower() not in headers, "%s header duplicated" % key
-        headers[key.lower()] = value
+        key, value = x.split(b': ', 1)
+        key = key.decode('iso-8859-1').lower()
+        value = value.decode('iso-8859-1')
+        assert key not in headers, "%s header duplicated" % key
+        headers[key] = value
   
     if 'content-length' in headers:
         num = int(headers['content-length'])

@@ -19,3 +19,5 @@
 - Timeout functests.
 
 - Complex pipelining functests (with intermediate connection: close).
+
+- Get rid of overflowable inbuf.

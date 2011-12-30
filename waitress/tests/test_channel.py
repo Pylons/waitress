@@ -102,12 +102,12 @@ class TestHTTPChannel(unittest.TestCase):
     def test_handle_read_no_error(self):
         inst, sock, map = self._makeOneWithMap()
         inst.will_close = False
-        inst.recv = lambda *arg: 'abc'
+        inst.recv = lambda *arg: b'abc'
         inst.last_activity = 0
         result = inst.handle_read()
         self.assertEqual(result, None)
         self.assertNotEqual(inst.last_activity, 0)
-        self.assertEqual(inst.inbuf.get(100), 'abc')
+        self.assertEqual(inst.inbuf.get(100), b'abc')
 
     def test_handle_read_error(self):
         import socket
@@ -122,7 +122,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(inst.last_activity, 0)
         self.assertEqual(len(L), 1)
-        self.assertEqual(inst.inbuf.get(100), '')
+        self.assertEqual(inst.inbuf.get(100), b'')
 
     def test_write_empty_byte(self):
         inst, sock, map = self._makeOneWithMap()
