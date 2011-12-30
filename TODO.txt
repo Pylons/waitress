@@ -18,6 +18,4 @@
 
 - Timeout functests.
 
-- Internal server error functests.
-
 - Complex pipelining functests (with intermediate connection: close).
