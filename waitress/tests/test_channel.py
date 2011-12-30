@@ -332,25 +332,6 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(inst.outbuf.get(100), b'HTTP/1.1 100 Continue\r\n\r\n')
 
-    ## def test_handle_request(self):
-    ##     req = DummyParser()
-    ##     inst, sock, map = self._makeOneWithMap()
-    ##     inst.server = DummyServer()
-    ##     inst.handle_request(req)
-    ##     self.assertEqual(inst.server.tasks, [inst])
-    ##     self.assertEqual(len(inst.tasks), 1)
-    ##     self.assertEqual(inst.tasks[0].__class__.__name__, 'WSGITask')
-
-    ## def test_handle_request_error(self):
-    ##     req = DummyParser()
-    ##     req.error = True
-    ##     inst, sock, map = self._makeOneWithMap()
-    ##     inst.server = DummyServer()
-    ##     inst.handle_request(req)
-    ##     self.assertEqual(inst.server.tasks, [inst])
-    ##     self.assertEqual(len(inst.tasks), 1)
-    ##     self.assertEqual(inst.tasks[0].__class__.__name__, 'ErrorTask')
-
     def test_handle_error_reraises_SystemExit(self):
         inst, sock, map = self._makeOneWithMap()
         self.assertRaises(SystemExit,
@@ -379,25 +360,6 @@ class TestHTTPChannel(unittest.TestCase):
         inst.handle_comm_error()
         self.assertEqual(inst.connected, False)
         self.assertEqual(sock.closed, True)
-
-    ## def test_queue_task_no_existing_tasks_notrunning(self):
-    ##     inst, sock, map = self._makeOneWithMap()
-    ##     inst.server = DummyServer()
-    ##     task = DummyTask()
-    ##     inst.queue_task(task)
-    ##     self.assertEqual(inst.tasks, [task])
-    ##     self.assertTrue(inst.running_tasks)
-    ##     self.assertFalse(inst.async_mode)
-    ##     self.assertEqual(inst.server.tasks, [inst])
-
-    ## def test_queue_task_no_existing_tasks_running(self):
-    ##     inst, sock, map = self._makeOneWithMap()
-    ##     inst.server = DummyServer()
-    ##     inst.running_tasks = True
-    ##     task = DummyTask()
-    ##     inst.queue_task(task)
-    ##     self.assertEqual(inst.tasks, [task])
-    ##     self.assertTrue(inst.async_mode)
 
     def test_service_no_task(self):
         inst, sock, map = self._makeOneWithMap()

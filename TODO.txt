@@ -17,3 +17,9 @@
 - Complex pipelining functests (with intermediate connection: close).
 
 - Get rid of overflowable inbuf.
+
+- Killthreads support.
+
+- Mention in docs that server doesn't support SSL.
+
+- Transfer-Encoding: chunked responses.
