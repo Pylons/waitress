@@ -240,14 +240,17 @@ class HTTPChannel(logging_dispatcher, object):
         except:
             self.logger.exception('Exception when serving %s' %
                                   task.request.uri)
-            request = self.parser_class(self.adj)
-            if self.adj.expose_tracebacks:
-                body = traceback.format_exc()
+            if not task.wrote_header:
+                if self.adj.expose_tracebacks:
+                    body = traceback.format_exc()
+                else:
+                    body = 'Internal server error'
+                request = self.parser_class(self.adj)
+                request.error = InternalServerError(body)
+                task = self.error_task_class(self, request)
+                task.service() # must not fail
             else:
-                body = 'Internal server error'
-            request.error = InternalServerError(body)
-            task = self.error_task_class(self, request)
-            task.service() # must not fail
+                task.close_on_finish = True
         while self._flush_some():
             pass
         self.task = None

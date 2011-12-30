@@ -487,6 +487,7 @@ class DummyTask(object):
     cancelled = False
     close_on_finish = False
     request = DummyRequest()
+    wrote_header = False
     def __init__(self, toraise=None):
         self.toraise = toraise
     def service(self):

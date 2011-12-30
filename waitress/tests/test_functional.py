@@ -715,6 +715,66 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         # connection has been closed
         self.assertRaises(ConnectionClosed, read_http, fp)
 
+class TestInternalServerError(SubprocessTests, unittest.TestCase):
+    def setUp(self):
+        echo = os.path.join(here, 'fixtureapps', 'error.py')
+        self.start_subprocess([self.exe, echo])
+
+    def tearDown(self):
+        self.stop_subprocess()
+    
+    def test_before_start_response(self):
+        to_send = "GET /before_start_response HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '500', 'Internal Server Error', 'HTTP/1.0')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body))
+        self.assertTrue(response_body.startswith('Internal Server Error'))
+        # connection has been closed
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_after_start_response(self):
+        to_send = "GET /after_start_response HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '500', 'Internal Server Error', 'HTTP/1.0')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body))
+        self.assertTrue(response_body.startswith('Internal Server Error'))
+        # connection has been closed
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_after_write_cb(self):
+        to_send = "GET /after_write_cb HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        self.assertEqual(response_body, '')
+        # connection has been closed
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_in_generator(self):
+        to_send = "GET /in_generator HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        self.assertEqual(response_body, '')
+        # connection has been closed
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
     """

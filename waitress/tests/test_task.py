@@ -567,7 +567,7 @@ class TestErrorTask(unittest.TestCase):
         self.assertEqual(len(lines), 9)
         self.assertEqual(lines[0], b'HTTP/1.0 432 Too Ugly')
         self.assertEqual(lines[1], b'Connection: close')
-        self.assertEqual(lines[2], b'Content-Length: 41')
+        self.assertEqual(lines[2], b'Content-Length: 43')
         self.assertEqual(lines[3], b'Content-Type: text/plain')
         self.assertTrue(lines[4])
         self.assertEqual(lines[5], b'Server: waitress')
