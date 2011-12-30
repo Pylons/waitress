@@ -6,8 +6,6 @@
 
 - Test paste server runner on windows.
 
-- Get rid of dual-moded-ness.
-
 - Anticipate multivalue and single-value-only headers in request headers in
   parser.py.
 
@@ -20,3 +18,6 @@
 
 - Timeout functests.
 
+- Internal server error functests.
+
+- Complex pipelining functests (with intermediate connection: close).

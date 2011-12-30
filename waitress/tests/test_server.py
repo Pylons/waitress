@@ -3,14 +3,11 @@ import socket
 import unittest
 
 class TestWSGIServer(unittest.TestCase):
-    def _makeOne(self, application, host='127.0.0.1', port=62122,
+    def _makeOne(self, application, host='127.0.0.1', port=0,
                  _dispatcher=None, adj=None, map=None, _start=True, 
-                 _sock=None):
+                 _sock=None, _server=None):
         from waitress.server import WSGIServer
-        class TestServer(WSGIServer):
-            def bind(self, v):
-                pass
-        return TestServer(
+        return WSGIServer(
             application,
             host=host,
             port=port,
@@ -20,7 +17,7 @@ class TestWSGIServer(unittest.TestCase):
             _sock=_sock)
     
     def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
-                        port=62122, app=None):
+                        port=0, app=None):
         sock = DummySock()
         task_dispatcher = DummyTaskDispatcher()
         map = {}
@@ -192,6 +189,8 @@ class DummySock(object):
         self.toraise = toraise
         self.acceptresult = acceptresult
         self.opts = []
+    def bind(self, addr):
+        pass
     def accept(self):
         if self.toraise:
             raise self.toraise
