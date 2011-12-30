@@ -447,20 +447,16 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        headers = parse_headers(fp)
-        content_length = int(headers.get('content-length')) or None
-        self.assertEqual(content_length, 9)
-        response_body = fp.read(content_length)
-        self.assertEqual(int(status), 200)
-        self.assertNotEqual(content_length, len(response_body))
-        self.assertEqual(len(response_body), content_length-1)
+        line, headers, response_body = read_http(fp)
+        # server trusts the content-length header (5)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, 9)
+        self.assertNotEqual(cl, len(response_body))
+        self.assertEqual(len(response_body), cl-1)
         self.assertEqual(response_body, tobytes('abcdefgh'))
-        # remote closed connection (despite keepalive header); not sure why
-        # first send succeeds
-        self.sock.send(to_send[:5])
-        self.assertRaises(socket.error, self.sock.send, to_send[5:])
+        # remote closed connection (despite keepalive header)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_long_body(self):
         # check server doesnt close connection when body is too long
@@ -474,24 +470,16 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
         content_length = int(headers.get('content-length')) or None
         self.assertEqual(content_length, 9)
-        response_body = fp.read(content_length)
-        self.assertEqual(int(status), 200)
         self.assertEqual(content_length, len(response_body))
         self.assertEqual(response_body, tobytes('abcdefghi'))
         # remote does not close connection (keepalive header)
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        headers = parse_headers(fp)
-        content_length = int(headers.get('content-length')) or None
-        response_body = fp.read(content_length)
-        self.assertEqual(int(status), 200)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
 
     def test_equal_body(self):
         # check server doesnt close connection when body is equal to
@@ -505,24 +493,17 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         self.sock.connect((self.host, self.port))
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
         content_length = int(headers.get('content-length')) or None
         self.assertEqual(content_length, 9)
-        response_body = fp.read(content_length)
-        self.assertEqual(int(status), 200)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
         self.assertEqual(content_length, len(response_body))
         self.assertEqual(response_body, tobytes('abcdefghi'))
         # remote does not close connection (keepalive header)
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        headers = parse_headers(fp)
-        content_length = int(headers.get('content-length')) or None
-        response_body = fp.read(content_length)
-        self.assertEqual(int(status), 200)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
 
     def test_no_content_length(self):
         # wtf happens when there's no content-length
@@ -536,17 +517,13 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line = fp.readline() # status line
-        version, status, reason = (x.strip() for x in line.split(None, 2))
-        headers = parse_headers(fp)
+        line, headers, response_body = read_http(fp)
         content_length = headers.get('content-length')
         self.assertEqual(content_length, None)
-        response_body = fp.read()
-        self.assertEqual(int(status), 200)
         self.assertEqual(response_body, tobytes('abcdefghi'))
         # remote closed connection (despite keepalive header); not sure why
         # first send succeeds
-        self.sock.send(to_send[:5])
-        self.assertRaises(socket.error, self.sock.send, to_send[5:])
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
 class TooLargeTests(SubprocessTests, unittest.TestCase):
 
