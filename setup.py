@@ -49,7 +49,7 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Internet :: WWW/HTTP',
         ],
-    url='https://github.com/mcdonc/waitress',
+    url='https://github.com/Pylons/waitress',
     packages=find_packages(),
     install_requires=[
         'setuptools',
