@@ -6,3 +6,5 @@ env*/
 .tox/
 nosetests.xml
 waitress/coverage.xml
+dist/
+keep/
