@@ -24,6 +24,13 @@ class TestFileBasedBuffer(unittest.TestCase):
         inst.remain = 10
         self.assertEqual(len(inst), 10)
 
+    def test___nonzero__(self):
+        inst = self._makeOne()
+        inst.remain = 10
+        self.assertEqual(bool(inst), True)
+        inst.remain = 0
+        self.assertEqual(bool(inst), False)
+
     def test_append(self):
         f = io.BytesIO(b'data')
         inst = self._makeOne(f)
@@ -137,9 +144,16 @@ class TestOverflowableBuffer(unittest.TestCase):
 
     def test___len__buf_is_not_None(self):
         inst = self._makeOne()
-        inst.buf = 'abc'
+        inst.buf = b'abc'
         self.assertEqual(len(inst), 3)
         
+    def test___nonzero__(self):
+        inst = self._makeOne()
+        inst.buf = b'abc'
+        self.assertEqual(bool(inst), True)
+        inst.buf = b''
+        self.assertEqual(bool(inst), False)
+
     def test__create_buffer_large(self):
         from waitress.buffers import TempfileBasedBuffer
         inst = self._makeOne()

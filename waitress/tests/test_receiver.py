@@ -66,6 +66,13 @@ class TestChunkedReceiver(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertEqual(inst.completed, False)
 
+    def test_received_control_line_finished_garbage_in_input(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        result = inst.received(b'garbage\n')
+        self.assertEqual(result, 8)
+        self.assertTrue(inst.error)
+
     def test_received_control_line_finished_all_chunks_not_received(self):
         buf = DummyBuffer()
         inst = self._makeOne(buf)

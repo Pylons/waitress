@@ -99,6 +99,15 @@ class TestHTTPChannel(unittest.TestCase):
         inst.task = True
         self.assertEqual(inst.readable(), False)
 
+    def test_readable_with_nonempty_inbuf_calls_received(self):
+        inst, sock, map = self._makeOneWithMap()
+        L = []
+        inst.received = lambda: L.append(True)
+        inst.task = None
+        inst.inbuf = True
+        self.assertEqual(inst.readable(), True)
+        self.assertEqual(len(L), 1)
+
     def test_handle_read_no_error(self):
         inst, sock, map = self._makeOneWithMap()
         inst.will_close = False
@@ -216,6 +225,15 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.server.tasks, [inst])
         self.assertTrue(inst.task)
 
+    def test_received_with_task(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.task = True
+        self.assertEqual(inst.received(), False)
+
+    def test_received_no_chunk(self):
+        inst, sock, map = self._makeOneWithMap()
+        self.assertEqual(inst.received(), False)
+
     def test_received_preq_not_completed(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
@@ -228,7 +246,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.task, None)
         self.assertEqual(inst.server.tasks, [])
 
-    def test_received_preq_completed(self):
+    def test_received_preq_completed_empty(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
@@ -240,6 +258,19 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.request, None)
         self.assertEqual(inst.server.tasks, [])
 
+    def test_received_preq_error(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        preq = DummyParser()
+        inst.request = preq
+        preq.completed = True
+        preq.error = True
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
+        self.assertEqual(inst.request, None)
+        self.assertEqual(len(inst.server.tasks), 1)
+        self.assertTrue(inst.task)
+
     def test_received_preq_completed_connection_close(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
@@ -248,10 +279,12 @@ class TestHTTPChannel(unittest.TestCase):
         preq.completed = True
         preq.empty = True
         preq.connection_close = True
-        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inbuf = inst.inbuf
+        inbuf.append(b'GET / HTTP/1.1\n\n' + b'a' * 50000)
         inst.received()
         self.assertEqual(inst.request, None)
         self.assertEqual(inst.server.tasks, [])
+        self.assertNotEqual(inst.inbuf, inbuf)
 
     def test_received_preq_completed_n_lt_data(self):
         inst, sock, map = self._makeOneWithMap()
@@ -382,14 +415,45 @@ class TestHTTPChannel(unittest.TestCase):
 
     def test_service_with_task_raises(self):
         inst, sock, map = self._makeOneWithMap()
+        inst.adj.expose_tracebacks = False
         inst.server = DummyServer()
         task = DummyTask(ValueError)
+        task.wrote_header = False
         inst.task = task
         inst.logger = DummyLogger()
         inst.service()
         self.assertTrue(task.serviced)
         self.assertEqual(inst.task, None)
         self.assertEqual(len(inst.logger.exceptions), 1)
+        self.assertTrue(sock.sent)
+
+    def test_service_with_task_raises_with_expose_tbs(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.expose_tracebacks = True
+        inst.server = DummyServer()
+        task = DummyTask(ValueError)
+        task.wrote_header = False
+        inst.task = task
+        inst.logger = DummyLogger()
+        inst.service()
+        self.assertTrue(task.serviced)
+        self.assertEqual(inst.task, None)
+        self.assertEqual(len(inst.logger.exceptions), 1)
+        self.assertTrue(sock.sent)
+
+    def test_service_with_task_raises_already_wrote_header(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.expose_tracebacks = False
+        inst.server = DummyServer()
+        task = DummyTask(ValueError)
+        task.wrote_header = True
+        inst.task = task
+        inst.logger = DummyLogger()
+        inst.service()
+        self.assertTrue(task.serviced)
+        self.assertEqual(inst.task, None)
+        self.assertEqual(len(inst.logger.exceptions), 1)
+        self.assertFalse(sock.sent)
 
     def test_cancel_no_task(self):
         inst, sock, map = self._makeOneWithMap()

@@ -128,7 +128,7 @@ GET /foobar HTTP/8.4
         self.assertEqual(result, 0)
 
     def test_received_cl_too_large(self):
-        from waitress.parser import RequestEntityTooLarge
+        from waitress.utilities import RequestEntityTooLarge
         self.parser.adj.max_request_body_size = 2
         data = b"""\
 GET /foobar HTTP/8.4
@@ -141,7 +141,7 @@ Content-Length: 10
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
 
     def test_received_headers_too_large(self):
-        from waitress.parser import RequestHeaderFieldsTooLarge
+        from waitress.utilities import RequestHeaderFieldsTooLarge
         self.parser.adj.max_request_header_size = 2
         data = b"""\
 GET /foobar HTTP/8.4
@@ -154,7 +154,7 @@ X-Foo: 1
                                    RequestHeaderFieldsTooLarge))
 
     def test_received_body_too_large(self):
-        from waitress.parser import RequestEntityTooLarge
+        from waitress.utilities import RequestEntityTooLarge
         self.parser.adj.max_request_body_size = 2
         data = b"""\
 GET /foobar HTTP/1.1
@@ -170,6 +170,24 @@ This string has 32 characters\r
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error,
                                    RequestEntityTooLarge))
+
+    def test_received_error_from_parser(self):
+        from waitress.utilities import BadRequest
+        data = b"""\
+GET /foobar HTTP/1.1
+Transfer-Encoding: chunked
+X-Foo: 1
+
+garbage
+"""
+        # header
+        result = self.parser.received(data)
+        # body
+        result = self.parser.received(data[result:])
+        self.assertEqual(result, 8)
+        self.assertTrue(self.parser.completed)
+        self.assertTrue(isinstance(self.parser.error,
+                                   BadRequest))
 
     def test_parse_header_gardenpath(self):
         data = b"""\

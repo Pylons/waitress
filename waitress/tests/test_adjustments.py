@@ -49,7 +49,8 @@ class TestAdjustments(unittest.TestCase):
             send_bytes='300', outbuf_overflow='400', inbuf_overflow='500',
             connection_limit='1000', cleanup_interval='1100',
             channel_timeout='1200', log_socket_errors='true',
-            max_request_header_size='1300', max_request_body_size='1400')
+            max_request_header_size='1300', max_request_body_size='1400',
+            expose_tracebacks='true')
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
@@ -65,6 +66,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.log_socket_errors, True)
         self.assertEqual(inst.max_request_header_size, 1300)
         self.assertEqual(inst.max_request_body_size, 1400)
+        self.assertEqual(inst.expose_tracebacks, True)
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)

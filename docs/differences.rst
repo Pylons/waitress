@@ -55,4 +55,4 @@ Differences from ``zope.server``
   premature channel closes).
 
 - Send a 500 error to the client when a task raises an uncaught exception
-  (with optional traceback rendering).
+  (with optional traceback rendering via "expose_traceback" adjustment).

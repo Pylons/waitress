@@ -134,7 +134,7 @@ class HTTPChannel(logging_dispatcher, object):
             return False
         chunk = self.inbuf.get(self.adj.recv_bytes)
         if not chunk:
-            return
+            return False
         if self.request is None:
             self.request = self.parser_class(self.adj)
         request = self.request

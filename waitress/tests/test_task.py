@@ -91,37 +91,20 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(inst.shutdown(cancel_pending=False, timeout=.01),
                          False)
 
-class TestWSGITask(unittest.TestCase):
+class TestTask(unittest.TestCase):
     def _makeOne(self, channel=None, request=None):
         if channel is None:
             channel = DummyChannel()
         if request is None:
             request = DummyParser()
-        from waitress.task import WSGITask
-        return WSGITask(channel, request)
+        from waitress.task import Task
+        return Task(channel, request)
 
-    def test_service(self):
-        inst = self._makeOne()
-        def execute():
-            inst.executed = True
-        inst.execute = execute
-        inst.complete = True
-        inst.service()
-        self.assertTrue(inst.start_time)
-        self.assertTrue(inst.close_on_finish)
-        self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.executed, True)
-
-    def test_service_server_raises_socket_error(self):
-        import socket
-        inst = self._makeOne()
-        def execute():
-            raise socket.error
-        inst.execute = execute
-        self.assertRaises(socket.error, inst.service)
-        self.assertTrue(inst.start_time)
-        self.assertTrue(inst.close_on_finish)
-        self.assertFalse(inst.channel.written)
+    def test_ctor_version_not_in_known(self):
+        request = DummyParser()
+        request.version = '8.4'
+        inst = self._makeOne(request=request)
+        self.assertEqual(inst.version, '1.0')
 
     def test_cancel(self):
         inst = self._makeOne()
@@ -131,125 +114,6 @@ class TestWSGITask(unittest.TestCase):
     def test_defer(self):
         inst = self._makeOne()
         self.assertEqual(inst.defer(), None)
-
-    def test_execute_app_calls_start_response_twice_wo_exc_info(self):
-        def app(environ, start_response):
-            start_response('200 OK', [])
-            start_response('200 OK', [])
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        self.assertRaises(AssertionError, inst.execute)
-
-    def test_execute_app_calls_start_response_w_exc_info_complete(self):
-        def app(environ, start_response):
-            start_response('200 OK', [], [ValueError, ValueError(), None])
-        inst = self._makeOne()
-        inst.complete = True
-        inst.channel.server.application = app
-        self.assertRaises(ValueError, inst.execute)
-
-    def test_execute_app_calls_start_response_w_exc_info_incomplete(self):
-        def app(environ, start_response):
-            start_response('200 OK', [], [ValueError, None, None])
-            return [b'a']
-        inst = self._makeOne()
-        inst.complete = False
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertTrue(inst.complete)
-        self.assertEqual(inst.status, '200 OK')
-        self.assertTrue(inst.channel.written)
-
-    def test_execute_bad_header_key(self):
-        def app(environ, start_response):
-            start_response('200 OK', [(None, 'a')])
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        self.assertRaises(AssertionError, inst.execute)
-
-    def test_execute_bad_header_value(self):
-        def app(environ, start_response):
-            start_response('200 OK', [('a', None)])
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        self.assertRaises(AssertionError, inst.execute)
-
-    def test_execute_bad_status_value(self):
-        def app(environ, start_response):
-            start_response(None, [])
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        self.assertRaises(AssertionError, inst.execute)
-
-    def test_execute_with_content_length_header(self):
-        def app(environ, start_response):
-            start_response('200 OK', [('Content-Length', '1')])
-            return [b'a']
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertEqual(inst.content_length, 1)
-
-    def test_execute_app_calls_write(self):
-        def app(environ, start_response):
-            write = start_response('200 OK', [('Content-Length', '3')])
-            write(b'abc')
-            return []
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertEqual(inst.channel.written[-3:], b'abc')
-
-    def test_execute_app_returns_len1_chunk_without_cl(self):
-        def app(environ, start_response):
-            start_response('200 OK', [])
-            return [b'abc']
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertEqual(inst.content_length, 3)
-
-    def test_execute_app_returns_empty_chunk_as_first(self):
-        def app(environ, start_response):
-            start_response('200 OK', [])
-            return ['', b'abc']
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertEqual(inst.content_length, -1)
-
-    def test_execute_app_returns_too_many_bytes(self):
-        def app(environ, start_response):
-            start_response('200 OK', [('Content-Length', '1')])
-            return [b'abc']
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(inst.channel.server.logged)
-
-    def test_execute_app_returns_too_few_bytes(self):
-        def app(environ, start_response):
-            start_response('200 OK', [('Content-Length', '3')])
-            return [b'a']
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(inst.channel.server.logged)
-
-    def test_execute_app_returns_closeable(self):
-        class closeable(list):
-            def close(self):
-                self.closed  = True
-        foo = closeable([b'abc'])
-        def app(environ, start_response):
-            start_response('200 OK', [('Content-Length', '3')])
-            return foo
-        inst = self._makeOne()
-        inst.channel.server.application = app
-        inst.execute()
-        self.assertEqual(foo.closed, True)
 
     def test_build_response_header_v10_keepalive_no_content_length(self):
         inst = self._makeOne()
@@ -438,6 +302,203 @@ class TestWSGITask(unittest.TestCase):
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: waitress')
 
+    def test_start(self):
+        inst = self._makeOne()
+        inst.start()
+        self.assertTrue(inst.start_time)
+
+    def test_finish_didnt_write_header(self):
+        inst = self._makeOne()
+        inst.wrote_header = False
+        inst.complete = True
+        inst.finish()
+        self.assertTrue(inst.channel.written)
+
+    def test_finish_wrote_header(self):
+        inst = self._makeOne()
+        inst.wrote_header = True
+        inst.finish()
+        self.assertFalse(inst.channel.written)
+
+    def test_write_wrote_header(self):
+        inst = self._makeOne()
+        inst.wrote_header = True
+        inst.complete = True
+        inst.write(b'abc')
+        self.assertEqual(inst.channel.written, b'abc')
+
+    def test_write_header_not_written(self):
+        inst = self._makeOne()
+        inst.wrote_header = False
+        inst.complete = True
+        inst.write(b'abc')
+        self.assertTrue(inst.channel.written)
+        self.assertEqual(inst.wrote_header, True)
+
+    def test_write_start_response_uncalled(self):
+        inst = self._makeOne()
+        self.assertRaises(RuntimeError, inst.write, b'')
+
+    def test_write_preexisting_content_length(self):
+        inst = self._makeOne()
+        inst.wrote_header = True
+        inst.complete = True
+        inst.content_length = 1
+        inst.write(b'abc')
+        self.assertTrue(inst.channel.written)
+        self.assertEqual(inst.logged_write_excess, True)
+
+class TestWSGITask(unittest.TestCase):
+    def _makeOne(self, channel=None, request=None):
+        if channel is None:
+            channel = DummyChannel()
+        if request is None:
+            request = DummyParser()
+        from waitress.task import WSGITask
+        return WSGITask(channel, request)
+
+    def test_service(self):
+        inst = self._makeOne()
+        def execute():
+            inst.executed = True
+        inst.execute = execute
+        inst.complete = True
+        inst.service()
+        self.assertTrue(inst.start_time)
+        self.assertTrue(inst.close_on_finish)
+        self.assertTrue(inst.channel.written)
+        self.assertEqual(inst.executed, True)
+
+    def test_service_server_raises_socket_error(self):
+        import socket
+        inst = self._makeOne()
+        def execute():
+            raise socket.error
+        inst.execute = execute
+        self.assertRaises(socket.error, inst.service)
+        self.assertTrue(inst.start_time)
+        self.assertTrue(inst.close_on_finish)
+        self.assertFalse(inst.channel.written)
+
+    def test_execute_app_calls_start_response_twice_wo_exc_info(self):
+        def app(environ, start_response):
+            start_response('200 OK', [])
+            start_response('200 OK', [])
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        self.assertRaises(AssertionError, inst.execute)
+
+    def test_execute_app_calls_start_response_w_exc_info_complete(self):
+        def app(environ, start_response):
+            start_response('200 OK', [], [ValueError, ValueError(), None])
+        inst = self._makeOne()
+        inst.complete = True
+        inst.channel.server.application = app
+        self.assertRaises(ValueError, inst.execute)
+
+    def test_execute_app_calls_start_response_w_exc_info_incomplete(self):
+        def app(environ, start_response):
+            start_response('200 OK', [], [ValueError, None, None])
+            return [b'a']
+        inst = self._makeOne()
+        inst.complete = False
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertTrue(inst.complete)
+        self.assertEqual(inst.status, '200 OK')
+        self.assertTrue(inst.channel.written)
+
+    def test_execute_bad_header_key(self):
+        def app(environ, start_response):
+            start_response('200 OK', [(None, 'a')])
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        self.assertRaises(AssertionError, inst.execute)
+
+    def test_execute_bad_header_value(self):
+        def app(environ, start_response):
+            start_response('200 OK', [('a', None)])
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        self.assertRaises(AssertionError, inst.execute)
+
+    def test_execute_bad_status_value(self):
+        def app(environ, start_response):
+            start_response(None, [])
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        self.assertRaises(AssertionError, inst.execute)
+
+    def test_execute_with_content_length_header(self):
+        def app(environ, start_response):
+            start_response('200 OK', [('Content-Length', '1')])
+            return [b'a']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertEqual(inst.content_length, 1)
+
+    def test_execute_app_calls_write(self):
+        def app(environ, start_response):
+            write = start_response('200 OK', [('Content-Length', '3')])
+            write(b'abc')
+            return []
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertEqual(inst.channel.written[-3:], b'abc')
+
+    def test_execute_app_returns_len1_chunk_without_cl(self):
+        def app(environ, start_response):
+            start_response('200 OK', [])
+            return [b'abc']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertEqual(inst.content_length, 3)
+
+    def test_execute_app_returns_empty_chunk_as_first(self):
+        def app(environ, start_response):
+            start_response('200 OK', [])
+            return ['', b'abc']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertEqual(inst.content_length, -1)
+
+    def test_execute_app_returns_too_many_bytes(self):
+        def app(environ, start_response):
+            start_response('200 OK', [('Content-Length', '1')])
+            return [b'abc']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(inst.channel.server.logged)
+
+    def test_execute_app_returns_too_few_bytes(self):
+        def app(environ, start_response):
+            start_response('200 OK', [('Content-Length', '3')])
+            return [b'a']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(inst.channel.server.logged)
+
+    def test_execute_app_returns_closeable(self):
+        class closeable(list):
+            def close(self):
+                self.closed  = True
+        foo = closeable([b'abc'])
+        def app(environ, start_response):
+            start_response('200 OK', [('Content-Length', '3')])
+            return foo
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertEqual(foo.closed, True)
+
     def test_get_environment_already_cached(self):
         inst = self._makeOne()
         inst.environ = object()
@@ -503,52 +564,6 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.run_once'], False)
         self.assertEqual(environ['wsgi.input'], 'stream')
         self.assertEqual(inst.environ, environ)
-
-    def test_start(self):
-        inst = self._makeOne()
-        inst.start()
-        self.assertTrue(inst.start_time)
-
-    def test_finish_didnt_write_header(self):
-        inst = self._makeOne()
-        inst.wrote_header = False
-        inst.complete = True
-        inst.finish()
-        self.assertTrue(inst.channel.written)
-
-    def test_finish_wrote_header(self):
-        inst = self._makeOne()
-        inst.wrote_header = True
-        inst.finish()
-        self.assertFalse(inst.channel.written)
-
-    def test_write_wrote_header(self):
-        inst = self._makeOne()
-        inst.wrote_header = True
-        inst.complete = True
-        inst.write(b'abc')
-        self.assertEqual(inst.channel.written, b'abc')
-
-    def test_write_header_not_written(self):
-        inst = self._makeOne()
-        inst.wrote_header = False
-        inst.complete = True
-        inst.write(b'abc')
-        self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.wrote_header, True)
-
-    def test_write_start_response_uncalled(self):
-        inst = self._makeOne()
-        self.assertRaises(RuntimeError, inst.write, b'')
-
-    def test_write_preexisting_content_length(self):
-        inst = self._makeOne()
-        inst.wrote_header = True
-        inst.complete = True
-        inst.content_length = 1
-        inst.write(b'abc')
-        self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.logged_write_excess, True)
 
 class TestErrorTask(unittest.TestCase):
     def _makeOne(self, channel=None, request=None):
@@ -624,8 +639,6 @@ class DummyChannel(object):
             server = DummyServer()
         self.server = server
         self.written = b''
-    def close_when_done(self):
-        self.closed_when_done = True
     def write(self, data):
         self.written += data
         return len(data)

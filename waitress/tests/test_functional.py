@@ -791,7 +791,8 @@ def parse_headers(fp):
 class ConnectionClosed(Exception):
     pass
 
-def read_http(fp):
+# stolen from gevent
+def read_http(fp): # pragma: no cover
     try:
         response_line = fp.readline()
     except socket.error as exc:
@@ -827,8 +828,9 @@ def read_http(fp):
         body = fp.read()
   
     return response_line, headers, body
-    
-def get_errno(exc):
+
+# stolen from gevent
+def get_errno(exc): # pragma: no cover
     """ Get the error code out of socket.error objects.
     socket.error in <2.5 does not have errno attribute
     socket.error in 3.x does not allow indexing access
