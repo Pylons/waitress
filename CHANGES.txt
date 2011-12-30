@@ -1,5 +1,6 @@
-Next release
-------------
+0.1 (2011-12-30)
+----------------
 
-- Initial fork from zope.server, see "differences" in the docs.
+- Initial release.
+
 
