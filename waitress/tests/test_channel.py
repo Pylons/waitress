@@ -190,7 +190,8 @@ class TestHTTPChannel(unittest.TestCase):
     def test_handle_close_with_task(self):
         inst, sock, map = self._makeOneWithMap()
         inst.task = True
-        self.assertRaises(AssertionError, inst.handle_close)
+        inst.handle_close()
+        self.assertEqual(inst.will_close, True)
 
     def test_add_channel(self):
         inst, sock, map = self._makeOneWithMap()

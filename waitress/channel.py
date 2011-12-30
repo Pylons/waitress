@@ -186,17 +186,21 @@ class HTTPChannel(logging_dispatcher, object):
             # Ignore socket errors.
             self.handle_close()
 
+    #
+    # METHODS USED IN BOTH MODES
+    #
+
     def handle_close(self):
         # Always close in asynchronous mode.  If the connection is
         # closed in a thread, the main loop can end up with a bad file
         # descriptor.
-        assert self.task is None
+        # XXX this method is probably called in a thread by virtue of
+        # "handle_comm_error"
+        if self.task is not None:
+            self.will_close = True
+            return
         self.connected = False
         asyncore.dispatcher.close(self)
-
-    #
-    # METHODS USED IN BOTH MODES
-    #
 
     def write(self, data):
         wrote = 0
