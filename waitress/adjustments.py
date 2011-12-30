@@ -17,11 +17,7 @@ import socket
 import sys
 
 class Adjustments(object):
-    """This class contains tunable communication parameters.
-
-    You can either change default_adj to adjust parameters for
-    all sockets, or you can create a new instance of this class,
-    change its attributes, and pass it to the channel constructors.
+    """This class contains tunable parameters.
     """
     # hostname or IP address
     host = '0.0.0.0'

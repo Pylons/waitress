@@ -22,7 +22,7 @@ WSGI app as a single argument::
    from waitress import serve
    serve(wsgiapp)
 
-Press Ctrl-C to exit the server.
+Press Ctrl-C (or Ctrl-Break on Windows) to exit the server.
 
 There's an entry point for :term:`PasteDeploy` (``egg:waitress#main``) that
 lets you use waitress's WSGI gateway from a configuration file, e.g.::
@@ -31,6 +31,9 @@ lets you use waitress's WSGI gateway from a configuration file, e.g.::
   use = egg:waitress#main
   host = 127.0.0.1
   port = 8080
+
+You can find more settings to tweak (arguments to ``waitress.serve`` or
+equivalent settings in PasteDeploy) in :ref:`arguments`.
 
 Using Behind a Reverse Proxy
 ----------------------------
@@ -133,6 +136,20 @@ PasteDeploy-style configuration::
   host = 127.0.0.1
   port = 8080
 
+Logging
+-------
+
+Waitress sends debug log output to the Python logger object named
+``waitress``.  You may need to do this to see its output if you use waitress
+outside of any particular web framework:
+
+.. code-block::  python
+
+   import waitress
+   import logging
+   logging.basicConfig()
+   waitress.serve(someapp)
+
 Why?
 ----
 
@@ -150,7 +167,7 @@ perfectly serviceable, but doesn't run under Python 3 and has no dedicated
 tests suite that would allow someone who did a Python 3 port to know it
 worked after a port was completed.  ``wsgiref`` works fine under most any
 Python, but it's a little slow and it's not recommended for production use as
-it has not been audited for security issues.
+it's single-threaded and has not been audited for security issues.
 
 At the time of this writing, some existing WSGI servers already claim wide
 platform support and have serviceable test suites.  The CherryPy WSGI server,
@@ -160,12 +177,9 @@ and requiring a non-CherryPy web framework to depend on the CherryPy web
 framework distribution simply for its server component is awkward.  The test
 suite of the CherryPy server also depends on the CherryPy web framework, so
 even if we forked its server component into a separate distribution, we would
-have still needed to backfill for all of its tests.
-
-Finally, I wanted the control that is provided by maintaining my own server.
-A WSGI server is an important dependency of my web framework, and being able
-to make arbitrary changes (add features, fix bugs, etc) without anyone else's
-permission is nice.
+have still needed to backfill for all of its tests.  The CherryPy team has
+started work on `Cheroot <https://bitbucket.org/cherrypy/cheroot>`_, which
+should solve this problem, however.
 
 Waitress is a fork of the WSGI-related components which existed in
 ``zope.server``.  ``zope.server`` had passable framework-independent test
@@ -193,6 +207,7 @@ More
 
    differences.rst
    api.rst
+   arguments.rst
    glossary.rst
 
 

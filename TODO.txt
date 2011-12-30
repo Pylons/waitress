@@ -12,10 +12,6 @@
 - Get rid of expectations that applications can set transfer-encoding and
   other hop-by-hop headers.
 
-- Logging docs.
-
-- serve() parameter docs.
-
 - Timeout functests.
 
 - Complex pipelining functests (with intermediate connection: close).
