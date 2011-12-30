@@ -175,3 +175,25 @@ class logging_dispatcher(asyncore.dispatcher):
             'error': logging.ERROR,
             }
         self.logger.log(severity.get(type, logging.INFO), message)
+
+class Error(object):
+    def __init__(self, body):
+        self.body = body
+
+class BadRequest(Error):
+    code = 400
+    reason = 'Bad Request'
+
+class RequestHeaderFieldsTooLarge(BadRequest):
+    code = 431
+    reason = 'Request Header Fields Too Large'
+
+class RequestEntityTooLarge(BadRequest):
+    code = 413
+    reason = 'Request Entity Too Large'
+
+class InternalServerError(Error):
+    code = 500
+    reason = 'Internal Server Error'
+        
+    

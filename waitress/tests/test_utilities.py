@@ -97,7 +97,15 @@ class Test_logging_dispatcher(unittest.TestCase):
         inst.log_info('message', 'warning')
         self.assertEqual(logger.severity, logging.WARN)
         self.assertEqual(logger.message, 'message')
-        
+
+class TestBadRequest(unittest.TestCase):
+    def _makeOne(self):
+        from waitress.utilities import BadRequest
+        return BadRequest(1)
+
+    def test_it(self):
+        inst = self._makeOne()
+        self.assertEqual(inst.body, 1)
 
 class DummyLogger(object):
     def log(self, severity, message):

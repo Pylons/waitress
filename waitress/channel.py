@@ -17,6 +17,7 @@ import asyncore
 import socket
 import sys
 import time
+import traceback
 
 from waitress.compat import thread
 from waitress.buffers import OverflowableBuffer
@@ -27,15 +28,18 @@ from waitress.task import (
     WSGITask,
     )
 
-from waitress.utilities import logging_dispatcher
+from waitress.utilities import (
+    logging_dispatcher,
+    InternalServerError,
+    )
 
 class HTTPChannel(logging_dispatcher, object):
     """Channel that switches between asynchronous and synchronous mode.
 
-    Set self.async_mode = False before using a channel in a thread other than
+    Set self.task = sometask before using a channel in a thread other than
     the thread handling the main loop.
 
-    Set self.async_mode = True to give the channel back to the thread handling
+    Set self.task = None to give the channel back to the thread handling
     the main loop.
     """
     task_class = WSGITask
@@ -44,10 +48,10 @@ class HTTPChannel(logging_dispatcher, object):
 
     task_lock = thread.allocate_lock() # syncs access to task-related attrs
 
-    proto_request = None        # A request parser instance
+    request = None              # A request parser instance
     last_activity = 0           # Time of last activity
     will_close = False          # will_close is set to True to close the socket.
-    async_mode = True           # boolean: async or sync mode
+    task = None                 # currently running task
 
     #
     # ASYNCHRONOUS METHODS (including __init__)
@@ -67,16 +71,15 @@ class HTTPChannel(logging_dispatcher, object):
         self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
         self.inbuf = OverflowableBuffer(adj.inbuf_overflow)
         self.creation_time = self.last_activity = time.time()
-        self.tasks = []
         asyncore.dispatcher.__init__(self, sock, map=map)
 
     def writable(self):
-        if not self.async_mode:
+        if self.task is not None:
             return False
         return self.will_close or self.outbuf
 
     def handle_write(self):
-        if not self.async_mode:
+        if self.task is not None:
             return
         if self.outbuf:
             try:
@@ -88,22 +91,21 @@ class HTTPChannel(logging_dispatcher, object):
         self.last_activity = time.time()
 
     def readable(self):
-        if not self.async_mode:
+        if self.task is not None or self.will_close:
             return False
         if self.inbuf:
             self.received()
         return not self.will_close
 
     def handle_read(self):
-        if not self.async_mode:
-            return
         try:
             data = self.recv(self.adj.recv_bytes)
         except socket.error:
             self.handle_comm_error()
             return
         self.last_activity = time.time()
-        self.inbuf.append(data)
+        if data:
+            self.inbuf.append(data)
 
     def add_channel(self, map=None):
         """See asyncore.dispatcher
@@ -126,44 +128,39 @@ class HTTPChannel(logging_dispatcher, object):
 
     def received(self):
         """
-        Receives input asynchronously and send requests to
-        handle_request().
+        Receives input asynchronously and assigns a task to the channel.
         """
-        if not self.async_mode:
+        if self.task is not None:
             return False
         chunk = self.inbuf.get(self.adj.recv_bytes)
         if not chunk:
             return
-        preq = self.proto_request
-        if preq is None:
-            preq = self.parser_class(self.adj)
-        n = preq.received(chunk)
+        if self.request is None:
+            self.request = self.parser_class(self.adj)
+        request = self.request
+        n = request.received(chunk)
         if n:
             self.inbuf.skip(n, True)
-        if preq.expect_continue and preq.headers_finished:
+        if request.expect_continue and request.headers_finished:
             # guaranteed by parser to be a 1.1 request
             self.write(b'HTTP/1.1 100 Continue\r\n\r\n')
-            preq.expect_continue = False
-        if preq.completed:
+            request.expect_continue = False
+        if request.completed:
             # The request (with the body) is ready to use.
-            self.proto_request = None
-            if not preq.empty:
-                if preq.error:
-                    task = self.error_task_class(self, preq)
-                else:
-                    task = self.task_class(self, preq)
-                with self.task_lock:
-                    self.tasks.append(task)
-            if preq.connection_close and self.inbuf:
+            if request.connection_close and self.inbuf:
                 self.inbuf = OverflowableBuffer(self.adj.inbuf_overflow)
-            preq = None
-        else:
-            self.proto_request = preq
+            self.request = None
+            if not request.empty:
+                if request.error:
+                    self.inbuf = OverflowableBuffer(self.adj.inbuf_overflow)
+                    task = self.error_task_class(self, request)
+                else:
+                    task = self.task_class(self, request)
+                self.task = task
+                self.server.add_task(self)
+                return
         if self.inbuf:
             self.server.pull_trigger()
-        else:
-            # run those dogs
-            self.server.add_task(self)
 
     def handle_error(self, exc_info=None): # exc_info for tests
         """See async.dispatcher
@@ -189,30 +186,17 @@ class HTTPChannel(logging_dispatcher, object):
             # Ignore socket errors.
             self.handle_close()
 
-    #
-    # SYNCHRONOUS METHODS
-    #
-
-    def set_async(self):
-        """Switches to asynchronous mode.
-
-        The main thread will begin calling received() again.
-        """
-        self.async_mode = True
-        self.server.pull_trigger()
-        self.last_activity = time.time()
-
-    #
-    # METHODS USED IN BOTH MODES
-    #
-
     def handle_close(self):
         # Always close in asynchronous mode.  If the connection is
         # closed in a thread, the main loop can end up with a bad file
         # descriptor.
-        assert self.async_mode
+        assert self.task is None
         self.connected = False
         asyncore.dispatcher.close(self)
+
+    #
+    # METHODS USED IN BOTH MODES
+    #
 
     def write(self, data):
         wrote = 0
@@ -247,41 +231,36 @@ class HTTPChannel(logging_dispatcher, object):
     #
 
     def service(self):
-        """Execute all pending tasks"""
-        self.async_mode = False
-        while True:
-            with self.task_lock:
-                if self.tasks:
-                    task = self.tasks.pop(0)
-                else:
-                    break
-            try:
-                task.service()
-                if task.close_on_finish:
-                    self.will_close = True
-            except:
-                # allow error to propagate but readd ourselves to the
-                # task queue
-                if self.tasks:
-                    self.server.add_task(self)
-                raise
+        """Execute a pending task"""
+        if self.task is None:
+            return
+        task = self.task
+        try:
+            task.service()
+        except:
+            self.logger.exception('Exception when serving %s' %
+                                  task.request.uri)
+            request = self.parser_class(self.adj)
+            if self.adj.expose_tracebacks:
+                body = traceback.format_exc()
+            else:
+                body = 'Internal server error'
+            request.error = InternalServerError(body)
+            task = self.error_task_class(self, request)
+            task.service() # must not fail
         while self._flush_some():
             pass
-        self.set_async()
+        self.task = None
+        if task.close_on_finish:
+            self.will_close = True
+        self.server.pull_trigger()
+        self.last_activity = time.time()
 
     def cancel(self):
         """Cancels all pending tasks"""
-        with self.task_lock:
-            if self.tasks:
-                old = self.tasks[:]
-            else:
-                old = []
-            self.tasks = []
-        try:
-            for task in old:
-                task.cancel()
-        finally:
-            self.set_async()
+        if self.task is not None:
+            self.task.cancel()
+            self.task = None
 
     def defer(self):
         pass

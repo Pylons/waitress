@@ -317,15 +317,6 @@ Hello.
                     '10.11.12.13, unknown,127.0.0.1, 255.255.255.255',
                 })
 
-class TestTooLarge(unittest.TestCase):
-    def _makeOne(self):
-        from waitress.parser import TooLarge
-        return TooLarge(1)
-
-    def test_it(self):
-        inst = self._makeOne()
-        self.assertEqual(inst.bytes, 1)
-
 class DummyBodyStream(object):
     def getfile(self):
         return self

@@ -19,44 +19,36 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.addr, '127.0.0.1')
         self.assertEqual(map[100], inst)
 
-    def test_handle_close(self):
+    def test_writable_no_task_will_close(self):
         inst, sock, map = self._makeOneWithMap()
-        def close():
-            inst.closed = True
-        inst.close = close
-        inst.handle_close()
-        self.assertEqual(inst.closed, True)
-
-    def test_writable_async_mode_will_close(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
+        inst.task = None
         inst.will_close = True
         inst.outbuf = ''
         self.assertTrue(inst.writable())
 
-    def test_writable_async_mode_outbuf(self):
+    def test_writable_no_task_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
+        inst.task = None
         inst.will_close = False
         inst.outbuf ='a'
         self.assertTrue(inst.writable())
 
-    def test_writable_sync_mode(self):
+    def test_writable_with_task(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = False
+        inst.task = True
         self.assertFalse(inst.writable())
 
-    def test_handle_write_sync_mode(self):
+    def test_handle_write_with_task(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = False
+        inst.task = True
         inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
         self.assertEqual(inst.last_activity, 0)
 
-    def test_handle_write_async_mode_with_outbuf(self):
+    def test_handle_write_no_task_with_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
+        inst.task = None
         inst.outbuf = DummyBuffer(b'abc')
         inst.last_activity = 0
         result = inst.handle_write()
@@ -64,10 +56,10 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertNotEqual(inst.last_activity, 0)
         self.assertEqual(sock.sent, b'abc')
 
-    def test_handle_write_async_mode_with_outbuf_raises_socketerror(self):
+    def test_handle_write_no_task_with_outbuf_raises_socketerror(self):
         import socket
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
+        inst.task = None
         L = []
         inst.log_info = lambda *x: L.append(x)
         inst.outbuf = DummyBuffer(b'abc', socket.error)
@@ -78,9 +70,9 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(sock.sent, b'')
         self.assertEqual(len(L), 1)
 
-    def test_handle_write_async_mode_no_outbuf_will_close(self):
+    def test_handle_write_no_task_no_outbuf_will_close(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
+        inst.task = None
         inst.outbuf = None
         inst.will_close = True
         inst.last_activity = 0
@@ -90,57 +82,36 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(sock.closed, True)
         self.assertNotEqual(inst.last_activity, 0)
 
-    def test_readable_async_mode_not_will_close(self):
+    def test_readable_no_task_not_will_close(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
+        inst.task = None
         inst.will_close = False
         self.assertEqual(inst.readable(), True)
 
-    def test_readable_async_mode_will_close(self):
+    def test_readable_no_task_will_close(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
+        inst.task = None
         inst.will_close = True
         self.assertEqual(inst.readable(), False)
 
-    def test_readable_sync_mode(self):
+    def test_readable_with_task(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = False
+        inst.task = True
         self.assertEqual(inst.readable(), False)
 
-    def test_handle_read_sync_mode(self):
+    def test_handle_read_no_error(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = False
-        inst.last_activity = 0
-        result = inst.handle_read()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.last_activity, 0)
-
-    def test_handle_read_async_mode_will_close(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
-        inst.will_close = True
-        inst.last_activity = 0
-        result = inst.handle_read()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.last_activity, 0)
-
-    def test_handle_read_async_mode_no_error(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
         inst.will_close = False
         inst.recv = lambda *arg: 'abc'
-        L = []
-        inst.received = lambda data: L.append(data)
         inst.last_activity = 0
         result = inst.handle_read()
         self.assertEqual(result, None)
         self.assertNotEqual(inst.last_activity, 0)
-        self.assertEqual(L, ['abc'])
+        self.assertEqual(inst.inbuf.get(100), 'abc')
 
-    def test_handle_read_async_mode_error(self):
+    def test_handle_read_error(self):
         import socket
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
         inst.will_close = False
         def recv(b): raise socket.error
         inst.recv = recv
@@ -151,15 +122,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(inst.last_activity, 0)
         self.assertEqual(len(L), 1)
-
-    def test_set_async(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = False
-        inst.last_activity = 0
-        inst.set_async()
-        self.assertEqual(inst.async_mode, True)
-        self.assertNotEqual(inst.last_activity, 0)
-        self.assertTrue(inst.server.trigger_pulled)
+        self.assertEqual(inst.inbuf.get(100), '')
 
     def test_write_empty_byte(self):
         inst, sock, map = self._makeOneWithMap()
@@ -217,35 +180,17 @@ class TestHTTPChannel(unittest.TestCase):
         result = inst._flush_some()
         self.assertEqual(result, False)
 
-    def test_close_when_done_async_mode(self):
+    def test_handle_close_no_task(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.connected = True
-        inst.async_mode = True
-        inst.outbuf.append(b'abc')
-        inst.close_when_done()
-        self.assertEqual(inst.will_close, True)
-
-    def test_close_when_done_sync_mode(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.connected = True
-        inst.outbuf.append(b'abc')
-        inst.async_mode = False
-        inst.close_when_done()
-        self.assertEqual(inst.will_close, True)
-        self.assertEqual(inst.async_mode, True)
-        self.assertEqual(inst.server.trigger_pulled, True)
-
-    def test_close_async_mode(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = True
-        inst.close()
+        inst.task = None
+        inst.handle_close()
         self.assertEqual(inst.connected, False)
         self.assertEqual(sock.closed, True)
 
-    def test_close_sync_mode(self):
+    def test_handle_close_with_task(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.async_mode = False
-        self.assertRaises(AssertionError, inst.close)
+        inst.task = True
+        self.assertRaises(AssertionError, inst.handle_close)
 
     def test_add_channel(self):
         inst, sock, map = self._makeOneWithMap()
@@ -265,67 +210,75 @@ class TestHTTPChannel(unittest.TestCase):
     def test_received(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
-        inst.received(b'GET / HTTP/1.1\n\n')
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
         self.assertEqual(inst.server.tasks, [inst])
-        self.assertEqual(len(inst.tasks), 1)
+        self.assertTrue(inst.task)
 
     def test_received_preq_not_completed(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
-        inst.proto_request = preq
+        inst.request = preq
         preq.completed = False
         preq.empty = True
-        inst.received(b'GET / HTTP/1.1\n\n')
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
+        self.assertEqual(inst.task, None)
         self.assertEqual(inst.server.tasks, [])
 
     def test_received_preq_completed(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
-        inst.proto_request = preq
+        inst.request = preq
         preq.completed = True
         preq.empty = True
-        inst.received(b'GET / HTTP/1.1\n\n')
-        self.assertEqual(inst.proto_request, None)
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
+        self.assertEqual(inst.request, None)
         self.assertEqual(inst.server.tasks, [])
 
     def test_received_preq_completed_connection_close(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
-        inst.proto_request = preq
+        inst.request = preq
         preq.completed = True
         preq.empty = True
         preq.connection_close = True
-        inst.received(b'GET / HTTP/1.1\n\n')
-        self.assertEqual(inst.proto_request, None)
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
+        self.assertEqual(inst.request, None)
         self.assertEqual(inst.server.tasks, [])
 
     def test_received_preq_completed_n_lt_data(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
-        inst.proto_request = preq
+        inst.request = preq
         preq.completed = True
         preq.empty = True
         preq.retval = 1
-        inst.received(b'GET / HTTP/1.1\n\n')
-        self.assertEqual(inst.proto_request, None)
-        self.assertEqual(inst.server.tasks, [inst])
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
+        self.assertEqual(inst.request, None)
+        self.assertEqual(inst.task, None)
+        self.assertEqual(inst.server.tasks, [])
 
     def test_received_headers_finished_not_expect_continue(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
-        inst.proto_request = preq
+        inst.request = preq
         preq.expect_continue = False
         preq.headers_finished = True
         preq.completed = False
         preq.empty = False
         preq.retval = 1
-        inst.received(b'GET / HTTP/1.1\n\n')
-        self.assertEqual(inst.proto_request, preq)
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
+        self.assertEqual(inst.request, preq)
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(inst.outbuf.get(100), b'')
 
@@ -333,35 +286,36 @@ class TestHTTPChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
-        inst.proto_request = preq
+        inst.request = preq
         preq.expect_continue = True
         preq.headers_finished = True
         preq.completed = False
         preq.empty = False
         preq.retval = 1
-        inst.received(b'GET / HTTP/1.1\n\n')
-        self.assertEqual(inst.proto_request, preq)
+        inst.inbuf.append(b'GET / HTTP/1.1\n\n')
+        inst.received()
+        self.assertEqual(inst.request, preq)
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(inst.outbuf.get(100), b'HTTP/1.1 100 Continue\r\n\r\n')
 
-    def test_handle_request(self):
-        req = DummyParser()
-        inst, sock, map = self._makeOneWithMap()
-        inst.server = DummyServer()
-        inst.handle_request(req)
-        self.assertEqual(inst.server.tasks, [inst])
-        self.assertEqual(len(inst.tasks), 1)
-        self.assertEqual(inst.tasks[0].__class__.__name__, 'WSGITask')
+    ## def test_handle_request(self):
+    ##     req = DummyParser()
+    ##     inst, sock, map = self._makeOneWithMap()
+    ##     inst.server = DummyServer()
+    ##     inst.handle_request(req)
+    ##     self.assertEqual(inst.server.tasks, [inst])
+    ##     self.assertEqual(len(inst.tasks), 1)
+    ##     self.assertEqual(inst.tasks[0].__class__.__name__, 'WSGITask')
 
-    def test_handle_request_error(self):
-        req = DummyParser()
-        req.error = True
-        inst, sock, map = self._makeOneWithMap()
-        inst.server = DummyServer()
-        inst.handle_request(req)
-        self.assertEqual(inst.server.tasks, [inst])
-        self.assertEqual(len(inst.tasks), 1)
-        self.assertEqual(inst.tasks[0].__class__.__name__, 'ErrorTask')
+    ## def test_handle_request_error(self):
+    ##     req = DummyParser()
+    ##     req.error = True
+    ##     inst, sock, map = self._makeOneWithMap()
+    ##     inst.server = DummyServer()
+    ##     inst.handle_request(req)
+    ##     self.assertEqual(inst.server.tasks, [inst])
+    ##     self.assertEqual(len(inst.tasks), 1)
+    ##     self.assertEqual(inst.tasks[0].__class__.__name__, 'ErrorTask')
 
     def test_handle_error_reraises_SystemExit(self):
         inst, sock, map = self._makeOneWithMap()
@@ -392,72 +346,62 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.connected, False)
         self.assertEqual(sock.closed, True)
 
-    def test_queue_task_no_existing_tasks_notrunning(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.server = DummyServer()
-        task = DummyTask()
-        inst.queue_task(task)
-        self.assertEqual(inst.tasks, [task])
-        self.assertTrue(inst.running_tasks)
-        self.assertFalse(inst.async_mode)
-        self.assertEqual(inst.server.tasks, [inst])
+    ## def test_queue_task_no_existing_tasks_notrunning(self):
+    ##     inst, sock, map = self._makeOneWithMap()
+    ##     inst.server = DummyServer()
+    ##     task = DummyTask()
+    ##     inst.queue_task(task)
+    ##     self.assertEqual(inst.tasks, [task])
+    ##     self.assertTrue(inst.running_tasks)
+    ##     self.assertFalse(inst.async_mode)
+    ##     self.assertEqual(inst.server.tasks, [inst])
 
-    def test_queue_task_no_existing_tasks_running(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.server = DummyServer()
-        inst.running_tasks = True
-        task = DummyTask()
-        inst.queue_task(task)
-        self.assertEqual(inst.tasks, [task])
-        self.assertTrue(inst.async_mode)
+    ## def test_queue_task_no_existing_tasks_running(self):
+    ##     inst, sock, map = self._makeOneWithMap()
+    ##     inst.server = DummyServer()
+    ##     inst.running_tasks = True
+    ##     task = DummyTask()
+    ##     inst.queue_task(task)
+    ##     self.assertEqual(inst.tasks, [task])
+    ##     self.assertTrue(inst.async_mode)
 
-    def test_service_no_tasks(self):
+    def test_service_no_task(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.running_tasks = True
-        inst.async_mode = False
+        inst.task = None
         inst.service()
-        self.assertEqual(inst.running_tasks, False)
-        self.assertEqual(inst.async_mode, True)
+        self.assertEqual(inst.task, None)
 
     def test_service_with_task(self):
         inst, sock, map = self._makeOneWithMap()
         task = DummyTask()
-        inst.tasks = [task]
-        inst.running_tasks = True
-        inst.async_mode = False
+        inst.task = task
         inst.service()
-        self.assertEqual(inst.running_tasks, False)
-        self.assertEqual(inst.async_mode, True)
+        self.assertEqual(inst.task, None)
         self.assertTrue(task.serviced)
 
     def test_service_with_task_raises(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         task = DummyTask(ValueError)
-        inst.tasks = [task]
-        inst.running_tasks = True
-        inst.async_mode = False
-        self.assertRaises(ValueError, inst.service)
-        self.assertEqual(inst.running_tasks, True)
-        self.assertEqual(inst.async_mode, False)
+        inst.task = task
+        inst.logger = DummyLogger()
+        inst.service()
         self.assertTrue(task.serviced)
-        self.assertEqual(inst.server.tasks, [inst])
+        self.assertEqual(inst.task, None)
+        self.assertEqual(len(inst.logger.exceptions), 1)
 
-    def test_cancel_no_tasks(self):
+    def test_cancel_no_task(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.tasks = None
-        inst.async_mode = False
+        inst.task = None
         inst.cancel()
-        self.assertTrue(inst.async_mode)
+        self.assertEqual(inst.task, None)
 
-    def test_cancel_with_tasks(self):
+    def test_cancel_with_task(self):
         inst, sock, map = self._makeOneWithMap()
         task = DummyTask()
-        inst.tasks = [task]
-        inst.async_mode = False
+        inst.task = task
         inst.cancel()
-        self.assertTrue(inst.async_mode)
-        self.assertEqual(inst.tasks, [])
+        self.assertEqual(inst.task, None)
         self.assertEqual(task.cancelled, True)
 
     def test_defer(self):
@@ -496,8 +440,21 @@ class DummyBuffer(object):
     def skip(self, num, x):
         self.skipped = num
 
+class DummyAdjustments(object):
+    outbuf_overflow = 1048576
+    inbuf_overflow = 512000
+    cleanup_interval = 900
+    send_bytes = 9000
+    url_scheme = 'http'
+    channel_timeout = 300
+    log_socket_errors = True
+    recv_bytes = 8192
+    expose_tracebacks = True
+    ident = 'waitress'
+
 class DummyServer(object):
     trigger_pulled = False
+    adj = DummyAdjustments()
     def __init__(self):
         self.tasks = []
         self.active_channels = {}
@@ -513,17 +470,23 @@ class DummyParser(object):
     empty = False
     headers_finished = False
     expect_continue = False
-    retval = 1000
+    retval = None
     error = None
     connection_close = False
     def received(self, data):
         self.data = data
-        return self.retval
+        if self.retval is not None:
+            return self.retval
+        return len(data)
+
+class DummyRequest(object):
+    uri = 'http://example.com'
     
 class DummyTask(object):
     serviced = False
     cancelled = False
     close_on_finish = False
+    request = DummyRequest()
     def __init__(self, toraise=None):
         self.toraise = toraise
     def service(self):
@@ -533,12 +496,8 @@ class DummyTask(object):
     def cancel(self):
         self.cancelled = True
 
-class DummyAdjustments(object):
-    outbuf_overflow = 1048576
-    inbuf_overflow = 512000
-    cleanup_interval = 900
-    send_bytes = 9000
-    url_scheme = 'http'
-    channel_timeout = 300
-    log_socket_errors = True
-    recv_bytes = 8192
+class DummyLogger(object):
+    def __init__(self):
+        self.exceptions = []
+    def exception(self, msg):
+        self.exceptions.append(msg)

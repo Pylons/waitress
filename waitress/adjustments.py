@@ -67,7 +67,7 @@ class Adjustments(object):
     cleanup_interval = 30
 
     # Maximum seconds to leave an inactive connection open.
-    channel_timeout = 60
+    channel_timeout = 120
 
     # Boolean: turn off to not log premature client disconnects.
     log_socket_errors = True
@@ -77,6 +77,9 @@ class Adjustments(object):
 
     # maximum number of bytes in request body (1GB default)
     max_request_body_size = 1073741824
+
+    # expose tracebacks of uncaught exceptions
+    expose_tracebacks = False
 
     # The socket options to set on receiving a connection.  It is a list of
     # (level, optname, value) tuples.  TCP_NODELAY is probably good for Zope,
@@ -117,6 +120,8 @@ class Adjustments(object):
                 v = int(v)
             elif k == 'max_request_body_size':
                 v = int(v)
+            elif k == 'expose_tracebacks':
+                v = asbool(v)
             else:
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, v)

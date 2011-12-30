@@ -92,13 +92,13 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
                          False)
 
 class TestWSGITask(unittest.TestCase):
-    def _makeOne(self, channel=None, request_data=None):
+    def _makeOne(self, channel=None, request=None):
         if channel is None:
             channel = DummyChannel()
-        if request_data is None:
-            request_data = DummyParser()
+        if request is None:
+            request = DummyParser()
         from waitress.task import WSGITask
-        return WSGITask(channel, request_data)
+        return WSGITask(channel, request)
 
     def test_service(self):
         inst = self._makeOne()
@@ -108,7 +108,7 @@ class TestWSGITask(unittest.TestCase):
         inst.complete = True
         inst.service()
         self.assertTrue(inst.start_time)
-        self.assertTrue(inst.channel.closed_when_done)
+        self.assertTrue(inst.close_on_finish)
         self.assertTrue(inst.channel.written)
         self.assertEqual(inst.executed, True)
 
@@ -120,13 +120,13 @@ class TestWSGITask(unittest.TestCase):
         inst.execute = execute
         self.assertRaises(socket.error, inst.service)
         self.assertTrue(inst.start_time)
-        self.assertTrue(inst.channel.closed_when_done)
+        self.assertTrue(inst.close_on_finish)
         self.assertFalse(inst.channel.written)
 
     def test_cancel(self):
         inst = self._makeOne()
         inst.cancel()
-        self.assertTrue(inst.channel.closed_when_done)
+        self.assertTrue(inst.close_on_finish)
 
     def test_defer(self):
         inst = self._makeOne()
@@ -253,8 +253,8 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v10_keepalive_no_content_length(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
-        inst.request_data.headers['CONNECTION'] = 'keep-alive'
+        inst.request = DummyParser()
+        inst.request.headers['CONNECTION'] = 'keep-alive'
         inst.version = '1.0'
         result = inst.build_response_header()
         lines = filter_lines(result)
@@ -268,8 +268,8 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v10_keepalive_with_content_length(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
-        inst.request_data.headers['CONNECTION'] = 'keep-alive'
+        inst.request = DummyParser()
+        inst.request.headers['CONNECTION'] = 'keep-alive'
         inst.response_headers = [('Content-Length', '10')]
         inst.version = '1.0'
         result = inst.build_response_header()
@@ -284,7 +284,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v11_connection_closed_by_app(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.version = '1.1'
         inst.response_headers = [('Connection', 'close')]
         result = inst.build_response_header()
@@ -299,9 +299,9 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v11_connection_closed_by_client(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.version = '1.1'
-        inst.request_data.headers['CONNECTION'] = 'close'
+        inst.request.headers['CONNECTION'] = 'close'
         result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
@@ -314,8 +314,8 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v11_connection_keepalive_by_client(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
-        inst.request_data.headers['CONNECTION'] = 'keep-alive'
+        inst.request = DummyParser()
+        inst.request.headers['CONNECTION'] = 'keep-alive'
         inst.version = '1.1'
         result = inst.build_response_header()
         lines = filter_lines(result)
@@ -329,7 +329,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v11_transfer_encoding_nonchunked(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.response_headers = [('Transfer-Encoding', 'notchunked')]
         inst.version = '1.1'
         result = inst.build_response_header()
@@ -345,7 +345,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v11_transfer_encoding_chunked(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.response_headers = [('Transfer-Encoding', 'chunked')]
         inst.version = '1.1'
         result = inst.build_response_header()
@@ -359,7 +359,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v11_304_headersonly(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.status = '304 OK'
         inst.version = '1.1'
         result = inst.build_response_header()
@@ -372,7 +372,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_v11_200_no_content_length(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.version = '1.1'
         result = inst.build_response_header()
         lines = filter_lines(result)
@@ -386,7 +386,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_unrecognized_http_version(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.version = '8.1'
         result = inst.build_response_header()
         lines = filter_lines(result)
@@ -400,7 +400,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_via_added(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.version = '1.0'
         inst.response_headers = [('Server',  'abc')]
         result = inst.build_response_header()
@@ -414,7 +414,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_date_exists(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.version = '1.0'
         inst.response_headers = [('Date',  'date')]
         result = inst.build_response_header()
@@ -427,7 +427,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_build_response_header_preexisting_content_length(self):
         inst = self._makeOne()
-        inst.request_data = DummyParser()
+        inst.request = DummyParser()
         inst.version = '1.1'
         inst.content_length = 100
         result = inst.build_response_header()
@@ -445,43 +445,43 @@ class TestWSGITask(unittest.TestCase):
 
     def test_get_environment_path_startswith_more_than_one_slash(self):
         inst = self._makeOne()
-        request_data = DummyParser()
-        request_data.path = '///abc'
-        inst.request_data = request_data
+        request = DummyParser()
+        request.path = '///abc'
+        inst.request = request
         environ = inst.get_environment()
         self.assertEqual(environ['PATH_INFO'], '/abc')
 
     def test_get_environment_path_empty(self):
         inst = self._makeOne()
-        request_data = DummyParser()
-        request_data.path = ''
-        inst.request_data = request_data
+        request = DummyParser()
+        request.path = ''
+        inst.request = request
         environ = inst.get_environment()
         self.assertEqual(environ['PATH_INFO'], '/')
 
     def test_get_environment_no_query(self):
         inst = self._makeOne()
-        request_data = DummyParser()
-        inst.request_data = request_data
+        request = DummyParser()
+        inst.request = request
         environ = inst.get_environment()
         self.assertEqual(environ['QUERY_STRING'], '')
 
     def test_get_environment_with_query(self):
         inst = self._makeOne()
-        request_data = DummyParser()
-        request_data.query = 'abc'
-        inst.request_data = request_data
+        request = DummyParser()
+        request.query = 'abc'
+        inst.request = request
         environ = inst.get_environment()
         self.assertEqual(environ['QUERY_STRING'], 'abc')
 
     def test_get_environment_values(self):
         import sys
         inst = self._makeOne()
-        request_data = DummyParser()
-        request_data.headers = {'CONTENT_TYPE':'abc', 'CONTENT_LENGTH':'10',
+        request = DummyParser()
+        request.headers = {'CONTENT_TYPE':'abc', 'CONTENT_LENGTH':'10',
                                 'X_FOO':'BAR'}
-        request_data.query = 'abc'
-        inst.request_data = request_data
+        request.query = 'abc'
+        inst.request = request
         environ = inst.get_environment()
         self.assertEqual(environ['REQUEST_METHOD'], 'GET')
         self.assertEqual(environ['SERVER_PORT'], '80')
@@ -551,33 +551,34 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(inst.logged_write_excess, True)
 
 class TestErrorTask(unittest.TestCase):
-    def _makeOne(self, channel=None, request_data=None):
+    def _makeOne(self, channel=None, request=None):
         if channel is None:
             channel = DummyChannel()
-        if request_data is None:
-            request_data = DummyParser()
-            request_data.error = DummyError()
+        if request is None:
+            request = DummyParser()
+            request.error = DummyError()
         from waitress.task import ErrorTask
-        return ErrorTask(channel, request_data)
+        return ErrorTask(channel, request)
 
     def test_execute(self):
         inst = self._makeOne()
         inst.execute()
         lines = filter_lines(inst.channel.written)
-        self.assertEqual(len(lines), 8)
+        self.assertEqual(len(lines), 9)
         self.assertEqual(lines[0], b'HTTP/1.0 432 Too Ugly')
         self.assertEqual(lines[1], b'Connection: close')
-        self.assertEqual(lines[2], b'Content-Length: 45')
+        self.assertEqual(lines[2], b'Content-Length: 41')
         self.assertEqual(lines[3], b'Content-Type: text/plain')
         self.assertTrue(lines[4])
         self.assertEqual(lines[5], b'Server: waitress')
-        self.assertEqual(lines[6], b'Too Ugly (1 bytes)')
-        self.assertEqual(lines[7], b'(generated by waitress)')
+        self.assertEqual(lines[6], b'Too Ugly')
+        self.assertEqual(lines[7], b'body')
+        self.assertEqual(lines[8], b'(generated by waitress)')
 
 class DummyError(object):
     code = '432'
     reason = 'Too Ugly'
-    bytes = 1
+    body = 'body'
 
 class DummyTask(object):
     serviced = False

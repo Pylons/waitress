@@ -45,6 +45,11 @@ class FileBasedBuffer(object):
     def __len__(self):
         return self.remain
 
+    def __bool__(self):
+        return self.remain >= 0
+
+    __nonzero__ = __bool__
+
     def append(self, s):
         file = self.file
         read_pos = file.tell()
@@ -151,6 +156,11 @@ class OverflowableBuffer(object):
             return len(buf)
         else:
             return len(self.strbuf)
+
+    def __bool__(self):
+        return bool(len(self))
+
+    __nonzero__ = __bool__
 
     def _create_buffer(self):
         strbuf = self.strbuf

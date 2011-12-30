@@ -49,3 +49,10 @@ Differences from ``zope.server``
 
 - Ensures body total can not exceed a maximum size.
 
+- Broken chunked encoding bodies don't crash the server.
+
+- Handles keepalive/pipelining properly (no out of order responses, no
+  premature channel closes).
+
+- Send a 500 error to the client when a task raises an uncaught exception
+  (with optional traceback rendering).

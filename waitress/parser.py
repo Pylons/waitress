@@ -29,19 +29,11 @@ from waitress.receiver import (
     FixedStreamReceiver,
     ChunkedReceiver,
     )
-from waitress.utilities import find_double_newline
-
-class TooLarge(object):
-    def __init__(self, bytes):
-        self.bytes = bytes
-
-class RequestHeaderFieldsTooLarge(TooLarge):
-    code = 431
-    reason = 'Request Header Fields Too Large'
-
-class RequestEntityTooLarge(TooLarge):
-    code = 413
-    reason = 'Request Entity Too Large'
+from waitress.utilities import (
+    find_double_newline,
+    RequestEntityTooLarge,
+    RequestHeaderFieldsTooLarge,
+    )
 
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
@@ -112,7 +104,8 @@ class HTTPRequestParser(object):
                         # we won't accept this request if the content-length
                         # is too large
                         if self.content_length >= max_body:
-                            self.error = RequestEntityTooLarge(max_body)
+                            self.error = RequestEntityTooLarge(
+                                'exceeds max_body of %s' % max_body)
                             self.completed = True
                 self.headers_finished = True
                 return consumed
@@ -122,7 +115,8 @@ class HTTPRequestParser(object):
                 max_header = self.adj.max_request_header_size
                 if self.header_bytes_received >= max_header:
                     self.parse_header(b'GET / HTTP/1.0\n')
-                    self.error = RequestHeaderFieldsTooLarge(max_header)
+                    self.error = RequestHeaderFieldsTooLarge(
+                        'exceeds max_header of %s' % max_header)
                     self.completed = True
                 self.header_plus = s
                 return datalen
@@ -133,7 +127,11 @@ class HTTPRequestParser(object):
             max_body = self.adj.max_request_body_size
             if self.body_bytes_received >= max_body:
                 # this will only be raised during t-e: chunked requests
-                self.error = RequestEntityTooLarge(max_body)
+                self.error = RequestEntityTooLarge(
+                    'exceeds max_body of %s' % max_body)
+                self.completed = True
+            elif br.error:
+                self.error = br.error
                 self.completed = True
             if br.completed:
                 self.completed = True

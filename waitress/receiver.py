@@ -16,10 +16,13 @@
 
 from waitress.utilities import find_double_newline
 
+from waitress.utilities import BadRequest
+
 class FixedStreamReceiver(object):
 
     # See IStreamConsumer
     completed = False
+    error = None
 
     def __init__(self, cl, buf):
         self.remain = cl
@@ -52,6 +55,7 @@ class ChunkedReceiver(object):
     all_chunks_received = False
     trailer = b''
     completed = False
+    error = None
 
     # max_control_line = 1024
     # max_trailer = 65536
@@ -94,7 +98,12 @@ class ChunkedReceiver(object):
                         if semi >= 0:
                             # discard extension info.
                             line = line[:semi]
-                        sz = int(line.strip(), 16)  # hexadecimal
+                        try:
+                            sz = int(line.strip(), 16)  # hexadecimal
+                        except ValueError: # garbage in input
+                            self.error = BadRequest(
+                                'garbage in chunked encoding input')
+                            sz = 0
                         if sz > 0:
                             # Start a new chunk.
                             self.chunk_remainder = sz
