@@ -151,13 +151,10 @@ class TestWSGIServer(unittest.TestCase):
         inst.adj = DummyAdj
         def foo(): raise socket.error
         inst.accept = foo
-        L = []
-        def log_info(msg, type):
-            L.append(msg)
-        inst.log_info = log_info
+        inst.logger = DummyLogger()
         inst.handle_accept()
         self.assertEqual(inst.socket.accepted, False)
-        self.assertEqual(len(L), 1)
+        self.assertEqual(len(inst.logger.logged), 1)
 
     def test_handle_accept_noerror(self):
         inst = self._makeOneWithMap()
@@ -244,4 +241,10 @@ class DummyAsyncore(object):
 class DummyTrigger(object):
     def pull_trigger(self):
         self.pulled = True
+        
+class DummyLogger(object):
+    def __init__(self):
+        self.logged = []
+    def warning(self, msg, **kw):
+        self.logged.append(msg)
         

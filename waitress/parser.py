@@ -41,7 +41,6 @@ class HTTPRequestParser(object):
     Once the stream is completed, the instance is passed to
     a server task constructor.
 
-    See waitress.interfaces.IStreamConsumer
     """
 
     completed = False  # Set once request is completed.
@@ -131,9 +130,10 @@ class HTTPRequestParser(object):
                     'exceeds max_body of %s' % max_body)
                 self.completed = True
             elif br.error:
+                # garbage in chunked encoding input probably
                 self.error = br.error
                 self.completed = True
-            if br.completed:
+            elif br.completed:
                 self.completed = True
             return consumed
 

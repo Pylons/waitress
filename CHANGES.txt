@@ -1,3 +1,29 @@
+Next release
+------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Set up logging by calling logging.basicConfig() when ``serve`` is called
+  (show tracebacks and other warnings to console by default).
+
+- Disallow WSGI applications to set "hop-by-hop" headers (Connection,
+  Transfer-Encoding, etc).
+
+- Don't treat 304 status responses specially in HTTP/1.1 mode.
+
+- Remove out of date ``interfaces.py`` file.
+
+- Normalize logging (all output is now sent to the ``waitress`` logger rather
+  than in degenerate cases some output being sent directly to stderr).
+
+Features
+~~~~~~~~
+
+- Support HTTP/1.1 ``Transfer-Encoding: chunked`` responses.
+
+- Slightly better docs about logging.
+
 0.1 (2011-12-30)
 ----------------
 

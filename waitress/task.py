@@ -15,7 +15,6 @@
 import socket
 import sys
 import time
-import traceback
 
 from waitress.compat import (
     tobytes,
@@ -27,6 +26,7 @@ from waitress.compat import (
 
 from waitress.utilities import (
     build_http_date,
+    logger,
     )
 
 rename_headers = {
@@ -35,17 +35,27 @@ rename_headers = {
     'CONNECTION'     : 'CONNECTION_TYPE',
     }
 
+hop_by_hop = frozenset((
+    'connection',
+    'keep-alive',
+    'proxy-authenticate',
+    'proxy-authorization',
+    'te',
+    'trailers',
+    'transfer-encoding',
+    'upgrade'
+    ))
+
 class JustTesting(Exception):
     pass
 
 class ThreadedTaskDispatcher(object):
     """A Task Dispatcher that creates a thread for each task.
-    See ITaskDispatcher.
     """
 
     stop_count = 0  # Number of threads that will stop soon.
-    stderr = sys.stderr
     start_new_thread = thread.start_new_thread
+    logger = logger
 
     def __init__(self):
         self.threads = {}  # { thread number -> 1 }
@@ -63,8 +73,8 @@ class ThreadedTaskDispatcher(object):
                 try:
                     task.service()
                 except Exception as e:
-                    traceback.print_exc(None, self.stderr)
-                    self.stderr.flush()
+                    self.logger.exception(
+                        'Exception when servicing %r' % task)
                     if isinstance(e, JustTesting):
                         break
         finally:
@@ -77,7 +87,6 @@ class ThreadedTaskDispatcher(object):
                 mlock.release()
 
     def set_thread_count(self, count):
-        """See waitress.interfaces.ITaskDispatcher"""
         mlock = self.thread_mgmt_lock
         mlock.acquire()
         try:
@@ -103,7 +112,6 @@ class ThreadedTaskDispatcher(object):
             mlock.release()
 
     def add_task(self, task):
-        """See waitress.interfaces.ITaskDispatcher"""
         try:
             task.defer()
             self.queue.put(task)
@@ -112,15 +120,13 @@ class ThreadedTaskDispatcher(object):
             raise
 
     def shutdown(self, cancel_pending=True, timeout=5):
-        """See waitress.interfaces.ITaskDispatcher"""
         self.set_thread_count(0)
         # Ensure the threads shut down.
         threads = self.threads
         expiration = time.time() + timeout
         while threads:
             if time.time() >= expiration:
-                self.stderr.write("%d thread(s) still running" % len(threads))
-                self.stderr.flush()
+                self.logger.warning("%d thread(s) still running" % len(threads))
                 break
             time.sleep(0.1)
         if cancel_pending:
@@ -145,6 +151,8 @@ class Task(object):
     content_bytes_written = 0
     logged_write_excess = False
     complete = False
+    chunked_response = False
+    logger = logger
 
     def __init__(self, channel, request):
         self.channel = channel
@@ -157,7 +165,6 @@ class Task(object):
         self.version = version
 
     def service(self):
-        """See waitress.interfaces.ITask"""
         try:
             try:
                 self.start()
@@ -171,11 +178,9 @@ class Task(object):
             pass
 
     def cancel(self):
-        """See waitress.interfaces.ITask"""
         self.close_on_finish = True
 
     def defer(self):
-        """See waitress.interfaces.ITask"""
         pass
 
     def build_response_header(self):
@@ -183,26 +188,23 @@ class Task(object):
         # Figure out whether the connection should be closed.
         connection = self.request.headers.get('CONNECTION', '').lower()
         response_headers = self.response_headers
-        connection_header = None
         content_length_header = None
-        transfer_encoding_header = None
         date_header = None
         server_header = None
+        connection_close_header = None
 
         for i, (headername, headerval) in enumerate(response_headers):
             headername = '-'.join(
                 [x.capitalize() for x in headername.split('-')]
                 )
-            if headername == 'Connection':
-                connection_header = headerval.lower()
             if headername == 'Content-Length':
                 content_length_header = headerval
-            if headername == 'Transfer-Encoding':
-                transfer_encoding_header = headerval.lower()
             if headername == 'Date':
                 date_header = headerval
             if headername == 'Server':
                 server_header = headerval
+            if headername == 'Connection':
+                connection_close_header = headerval.lower()
             # replace with properly capitalized version
             response_headers[i] = (headername, headerval)
 
@@ -213,7 +215,7 @@ class Task(object):
                 )
 
         def close_on_finish():
-            if connection_header != 'close':
+            if connection_close_header is None:
                 response_headers.append(('Connection', 'close'))
             self.close_on_finish = True
 
@@ -221,27 +223,24 @@ class Task(object):
             if connection == 'keep-alive':
                 if not content_length_header:
                     close_on_finish()
-                elif not connection_header:
+                else:
                     response_headers.append(('Connection', 'Keep-Alive'))
             else:
                 close_on_finish()
+
         elif version == '1.1':
-            if connection_header == 'close':
-                self.close_on_finish = True # shortcut doesnt call closure
-            elif connection == 'close':
+            if connection == 'close':
                 close_on_finish()
-            elif transfer_encoding_header:
-                if transfer_encoding_header != 'chunked':
+
+            if not content_length_header:
+                response_headers.append(('Transfer-Encoding', 'chunked'))
+                self.chunked_response = True
+                if not self.close_on_finish:
                     close_on_finish()
-            elif self.status[:3] == '304':
-                # Replying with headers only.
-                pass
-            elif not content_length_header:
-                close_on_finish()
+
             # under HTTP 1.1 keep-alive is default, no need to set the header
         else:
-            # Close if unrecognized HTTP version.
-            close_on_finish()
+            raise AssertionError('neither HTTP/1.0 or HTTP/1.1')
 
         # Set the Server and Date field, if not yet specified. This is needed
         # if the server is used as a proxy.
@@ -265,6 +264,9 @@ class Task(object):
     def finish(self):
         if not self.wrote_header:
             self.write(b'')
+        if self.chunked_response:
+            # not self.write, it will chunk it!
+            self.channel.write(b'0\r\n\r\n')
 
     def write(self, data):
         if not self.complete:
@@ -278,15 +280,19 @@ class Task(object):
         if data:
             towrite = data
             cl = self.content_length
-            if cl != -1:
+            if self.chunked_response:
+                # use chunked encoding response
+                towrite = tobytes(hex(len(data))[2:].upper()) + b'\r\n'
+                towrite += data + b'\r\n'
+            elif cl != -1:
                 towrite = data[:cl-self.content_bytes_written]
-            if towrite != data and not self.logged_write_excess:
-                self.channel.server.log_info(
-                    'written content exceeded the number of bytes '
-                    'specified by Content-Length header (%s)' % cl)
-                self.logged_write_excess = True
-            if towrite:
                 self.content_bytes_written += len(towrite)
+                if towrite != data and not self.logged_write_excess:
+                    self.logger.warning(
+                        'application-written content exceeded the number of '
+                        'bytes specified by Content-Length header (%s)' % cl)
+                    self.logged_write_excess = True
+            if towrite:
                 channel.write(towrite)
 
 class ErrorTask(Task):
@@ -298,15 +304,17 @@ class ErrorTask(Task):
         tag = '\r\n\r\n(generated by waitress)'
         body = body + tag
         self.status = '%s %s' % (e.code, e.reason)
-        self.response_headers.append(('Content-Length', str(len(body))))
+        cl = len(body)
+        self.content_length = cl
+        self.response_headers.append(('Content-Length', str(cl)))
         self.response_headers.append(('Content-Type', 'text/plain'))
         self.response_headers.append(('Connection', 'close'))
+        self.close_on_finish = True
         self.write(tobytes(body))
 
 class WSGITask(Task):
     """A WSGI task accepts a request and writes to a channel.
 
-       See ITask, IHeaderOutput.
     """
 
     environ = None
@@ -343,17 +351,19 @@ class WSGITask(Task):
             for k, v in headers:
                 if not k.__class__ is str:
                     raise AssertionError(
-                        'Header name %r is not a string in %s' % (k, (k, v))
+                        'Header name %r is not a string in %r' % (k, (k, v))
                         )
                 if not v.__class__ is str:
                     raise AssertionError(
-                        'Header value %r is not a string in %s' % (v, (k, v))
+                        'Header value %r is not a string in %r' % (v, (k, v))
                         )
-                if k in ('content-length', 'Content-Length', 'Content-length',
-                         'CONTENT-LENGTH'):
-                    # reduce funccalls by not calling .lower at small risk of
-                    # being wrong
+                kl = k.lower()
+                if kl == 'content-length':
                     self.content_length = int(v)
+                elif kl in hop_by_hop:
+                    raise AssertionError(
+                        '%s is a "hop-by-hop" header; it cannot be used by '
+                        'a WSGI application (see PEP 3333)' % k)
 
             self.response_headers.extend(headers)
 
@@ -393,11 +403,10 @@ class WSGITask(Task):
                     # waiting for more data when there are too few bytes
                     # to service content-length
                     self.close_on_finish = True
-                    self.channel.server.log_info(
-                        'app_iter returned too few bytes (%s) '
-                        'for specified Content-Length (%s)' % (
-                            self.content_bytes_written,
-                            cl)
+                    self.logger.warning(
+                        'appplication returned too few bytes (%s) '
+                        'for specified Content-Length (%s) via app_iter' % (
+                            self.content_bytes_written, cl),
                         )
         finally:
             if hasattr(app_iter, 'close'):

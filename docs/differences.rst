@@ -24,7 +24,7 @@ Differences from ``zope.server``
   added).
 
 - Supports convenience ``waitress.serve`` function (e.g. ``from waitress
-  import serve; serve(app)`` and convenience ``server.serve()`` function.
+  import serve; serve(app)`` and convenience ``server.run()`` function.
 
 - Returns a "real" write method from start_response.
 

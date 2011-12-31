@@ -87,11 +87,9 @@ class WSGIServer(logging_dispatcher, object):
         self.socket.listen(self.adj.backlog)  # Get around asyncore NT limit
 
     def add_task(self, task):
-        """See waitress.interfaces.ITaskDispatcher"""
         self.task_dispatcher.add_task(task)
 
     def readable(self):
-        """See waitress.interfaces.IDispatcher"""
         now = time.time()
         if now >= self.next_channel_cleanup:
             self.next_channel_cleanup = now + self.adj.cleanup_interval
@@ -99,19 +97,15 @@ class WSGIServer(logging_dispatcher, object):
         return (self.accepting and len(self._map) < self.adj.connection_limit)
 
     def writable(self):
-        """See waitress.interfaces.IDispatcher"""
         return False
 
     def handle_read(self):
-        """See waitress.interfaces.IDispatcherEventHandler"""
         pass
 
     def handle_connect(self):
-        """See waitress.interfaces.IDispatcherEventHandler"""
         pass
 
     def handle_accept(self):
-        """See waitress.interfaces.IDispatcherEventHandler"""
         try:
             v = self.accept()
             if v is None:
@@ -123,8 +117,8 @@ class WSGIServer(logging_dispatcher, object):
             # address family is unknown.  We don't want the whole server
             # to shut down because of this.
             if self.adj.log_socket_errors:
-                self.log_info('warning: server accept() threw an exception',
-                              'warning')
+                self.logger.warning('server accept() threw an exception',
+                                    exc_info=True)
             return
         for (level, optname, value) in self.adj.socket_options:
             conn.setsockopt(level, optname, value)

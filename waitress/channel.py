@@ -248,7 +248,8 @@ class HTTPChannel(logging_dispatcher, object):
                 if self.adj.expose_tracebacks:
                     body = traceback.format_exc()
                 else:
-                    body = 'Internal server error'
+                    body = ('The server encountered an unexpected internal '
+                            'server error')
                 request = self.parser_class(self.adj)
                 request.error = InternalServerError(body)
                 task = self.error_task_class(self, request)

@@ -14,17 +14,17 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(inst.threads, {})
 
     def test_handler_thread_task_raises(self):
-        from waitress.compat import NativeIO
         from waitress.task import JustTesting
         inst = self._makeOne()
         inst.threads[0] = True
-        inst.stderr = NativeIO()
+        inst.logger = DummyLogger()
         task = DummyTask(JustTesting)
+        inst.logger = DummyLogger()
         inst.queue.put(task)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
         self.assertEqual(inst.threads, {})
-        self.assertTrue(inst.stderr.getvalue())
+        self.assertTrue(len(inst.logger.logged), 1)
 
     def test_set_thread_count_increase(self):
         inst = self._makeOne()
@@ -72,14 +72,13 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertTrue(task.cancelled)
 
     def test_shutdown_one_thread(self):
-        from waitress.compat import NativeIO
         inst = self._makeOne()
         inst.threads[0] = 1
-        inst.stderr = NativeIO()
+        inst.logger = DummyLogger()
         task = DummyTask()
         inst.queue.put(task)
         self.assertEqual(inst.shutdown(timeout=.01), True)
-        self.assertEqual(inst.stderr.getvalue(), '1 thread(s) still running')
+        self.assertEqual(inst.logger.logged, ['1 thread(s) still running'])
         self.assertEqual(task.cancelled, True)
 
     def test_shutdown_no_threads(self):
@@ -115,6 +114,12 @@ class TestTask(unittest.TestCase):
         inst = self._makeOne()
         self.assertEqual(inst.defer(), None)
 
+    def test_build_response_header_bad_http_version(self):
+        inst = self._makeOne()
+        inst.request = DummyParser()
+        inst.version = '8.4'
+        self.assertRaises(AssertionError, inst.build_response_header)
+
     def test_build_response_header_v10_keepalive_no_content_length(self):
         inst = self._makeOne()
         inst.request = DummyParser()
@@ -136,6 +141,7 @@ class TestTask(unittest.TestCase):
         inst.request.headers['CONNECTION'] = 'keep-alive'
         inst.response_headers = [('Content-Length', '10')]
         inst.version = '1.0'
+        inst.content_length = 0
         result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
@@ -146,21 +152,6 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[4], b'Server: waitress')
         self.assertEqual(inst.close_on_finish, False)
 
-    def test_build_response_header_v11_connection_closed_by_app(self):
-        inst = self._makeOne()
-        inst.request = DummyParser()
-        inst.version = '1.1'
-        inst.response_headers = [('Connection', 'close')]
-        result = inst.build_response_header()
-        lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
-        self.assertEqual(lines[1], b'Connection: close')
-        self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: waitress')
-        self.assertTrue(('Connection', 'close') in inst.response_headers)
-        self.assertEqual(inst.close_on_finish, True)
-
     def test_build_response_header_v11_connection_closed_by_client(self):
         inst = self._makeOne()
         inst.request = DummyParser()
@@ -168,11 +159,12 @@ class TestTask(unittest.TestCase):
         inst.request.headers['CONNECTION'] = 'close'
         result = inst.build_response_header()
         lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: waitress')
+        self.assertEqual(lines[4], b'Transfer-Encoding: chunked')
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
@@ -183,18 +175,18 @@ class TestTask(unittest.TestCase):
         inst.version = '1.1'
         result = inst.build_response_header()
         lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(lines), 5)
         self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: waitress')
+        self.assertEqual(lines[4], b'Transfer-Encoding: chunked')
         self.assertTrue(('Connection', 'close') in inst.response_headers)
         self.assertEqual(inst.close_on_finish, True)
 
-    def test_build_response_header_v11_transfer_encoding_nonchunked(self):
+    def test_build_response_header_v11_200_no_content_length(self):
         inst = self._makeOne()
         inst.request = DummyParser()
-        inst.response_headers = [('Transfer-Encoding', 'notchunked')]
         inst.version = '1.1'
         result = inst.build_response_header()
         lines = filter_lines(result)
@@ -203,62 +195,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[1], b'Connection: close')
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: waitress')
-        self.assertEqual(lines[4], b'Transfer-Encoding: notchunked')
-        self.assertTrue(('Connection', 'close') in inst.response_headers)
-        self.assertEqual(inst.close_on_finish, True)
-
-    def test_build_response_header_v11_transfer_encoding_chunked(self):
-        inst = self._makeOne()
-        inst.request = DummyParser()
-        inst.response_headers = [('Transfer-Encoding', 'chunked')]
-        inst.version = '1.1'
-        result = inst.build_response_header()
-        lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
-        self.assertTrue(lines[1].startswith(b'Date:'))
-        self.assertEqual(lines[2], b'Server: waitress')
-        self.assertEqual(lines[3], b'Transfer-Encoding: chunked')
-        self.assertEqual(inst.close_on_finish, False)
-
-    def test_build_response_header_v11_304_headersonly(self):
-        inst = self._makeOne()
-        inst.request = DummyParser()
-        inst.status = '304 OK'
-        inst.version = '1.1'
-        result = inst.build_response_header()
-        lines = filter_lines(result)
-        self.assertEqual(len(lines), 3)
-        self.assertEqual(lines[0], b'HTTP/1.1 304 OK')
-        self.assertTrue(lines[1].startswith(b'Date:'))
-        self.assertEqual(lines[2], b'Server: waitress')
-        self.assertEqual(inst.close_on_finish, False)
-
-    def test_build_response_header_v11_200_no_content_length(self):
-        inst = self._makeOne()
-        inst.request = DummyParser()
-        inst.version = '1.1'
-        result = inst.build_response_header()
-        lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], b'HTTP/1.1 200 OK')
-        self.assertEqual(lines[1], b'Connection: close')
-        self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: waitress')
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(('Connection', 'close') in inst.response_headers)
-
-    def test_build_response_header_unrecognized_http_version(self):
-        inst = self._makeOne()
-        inst.request = DummyParser()
-        inst.version = '8.1'
-        result = inst.build_response_header()
-        lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], b'HTTP/8.1 200 OK')
-        self.assertEqual(lines[1], b'Connection: close')
-        self.assertTrue(lines[2].startswith(b'Date:'))
-        self.assertEqual(lines[3], b'Server: waitress')
+        self.assertEqual(lines[4], b'Transfer-Encoding: chunked')
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
@@ -320,10 +257,18 @@ class TestTask(unittest.TestCase):
         inst.finish()
         self.assertFalse(inst.channel.written)
 
+    def test_finish_chunked_response(self):
+        inst = self._makeOne()
+        inst.wrote_header = True
+        inst.chunked_response = True
+        inst.finish()
+        self.assertEqual(inst.channel.written, b'0\r\n\r\n')
+
     def test_write_wrote_header(self):
         inst = self._makeOne()
         inst.wrote_header = True
         inst.complete = True
+        inst.content_length = 3
         inst.write(b'abc')
         self.assertEqual(inst.channel.written, b'abc')
 
@@ -339,14 +284,24 @@ class TestTask(unittest.TestCase):
         inst = self._makeOne()
         self.assertRaises(RuntimeError, inst.write, b'')
 
+    def test_write_chunked_response(self):
+        inst = self._makeOne()
+        inst.wrote_header = True
+        inst.chunked_response = True
+        inst.complete = True
+        inst.write(b'abc')
+        self.assertEqual(inst.channel.written, b'3\r\nabc\r\n')
+
     def test_write_preexisting_content_length(self):
         inst = self._makeOne()
         inst.wrote_header = True
         inst.complete = True
         inst.content_length = 1
+        inst.logger = DummyLogger()
         inst.write(b'abc')
         self.assertTrue(inst.channel.written)
         self.assertEqual(inst.logged_write_excess, True)
+        self.assertEqual(len(inst.logger.logged), 1)
 
 class TestWSGITask(unittest.TestCase):
     def _makeOne(self, channel=None, request=None):
@@ -422,6 +377,13 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         self.assertRaises(AssertionError, inst.execute)
 
+    def test_execute_hopbyhop_header(self):
+        def app(environ, start_response):
+            start_response('200 OK', [('Connection', 'close')])
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        self.assertRaises(AssertionError, inst.execute)
+
     def test_execute_bad_status_value(self):
         def app(environ, start_response):
             start_response(None, [])
@@ -472,9 +434,10 @@ class TestWSGITask(unittest.TestCase):
             return [b'abc']
         inst = self._makeOne()
         inst.channel.server.application = app
+        inst.logger = DummyLogger()
         inst.execute()
         self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(inst.channel.server.logged)
+        self.assertTrue(len(inst.logger.logged), 1)
 
     def test_execute_app_returns_too_few_bytes(self):
         def app(environ, start_response):
@@ -482,9 +445,10 @@ class TestWSGITask(unittest.TestCase):
             return [b'a']
         inst = self._makeOne()
         inst.channel.server.application = app
+        inst.logger = DummyLogger()
         inst.execute()
         self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(inst.channel.server.logged)
+        self.assertTrue(len(inst.logger.logged), 1)
 
     def test_execute_app_returns_closeable(self):
         class closeable(list):
@@ -626,8 +590,6 @@ class DummyServer(object):
     effective_port = 80
     def __init__(self):
         self.adj = DummyAdj()
-    def log_info(self, msg):
-        self.logged = msg
 
 class DummyChannel(object):
     closed_when_done = False
@@ -658,4 +620,12 @@ class DummyParser(object):
 
 def filter_lines(s):
     return list(filter(None, s.split(b'\r\n')))
+
+class DummyLogger(object):
+    def __init__(self):
+        self.logged = []
+    def warning(self, msg):
+        self.logged.append(msg)
+    def exception(self, msg):
+        self.logged.append(msg)
 

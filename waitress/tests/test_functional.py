@@ -1,5 +1,6 @@
 import os
 import socket
+import string
 import subprocess
 import sys
 import time
@@ -25,19 +26,13 @@ class SubprocessTests(object):
         time.sleep(.2)
         if self.proc.returncode is not None: # pragma: no cover
             raise RuntimeError('%s didnt start' % str(cmd))
-        self.conn = httplib.HTTPConnection('%s:%s' % (self.host, self.port))
 
     def stop_subprocess(self):
         time.sleep(.2)
         if self.proc.returncode is None:
-            self.conn.close()
+            #self.conn.close()
             self.proc.terminate()
         self.sock.close()
-
-    def getresponse(self, status=200):
-        resp = self.conn.getresponse()
-        self.assertEqual(resp.status, status)
-        return resp
 
     def assertline(self, line, status, reason, version):
         v, s, r = (x.strip() for x in line.split(None, 2))
@@ -54,32 +49,50 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         self.stop_subprocess()
 
     def test_date_and_server(self):
-        self.conn.request('GET', '/')
-        resp = self.getresponse()
-        resp.read()
-        self.assertEqual(resp.getheader('Server'), 'waitress')
-        self.assertTrue(resp.getheader('Date'))
+        to_send = ("GET / HTTP/1.0\n"
+                   "Content-Length: 0\n\n")
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        self.assertEqual(headers.get('server'), 'waitress')
+        self.assertTrue(headers.get('date'))
 
     def test_send_with_body(self):
-        self.conn.request('GET', '/', b'hello')
-        resp = self.getresponse()
-        self.assertEqual(resp.getheader('Content-Length'), '5')
-        body = resp.read()
-        self.assertEqual(body, b'hello')
+        to_send = ("GET / HTTP/1.0\n"
+                   "Content-Length: 5\n\n")
+        to_send += 'hello'
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        self.assertEqual(headers.get('content-length'), '5')
+        self.assertEqual(response_body, b'hello')
 
     def test_send_empty_body(self):
-        self.conn.request('GET', '/')
-        resp = self.getresponse()
-        self.assertEqual(resp.getheader('Content-Length'), '0')
-        body = resp.read()
-        self.assertEqual(body, b'')
+        to_send = ("GET / HTTP/1.0\n"
+                   "Content-Length: 0\n\n")
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        self.assertEqual(headers.get('content-length'), '0')
+        self.assertEqual(response_body, b'')
 
     def test_multiple_requests_with_body(self):
         for x in range(3):
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.test_send_with_body()
 
     def test_multiple_requests_without_body(self):
         for x in range(3):
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.test_send_empty_body()
 
     def test_without_crlf(self):
@@ -93,27 +106,33 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             )
         self.sock.connect((self.host, self.port))
         self.sock.send(s)
-        response = httplib.HTTPResponse(self.sock)
-        response.begin()
-        self.assertEqual(int(response.status), 200)
-        length = int(response.getheader('Content-Length', '0'))
-        response_body = response.read(length)
-        self.assertEqual(length, len(data))
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        headers['content-length']
+        self.assertEqual(len(response_body), len(data))
         self.assertEqual(response_body, tobytes(data))
 
     def test_large_body(self):
         # 1024 characters.
-        s = tobytes('This string has 32 characters.\r\n' * 32)  
-        self.conn.request('GET', '/', s)
-        resp = self.getresponse()
-        self.assertEqual(resp.getheader('Content-Length'), '1024')
-        body = resp.read()
-        self.assertEqual(body, s)
+        body = 'This string has 32 characters.\r\n' * 32
+        s = tobytes(
+            "GET / HTTP/1.0\n"
+            "Content-Length: %d\n"
+            "\n"
+            "%s" % (len(body), body)
+            )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(s)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        self.assertEqual(headers.get('content-length'), '1024')
+        self.assertEqual(response_body, tobytes(body))
 
     def test_many_clients(self):
         conns = []
         for n in range(50):
-            #print 'open', n, clock()
             h = httplib.HTTPConnection(self.host, self.port)
             h.request("GET", "/", headers={"Accept": "text/plain"})
             conns.append(h)
@@ -126,29 +145,36 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             response.read()
 
     def test_chunking_request_without_content(self):
-        self.conn.request("GET", "/", headers={"Accept": "text/plain",
-                                               "Transfer-Encoding": "chunked"})
-        self.conn.send(b"0\r\n\r\n")
-        response = self.conn.getresponse()
-        self.assertEqual(int(response.status), 200)
-        response_body = response.read()
+        header = tobytes(
+            "GET / HTTP/1.1\n"
+            "Transfer-Encoding: chunked\n\n"
+            )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(header)
+        self.sock.send(b"0\r\n\r\n")
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
         self.assertEqual(response_body, b'')
 
     def test_chunking_request_with_content(self):
         control_line = b"20;\r\n"  # 20 hex = 32 dec
         s = b'This string has 32 characters.\r\n'
-        expect = s * 12
-
-        self.conn.request("GET", "/", headers={"Accept": "text/plain",
-                                               "Transfer-Encoding": "chunked"})
+        expected = s * 12
+        header = tobytes(
+            "GET / HTTP/1.1\n"
+            "Transfer-Encoding: chunked\n\n"
+            )
+        self.sock.connect((self.host, self.port))
+        self.sock.send(header)
+        fp = self.sock.makefile('rb', 0)
         for n in range(12):
-            self.conn.send(control_line)
-            self.conn.send(s)
-        self.conn.send(b"0\r\n\r\n")
-        response = self.conn.getresponse()
-        self.assertEqual(int(response.status), 200)
-        response_body = response.read()
-        self.assertEqual(response_body, expect)
+            self.sock.send(control_line)
+            self.sock.send(s)
+        self.sock.send(b"0\r\n\r\n")
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        self.assertEqual(response_body, expected)
 
     def test_broken_chunked_encoding(self):
         control_line = "20;\r\n"  # 20 hex = 32 dec
@@ -170,6 +196,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(headers['content-type'], 'text/plain')
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_keepalive_http_10(self):
@@ -368,6 +395,7 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(response_body, tobytes('abcdefghi'))
         # remote closed connection (despite keepalive header); not sure why
         # first send succeeds
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_long_body(self):
@@ -408,23 +436,129 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
     def tearDown(self):
         self.stop_subprocess()
 
-    def test_generator(self):
-        self.conn.request("GET", "/generator",
-                          headers={"Connection": "Keep-Alive",
-                                   "Content-Length": "0"})
-        resp = self.getresponse()
-        self.assertEqual(resp.getheader('Content-Length'), None)
-        self.assertEqual(resp.getheader('Connection'), 'close')
-        self.assertEqual(resp.read(), b'abcdefghi')
+    def test_http10_generator(self):
+        body = string.ascii_letters
+        to_send = ("GET / HTTP/1.0\n"
+                   "Connection: Keep-Alive\n"
+                   "Content-Length: %d\n\n" % len(body))
+        to_send += body
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        self.assertEqual(headers.get('content-length'), None)
+        self.assertEqual(headers.get('connection'), 'close')
+        self.assertEqual(response_body, tobytes(body))
+        # remote closed connection (despite keepalive header), because
+        # generators cannot have a content-length divined
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
-    def test_list(self):
-        self.conn.request("GET", "/list",
-                          headers={"Connection": "Keep-Alive",
-                                   "Content-Length": "0"})
-        resp = self.getresponse()
-        self.assertEqual(resp.getheader('Content-Length'), '9')
-        self.assertEqual(resp.getheader('Connection'), None)
-        self.assertEqual(resp.read(), b'abcdefghi')
+    def test_http10_list(self):
+        body = string.ascii_letters
+        to_send = ("GET /list HTTP/1.0\n"
+                   "Connection: Keep-Alive\n"
+                   "Content-Length: %d\n\n" % len(body))
+        to_send += body
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        self.assertEqual(headers['content-length'], str(len(body)))
+        self.assertEqual(headers.get('connection'), 'Keep-Alive')
+        self.assertEqual(response_body, tobytes(body))
+        # remote keeps connection open because it divined the content length
+        # from a length-1 list
+        self.sock.send(to_send)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+
+    def test_http10_listlentwo(self):
+        body = string.ascii_letters
+        to_send = ("GET /list_lentwo HTTP/1.0\n"
+                   "Connection: Keep-Alive\n"
+                   "Content-Length: %d\n\n" % len(body))
+        to_send += body
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        self.assertEqual(headers.get('content-length'), None)
+        self.assertEqual(headers.get('connection'), 'close')
+        self.assertEqual(response_body, tobytes(body))
+        # remote closed connection (despite keepalive header), because
+        # lists of length > 1 cannot have their content length divined
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_http11_generator(self):
+        body = string.ascii_letters
+        to_send = ("GET / HTTP/1.1\n"
+                   "Content-Length: %s\n\n" % len(body))
+        to_send += body
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb')
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        expected = b''
+        for chunk in chunks(body, 10):
+            expected += tobytes(
+                '%s\r\n%s\r\n' % (str(hex(len(chunk))[2:].upper()), chunk)
+                )
+        expected += b'0\r\n\r\n'
+        self.assertEqual(response_body, expected)
+        # connection is always closed at the end of a chunked response
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_http11_list(self):
+        body = string.ascii_letters
+        to_send = ("GET /list HTTP/1.1\n"
+                   "Content-Length: %d\n\n" % len(body))
+        to_send += body
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        self.assertEqual(headers['content-length'], str(len(body)))
+        self.assertEqual(response_body, tobytes(body))
+        # remote keeps connection open because it divined the content length
+        # from a length-1 list
+        self.sock.send(to_send)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+
+    def test_http11_listlentwo(self):
+        body = string.ascii_letters
+        to_send = ("GET /list_lentwo HTTP/1.1\n"
+                   "Content-Length: %s\n\n" % len(body))
+        to_send += body
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb')
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        expected = b''
+        for chunk in (body[0], body[1:]):
+            expected += tobytes(
+                '%s\r\n%s\r\n' % (str(hex(len(chunk))[2:].upper()), chunk)
+                )
+        expected += b'0\r\n\r\n'
+        self.assertEqual(response_body, expected)
+        # connection is always closed at the end of a chunked response
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
 class WriteCallbackTests(SubprocessTests, unittest.TestCase):
     def setUp(self):
@@ -455,6 +589,7 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(len(response_body), cl-1)
         self.assertEqual(response_body, tobytes('abcdefgh'))
         # remote closed connection (despite keepalive header)
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_long_body(self):
@@ -520,8 +655,8 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         content_length = headers.get('content-length')
         self.assertEqual(content_length, None)
         self.assertEqual(response_body, tobytes('abcdefghi'))
-        # remote closed connection (despite keepalive header); not sure why
-        # first send succeeds
+        # remote closed connection (despite keepalive header)
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 class TooLargeTests(SubprocessTests, unittest.TestCase):
@@ -552,6 +687,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         # server trusts the content-length header; no pipelining,
         # so request fulfilled, extra bytes are thrown away
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_wrong_cl_http10_keepalive(self):
@@ -575,6 +711,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http10(self):
@@ -590,6 +727,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # extra bytes are thrown away (no pipelining), connection closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http10_keepalive(self):
@@ -613,6 +751,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_wrong_cl_http11(self):
@@ -636,6 +775,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_wrong_cl_http11_connclose(self):
@@ -652,6 +792,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http11(self):
@@ -677,6 +818,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_with_no_cl_http11_connclose(self):
@@ -693,6 +835,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_chunked_encoding(self):
@@ -713,6 +856,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(headers['content-type'], 'text/plain')
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 class TestInternalServerError(SubprocessTests, unittest.TestCase):
@@ -735,6 +879,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_after_start_response(self):
@@ -749,6 +894,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_after_write_cb(self):
@@ -761,6 +907,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
         self.assertEqual(response_body, b'')
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_in_generator(self):
@@ -773,6 +920,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
         self.assertEqual(response_body, b'')
         # connection has been closed
+        self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 def parse_headers(fp):
@@ -796,7 +944,7 @@ def read_http(fp): # pragma: no cover
     try:
         response_line = fp.readline()
     except socket.error as exc:
-        if get_errno(exc) == 10053:
+        if get_errno(exc) in (10053, 104):
             raise ConnectionClosed
         raise
     if not response_line:
@@ -848,3 +996,9 @@ def get_errno(exc): # pragma: no cover
         return exc.args[0]
     except IndexError:
         return None
+
+def chunks(l, n):
+    """ Yield successive n-sized chunks from l.
+    """
+    for i in range(0, len(l), n):
+        yield l[i:i+n]
