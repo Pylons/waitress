@@ -944,7 +944,7 @@ def read_http(fp): # pragma: no cover
     try:
         response_line = fp.readline()
     except socket.error as exc:
-        if get_errno(exc) in (10053, 104):
+        if get_errno(exc) in (10053, 10054, 104):
             raise ConnectionClosed
         raise
     if not response_line:
