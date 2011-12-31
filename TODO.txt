@@ -9,9 +9,6 @@
 - Anticipate multivalue and single-value-only headers in request headers in
   parser.py.
 
-- Get rid of expectations that applications can set transfer-encoding and
-  other hop-by-hop headers.
-
 - Timeout functests.
 
 - Complex pipelining functests (with intermediate connection: close).
@@ -20,6 +17,3 @@
 
 - Killthreads support.
 
-- Mention in docs that server doesn't support SSL.
-
-- Transfer-Encoding: chunked responses.
