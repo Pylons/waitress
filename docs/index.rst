@@ -195,9 +195,9 @@ Known Issues
 
 - Does not support the ``wsgi.file_wrapper`` protocol.
 
-- Does not yet support IPv6.
+- Does not yet support IPv6 natively.
 
-- Does not support SSL.
+- Does not support SSL natively.
 
 Support and Development
 -----------------------
