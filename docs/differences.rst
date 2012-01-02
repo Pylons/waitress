@@ -60,3 +60,4 @@ Differences from ``zope.server``
 - Supports HTTP/1.1 chunked responses when application doesn't set a
   Content-Length header.
 
+- Dont hang a thread up trying to send data to slow clients.
