@@ -171,7 +171,7 @@ class TestWSGIServer(unittest.TestCase):
     def test_maintenance(self):
         inst = self._makeOneWithMap()
         class DummyChannel(object):
-            task = None
+            requests = []
         zombie = DummyChannel()
         zombie.last_activity = 0
         zombie.running_tasks = False

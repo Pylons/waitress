@@ -266,7 +266,7 @@ class Task(object):
             self.write(b'')
         if self.chunked_response:
             # not self.write, it will chunk it!
-            self.channel.write(b'0\r\n\r\n')
+            self.channel.write_soon(b'0\r\n\r\n')
 
     def write(self, data):
         if not self.complete:
@@ -275,7 +275,7 @@ class Task(object):
         channel = self.channel
         if not self.wrote_header:
             rh = self.build_response_header()
-            channel.write(rh)
+            channel.write_soon(rh)
             self.wrote_header = True
         if data:
             towrite = data
@@ -293,7 +293,7 @@ class Task(object):
                         'bytes specified by Content-Length header (%s)' % cl)
                     self.logged_write_excess = True
             if towrite:
-                channel.write(towrite)
+                self.channel.write_soon(towrite)
 
 class ErrorTask(Task):
     """ An error task produces an error response """
@@ -392,9 +392,8 @@ class WSGITask(Task):
                             self.content_length = first_chunk_len
                 # transmit headers only after first iteration of the iterable
                 # that returns a non-empty bytestring (PEP 3333)
-                if not chunk:
-                    continue
-                self.write(chunk)
+                if chunk:
+                    self.write(chunk)
 
             cl = self.content_length
             if cl != -1:

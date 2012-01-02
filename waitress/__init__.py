@@ -3,7 +3,7 @@ import logging
 
 def serve(app, **kw):
     _server = kw.pop('_server', WSGIServer) # test shim
-    _quiet = kw.pop('_quiet', False)
+    _quiet = kw.pop('_quiet', False) # test shim
     if not _quiet: # pragma: no cover
         # idempotent if logging has already been set up
         logging.basicConfig()

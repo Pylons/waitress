@@ -78,8 +78,8 @@ class Adjustments(object):
     expose_tracebacks = False
 
     # The socket options to set on receiving a connection.  It is a list of
-    # (level, optname, value) tuples.  TCP_NODELAY is probably good for Zope,
-    # since Zope buffers data itself.
+    # (level, optname, value) tuples.  TCP_NODELAY disables the Nagle
+    # algorithm for writes (Waitress already buffers its writes).
     socket_options = [
         (socket.SOL_TCP, socket.TCP_NODELAY, 1),
         ]

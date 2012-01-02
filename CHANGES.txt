@@ -1,3 +1,23 @@
+Next release
+-----------
+
+Features
+~~~~~~~~
+
+- Dont hang a thread up trying to send data to slow clients.
+
+- Use self.logger to log socket errors instead of self.log_info (normalize).
+
+- Remove pointless handle_error method from channel.
+
+- Queue requests instead of tasks in a channel.
+
+Bug Fixes
+~~~~~~~~~
+
+- Expect: 100-continue responses were broken.
+
+
 0.2 (2011-12-31)
 ----------------
 

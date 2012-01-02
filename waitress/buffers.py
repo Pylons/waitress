@@ -13,8 +13,9 @@
 ##############################################################################
 """Buffers
 """
-
 from io import BytesIO
+
+from waitress.compat import thread
 
 # copy_bytes controls the size of temp. strings for shuffling data around.
 COPY_BYTES = 1 << 18  # 256K
@@ -149,6 +150,7 @@ class OverflowableBuffer(object):
     def __init__(self, overflow):
         # overflow is the maximum to be stored in a StringIO buffer.
         self.overflow = overflow
+        self.lock = thread.allocate_lock() # API
 
     def __len__(self):
         buf = self.buf

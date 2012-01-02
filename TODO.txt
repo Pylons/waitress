@@ -2,18 +2,12 @@
 
 - Speed tweaking.
 
-- Waitress version number in header.
-
-- Test paste server runner on windows.
-
 - Anticipate multivalue and single-value-only headers in request headers in
   parser.py.
 
 - Timeout functests.
 
 - Complex pipelining functests (with intermediate connection: close).
-
-- Get rid of overflowable inbuf.
 
 - Killthreads support.
 

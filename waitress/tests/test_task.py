@@ -601,7 +601,7 @@ class DummyChannel(object):
             server = DummyServer()
         self.server = server
         self.written = b''
-    def write(self, data):
+    def write_soon(self, data):
         self.written += data
         return len(data)
 
