@@ -1,6 +1,11 @@
 Next release
 ------------
 
+Features
+~~~~~~~~
+
+- Added "design" document to docs.
+
 Bug Fixes
 ~~~~~~~~~
 
