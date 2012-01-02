@@ -74,13 +74,19 @@ class HTTPChannel(logging_dispatcher, object):
         asyncore.dispatcher.__init__(self, sock, map=map)
 
     def writable(self):
-        return bool(self.outbuf)
+        # if there's data in the out buffer or we've been instructed to close
+        # the channel (possibly by our server maintenance logic), run
+        # handle_write
+        return bool(self.outbuf) or self.will_close
 
     def handle_write(self):
-        # Precondition: there's data in the out buffer to be sent
+        # Precondition: there's data in the out buffer to be sent, or
+        # there's a pending will_close request
         if not self.connected:
+            # we dont want to close the channel twice
             return
 
+        # try to flush any pending output
         if not self.requests:
             # 1. There are no running tasks, so we don't need to try to lock
             #    the outbuf before sending
@@ -116,6 +122,7 @@ class HTTPChannel(logging_dispatcher, object):
                 if self.adj.log_socket_errors:
                     self.logger.exception('Socket error')
                 self.will_close = True
+
         if self.will_close:
             self.handle_close()
 

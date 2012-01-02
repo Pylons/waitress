@@ -11,6 +11,8 @@ Bug Fixes
 
 - Minor resource cleanups during tests.
 
+- Channel timeout cleanup was broken.
+
 0.3 (2012-01-02)
 ----------------
 

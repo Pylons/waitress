@@ -29,6 +29,12 @@ class TestHTTPChannel(unittest.TestCase):
         inst.outbuf = ''
         self.assertFalse(inst.writable())
 
+    def test_writable_nothing_in_outbuf_will_close(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.outbuf = ''
+        inst.will_close = True
+        self.assertTrue(inst.writable())
+
     def test_handle_write_not_connected(self):
         inst, sock, map = self._makeOneWithMap()
         inst.outbuf = ''
