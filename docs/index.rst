@@ -180,6 +180,7 @@ Extended Documentation
 .. toctree::
    :maxdepth: 1
 
+   design.rst
    differences.rst
    api.rst
    arguments.rst
