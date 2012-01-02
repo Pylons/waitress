@@ -89,11 +89,13 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         for x in range(3):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.test_send_with_body()
+            self.sock.close()
 
     def test_multiple_requests_without_body(self):
         for x in range(3):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.test_send_empty_body()
+            self.sock.close()
 
     def test_without_crlf(self):
         data = "Echo\nthis\r\nplease"

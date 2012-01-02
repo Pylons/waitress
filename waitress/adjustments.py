@@ -19,22 +19,28 @@ import sys
 class Adjustments(object):
     """This class contains tunable parameters.
     """
-    # hostname or IP address
+    # hostname or IP address to listen on
     host = '0.0.0.0'
 
-    # TCP port
+    # TCP port to listen on
     port = 8080
 
-    # mumber of threads
+    # mumber of threads available for tasks
     threads = 4
 
-    # default wsgi url scheme
+    # default ``wsgi.url_scheme`` value
     url_scheme = 'http'
 
-    # server identity
+    # server identity (sent in Server: header)
     ident = 'waitress'
 
-    # backlog is the argument to pass to socket.listen().
+    # backlog is the value waitress passes to pass to socket.listen() This is
+    # the maximum number of incoming TCP connections that will wait in an OS
+    # queue for an available channel.  From listen(1): "If a connection
+    # request arrives when the queue is full, the client may receive an error
+    # with an indication of ECONNREFUSED or, if the underlying protocol
+    # supports retransmission, the request may be ignored so that a later
+    # reattempt at connection succeeds."
     backlog = 1024
 
     # recv_bytes is the argument to pass to socket.recv().
@@ -56,8 +62,16 @@ class Adjustments(object):
     # is conservative.
     inbuf_overflow = 524288
 
-    # Stop accepting new connections if too many are already active.
-    connection_limit = 1000
+    # Stop creating new channels if too many are already active (integer).
+    # Each channel consumes at least one file descriptor, and, depending on
+    # the input and output body sizes, potentially up to three.  The default
+    # is conservative, but you may need to increase the number of file
+    # descriptors available to the Waitress process on most platforms in
+    # order to safely change it (see ``ulimit -a`` "open files" setting).
+    # Note that this doesn't control the maximum number of TCP connections
+    # that can be waiting for processing; the ``backlog`` argument controls
+    # that.
+    connection_limit = 100
 
     # Minimum seconds between cleaning up inactive channels.
     cleanup_interval = 30

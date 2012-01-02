@@ -1,3 +1,16 @@
+Next release
+------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Set default ``connection_limit`` back to 100 for benefit of maximal
+  platform compatibility.
+
+- Normalize setting of ``last_activity`` during send.
+
+- Minor resource cleanups during tests.
+
 0.3 (2012-01-02)
 ----------------
 

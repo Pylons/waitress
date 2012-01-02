@@ -197,16 +197,20 @@ class HTTPChannel(logging_dispatcher, object):
         # Send as much data as possible to our client
         outbuf = self.outbuf
         outbuflen = len(outbuf)
+        sent = 0
         while outbuflen > 0:
             chunk = outbuf.get(self.adj.send_bytes)
             num_sent = self.send(chunk)
             if num_sent:
                 outbuf.skip(num_sent, True)
                 outbuflen -= num_sent
+                sent += num_sent
             else:
-                return False
-        self.last_activity = time.time()
-        return True
+                break
+        if sent:
+            self.last_activity = time.time()
+            return True
+        return False
 
     def handle_close(self):
         self.connected = False
@@ -245,7 +249,7 @@ class HTTPChannel(logging_dispatcher, object):
         return 0
 
     def service(self):
-        """Execute a pending task"""
+        """Execute all pending requests """
         with self.task_lock:
             while self.requests:
                 request = self.requests[0]

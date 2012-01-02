@@ -76,7 +76,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(inst.connected, False)
         self.assertEqual(sock.closed, True)
-        self.assertNotEqual(inst.last_activity, 0)
+        self.assertEqual(inst.last_activity, 0)
 
     def test_handle_write_no_requests_force_flush(self):
         inst, sock, map = self._makeOneWithMap()
@@ -162,7 +162,7 @@ class TestHTTPChannel(unittest.TestCase):
     def test__flush_some_empty_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
         result = inst._flush_some()
-        self.assertEqual(result, True)
+        self.assertEqual(result, False)
 
     def test__flush_some_full_outbuf_socket_returns_nonzero(self):
         inst, sock, map = self._makeOneWithMap()
