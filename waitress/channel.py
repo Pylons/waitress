@@ -252,6 +252,10 @@ class HTTPChannel(logging_dispatcher, object):
             # block here waiting for it because we're in a thread
             with self.outbuf.lock:
                 self.outbuf.append(data)
+            # XXX We might eventually need to pull the trigger here (to
+            # instruct select to stop blocking), but it slows things down so
+            # much that I'll hold off for now; "server push" on otherwise
+            # unbusy systems may suffer.
             return len(data)
         return 0
 
