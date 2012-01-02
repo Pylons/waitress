@@ -49,7 +49,7 @@ Differences from ``zope.server``
 
 - Ensures body total can not exceed a maximum size.
 
-- Broken chunked encoding bodies don't crash the server.
+- Broken chunked encoding request bodies don't crash the server.
 
 - Handles keepalive/pipelining properly (no out of order responses, no
   premature channel closes).
