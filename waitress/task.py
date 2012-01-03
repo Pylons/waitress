@@ -434,7 +434,7 @@ class WSGITask(Task):
         environ['SERVER_PROTOCOL'] = 'HTTP/%s' % self.version
         environ['SCRIPT_NAME'] = ''
         environ['PATH_INFO'] = '/' + path
-        environ['QUERY_STRING'] = request.query or ''
+        environ['QUERY_STRING'] = request.query
         environ['REMOTE_ADDR'] = channel.addr[0]
 
         for key, value in request.headers.items():

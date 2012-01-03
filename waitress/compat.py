@@ -2,11 +2,6 @@ import sys
 import types
 
 try:
-    from urllib import unquote
-except ImportError: # pragma: no cover
-    from urllib.parse import unquote
-
-try:
     import urlparse
 except ImportError: # pragma: no cover
     from urllib import parse as urlparse
@@ -28,6 +23,15 @@ else:
     text_type = unicode
     binary_type = str
     long = long
+
+if PY3: # pragma: no cover
+    from urllib.parse import unquote_to_bytes
+    def unquote_bytes_to_wsgi(bytestring):
+        return unquote_to_bytes(bytestring).decode('latin-1')
+else:
+    from urlparse import unquote as unquote_to_bytes
+    def unquote_bytes_to_wsgi(bytestring):
+        return unquote_to_bytes(bytestring)
 
 def text_(s, encoding='latin-1', errors='strict'):
     """ If ``s`` is an instance of ``binary_type``, return

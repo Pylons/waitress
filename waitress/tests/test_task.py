@@ -609,7 +609,7 @@ class DummyParser(object):
     version = '1.0'
     command = 'GET'
     path = '/'
-    query = None
+    query = ''
     url_scheme = 'http'
     expect_continue = False
     headers_finished = False

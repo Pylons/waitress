@@ -522,7 +522,7 @@ class DummyParser(object):
 
 class DummyRequest(object):
     error = None
-    uri = 'http://example.com'
+    path = '/'
     version = '1.0'
     def __init__(self):
         self.headers = {}

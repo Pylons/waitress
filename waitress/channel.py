@@ -272,7 +272,7 @@ class HTTPChannel(logging_dispatcher, object):
                     task.service()
                 except:
                     self.logger.exception('Exception when serving %s' %
-                                          task.request.uri)
+                                          task.request.path)
                     if not task.wrote_header:
                         if self.adj.expose_tracebacks:
                             body = traceback.format_exc()

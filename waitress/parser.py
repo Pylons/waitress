@@ -22,13 +22,16 @@ from io import BytesIO
 from waitress.compat import (
     tostr,
     urlparse,
-    unquote,
+    unquote_bytes_to_wsgi,
     )
+
 from waitress.buffers import OverflowableBuffer
+
 from waitress.receiver import (
     FixedStreamReceiver,
     ChunkedReceiver,
     )
+
 from waitress.utilities import (
     find_double_newline,
     RequestEntityTooLarge,
@@ -144,14 +147,15 @@ class HTTPRequestParser(object):
         """
         index = header_plus.find(b'\n')
         if index >= 0:
-            first_line = tostr(header_plus[:index].rstrip())
+            first_line = header_plus[:index].rstrip()
             header = header_plus[index + 1:]
         else:
-            first_line = tostr(header_plus.rstrip())
+            first_line = header_plus.rstrip()
             header = b''
-        self.first_line = first_line
 
-        lines = self.get_header_lines(header)
+        self.first_line = first_line # for testing
+
+        lines = get_header_lines(header)
 
         headers = self.headers
         for line in lines:
@@ -170,11 +174,16 @@ class HTTPRequestParser(object):
                     headers[key1] = tostr(value)
             # else there's garbage in the headers?
 
-        command, uri, version = self.crack_first_line()
+        # command, uri, version will be bytes
+        command, uri, version = crack_first_line(first_line)
+        version = tostr(version)
+        command = tostr(command)
         self.command = command
-        self.uri = uri
         self.version = version
-        self.split_uri()
+        (self.proxy_scheme,
+         self.proxy_netloc,
+         self.path,
+         self.query, self.fragment) = split_uri(uri)
         self.url_scheme = self.adj.url_scheme
         connection = headers.get('CONNECTION', '')
 
@@ -203,52 +212,50 @@ class HTTPRequestParser(object):
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = FixedStreamReceiver(cl, buf)
 
-
-    def get_header_lines(self, header):
-        """
-        Splits the header into lines, putting multi-line headers together.
-        """
-        r = []
-        lines = header.split(b'\n')
-        for line in lines:
-            if line.startswith((b' ', b'\t')):
-                r[-1] = r[-1] + line[1:]
-            else:
-                r.append(line)
-        return r
-
-    first_line_re = re.compile(
-        '([^ ]+) ((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)(( HTTP/([0-9.]+))$|$)')
-
-    def crack_first_line(self):
-        r = self.first_line
-        m = self.first_line_re.match(r)
-        if m is not None and m.end() == len(r):
-            if m.group(3):
-                version = m.group(5)
-            else:
-                version = None
-            command = m.group(1).upper()
-            path = m.group(2)
-            return command, path, version
-        else:
-            return '', '', ''
-
-    def split_uri(self):
-        (self.proxy_scheme,
-         self.proxy_netloc,
-         path,
-         self.query,
-         self.fragment) = urlparse.urlsplit(self.uri)
-        if path and '%' in path:
-            path = unquote(path)
-        self.path = path
-        if self.query == '':
-            self.query = None
-
     def get_body_stream(self):
         body_rcv = self.body_rcv
         if body_rcv is not None:
             return body_rcv.getfile()
         else:
             return BytesIO()
+
+def split_uri(uri):
+    # urlsplit handles byte input by returning bytes on py3, so
+    # scheme, netloc, path, query, and fragment are bytes
+    scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
+    return (
+        tostr(scheme),
+        tostr(netloc),
+        unquote_bytes_to_wsgi(path),
+        tostr(query),
+        tostr(fragment),
+        )
+
+def get_header_lines(header):
+    """
+    Splits the header into lines, putting multi-line headers together.
+    """
+    r = []
+    lines = header.split(b'\n')
+    for line in lines:
+        if line.startswith((b' ', b'\t')):
+            r[-1] = r[-1] + line[1:]
+        else:
+            r.append(line)
+    return r
+
+first_line_re = re.compile(
+b'([^ ]+) ((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)(( HTTP/([0-9.]+))$|$)')
+
+def crack_first_line(line):
+    m = first_line_re.match(line)
+    if m is not None and m.end() == len(line):
+        if m.group(3):
+            version = m.group(5)
+        else:
+            version = None
+        command = m.group(1).upper()
+        uri = m.group(2)
+        return command, uri, version
+    else:
+        return b'', b'', b''

@@ -14,7 +14,11 @@
 """HTTP Request Parser tests
 """
 import unittest
-from waitress.compat import text_
+
+from waitress.compat import (
+    text_,
+    tobytes,
+    )
 
 class TestHTTPRequestParser(unittest.TestCase):
     def setUp(self):
@@ -33,64 +37,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.parser.body_rcv = body_rcv
         result = self.parser.get_body_stream()
         self.assertEqual(result, body_rcv)
-
-    def test_split_uri_unquoting_unneeded(self):
-        self.parser.uri = 'http://localhost:8080/abc def'
-        self.parser.split_uri()
-        self.assertEqual(self.parser.path, '/abc def')
-
-    def test_split_uri_unquoting_needed(self):
-        self.parser.uri = 'http://localhost:8080/abc%20def'
-        self.parser.split_uri()
-        self.assertEqual(self.parser.path, '/abc def')
-
-    def test_split_url_with_query(self):
-        self.parser.uri = 'http://localhost:8080/abc?a=1&b=2'
-        self.parser.split_uri()
-        self.assertEqual(self.parser.path, '/abc')
-        self.assertEqual(self.parser.query, 'a=1&b=2')
-
-    def test_split_url_with_query_empty(self):
-        self.parser.uri = 'http://localhost:8080/abc?'
-        self.parser.split_uri()
-        self.assertEqual(self.parser.path, '/abc')
-        self.assertEqual(self.parser.query, None)
-
-    def test_split_url_with_fragment(self):
-        self.parser.uri = 'http://localhost:8080/#foo'
-        self.parser.split_uri()
-        self.assertEqual(self.parser.path, '/')
-        self.assertEqual(self.parser.fragment, 'foo')
-
-    def test_split_url_https(self):
-        self.parser.uri = 'https://localhost:8080/'
-        self.parser.split_uri()
-        self.assertEqual(self.parser.path, '/')
-        self.assertEqual(self.parser.proxy_scheme, 'https')
-        self.assertEqual(self.parser.proxy_netloc, 'localhost:8080')
-
-    def test_crack_first_line_matchok(self):
-        self.parser.first_line = 'get / HTTP/1.0'
-        result = self.parser.crack_first_line()
-        self.assertEqual(result, ('GET', '/', '1.0'))
-
-    def test_crack_first_line_nomatch(self):
-        self.parser.first_line = 'get / bleh'
-        result = self.parser.crack_first_line()
-        self.assertEqual(result, ('', '', ''))
-
-    def test_crack_first_line_missing_version(self):
-        self.parser.first_line = 'get /'
-        result = self.parser.crack_first_line()
-        self.assertEqual(result, ('GET', '/', None))
-
-    def test_get_header_lines(self):
-        result = self.parser.get_header_lines(b'slam\nslim')
-        self.assertEqual(result, [b'slam', b'slim'])
-
-    def test_get_header_lines_tabbed(self):
-        result = self.parser.get_header_lines(b'slam\n\tslim')
-        self.assertEqual(result, [b'slamslim'])
 
     def test_received_nonsense_with_double_cr(self):
         data = b"""\
@@ -194,13 +140,13 @@ garbage
 GET /foobar HTTP/8.4
 foo: bar"""
         self.parser.parse_header(data)
-        self.assertEqual(self.parser.first_line, 'GET /foobar HTTP/8.4')
+        self.assertEqual(self.parser.first_line, b'GET /foobar HTTP/8.4')
         self.assertEqual(self.parser.headers['FOO'], 'bar')
 
     def test_parse_header_no_cr_in_headerplus(self):
         data = b"GET /foobar HTTP/8.4"
         self.parser.parse_header(data)
-        self.assertEqual(self.parser.first_line, data.decode('ascii'))
+        self.assertEqual(self.parser.first_line, data)
 
     def test_parse_header_bad_content_length(self):
         data = b"GET /foobar HTTP/8.4\ncontent-length: abc"
@@ -222,6 +168,73 @@ foo: bar"""
         data = b"GET /foobar HTTP/1.1\nConnection: close\n\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.connection_close, True)
+
+class Test_split_uri(unittest.TestCase):
+    def _callFUT(self, uri):
+        from waitress.parser import split_uri
+        (self.proxy_scheme,
+         self.proxy_netloc,
+         self.path,
+         self.query, self.fragment) = split_uri(uri)
+    
+    def test_split_uri_unquoting_unneeded(self):
+        self._callFUT(b'http://localhost:8080/abc def')
+        self.assertEqual(self.path, '/abc def')
+
+    def test_split_uri_unquoting_needed(self):
+        self._callFUT(b'http://localhost:8080/abc%20def')
+        self.assertEqual(self.path, '/abc def')
+
+    def test_split_url_with_query(self):
+        self._callFUT(b'http://localhost:8080/abc?a=1&b=2')
+        self.assertEqual(self.path, '/abc')
+        self.assertEqual(self.query, 'a=1&b=2')
+
+    def test_split_url_with_query_empty(self):
+        self._callFUT(b'http://localhost:8080/abc?')
+        self.assertEqual(self.path, '/abc')
+        self.assertEqual(self.query, '')
+
+    def test_split_url_with_fragment(self):
+        self._callFUT(b'http://localhost:8080/#foo')
+        self.assertEqual(self.path, '/')
+        self.assertEqual(self.fragment, 'foo')
+
+    def test_split_url_https(self):
+        self._callFUT(b'https://localhost:8080/')
+        self.assertEqual(self.path, '/')
+        self.assertEqual(self.proxy_scheme, 'https')
+        self.assertEqual(self.proxy_netloc, 'localhost:8080')
+
+class Test_get_header_lines(unittest.TestCase):
+    def _callFUT(self, data):
+        from waitress.parser import get_header_lines
+        return get_header_lines(data)
+    
+    def test_get_header_lines(self):
+        result = self._callFUT(b'slam\nslim')
+        self.assertEqual(result, [b'slam', b'slim'])
+
+    def test_get_header_lines_tabbed(self):
+        result = self._callFUT(b'slam\n\tslim')
+        self.assertEqual(result, [b'slamslim'])
+
+class Test_crack_first_line(unittest.TestCase):
+    def _callFUT(self, line):
+        from waitress.parser import crack_first_line
+        return crack_first_line(line)
+
+    def test_crack_first_line_matchok(self):
+        result = self._callFUT(b'get / HTTP/1.0')
+        self.assertEqual(result, (b'GET', b'/', b'1.0'))
+
+    def test_crack_first_line_nomatch(self):
+        result = self._callFUT(b'get / bleh')
+        self.assertEqual(result, (b'', b'', b''))
+
+    def test_crack_first_line_missing_version(self):
+        result = self._callFUT(b'get /')
+        self.assertEqual(result, (b'GET', b'/', None))
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
 
@@ -261,7 +274,7 @@ Hello.
                           })
         self.assertEqual(parser.path, '/foobar')
         self.assertEqual(parser.command, 'GET')
-        self.assertEqual(parser.query, None)
+        self.assertEqual(parser.query, '')
         self.assertEqual(parser.proxy_scheme, '')
         self.assertEqual(parser.proxy_netloc, '')
         self.assertEqual(parser.get_body_stream().getvalue(), b'Hello.\n')
@@ -286,7 +299,7 @@ Hello mickey.
                           'CONTENT_LENGTH': '10',
                           })
         # path should be utf-8 encoded
-        self.assertEqual(text_(parser.path, 'utf-8'),
+        self.assertEqual(tobytes(parser.path).decode('utf-8'),
                          text_(b'/foo/a++/\xc3\xa4=&a:int', 'utf-8'))
         self.assertEqual(parser.query,
                          'd=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6')
@@ -312,7 +325,7 @@ Hello.
         self.assertEqual(parser.proxy_scheme, 'https')
         self.assertEqual(parser.proxy_netloc, 'example.com:8080')
         self.assertEqual(parser.command, 'GET')
-        self.assertEqual(parser.query, None)
+        self.assertEqual(parser.query, '')
         self.assertEqual(parser.get_body_stream().getvalue(), b'Hello.\n')
 
     def testDuplicateHeaders(self):
