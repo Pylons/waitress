@@ -4,7 +4,7 @@
 Bug Fixes
 ~~~~~~~~~
 
-- Fix PATH_INFO encoding/decoding on Python 3 (as per PEP 333, tunnel
+- Fix PATH_INFO encoding/decoding on Python 3 (as per PEP 3333, tunnel
   bytes-in-unicode-as-latin-1-after-unquoting).
 
 0.4 (2012-01-02)
