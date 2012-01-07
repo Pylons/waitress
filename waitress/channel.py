@@ -260,7 +260,6 @@ class HTTPChannel(logging_dispatcher, object):
             # instruct select to stop blocking), but it slows things down so
             # much that I'll hold off for now; "server push" on otherwise
             # unbusy systems may suffer.
-            self.server.pull_trigger()
             return len(data)
         return 0
 

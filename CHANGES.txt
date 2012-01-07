@@ -1,5 +1,17 @@
+Next release
+------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Remove performance-sapping call to ``pull_trigger`` in the channel's
+  ``write_soon`` method added mistakenly in 0.6.
+
 0.6 (2012-01-07)
 ----------------
+
+Bug Fixes
+~~~~~~~~~
 
 - A logic error prevented the internal outbuf buffer of a channel from being
   flushed when the client could not accept the entire contents of the output
