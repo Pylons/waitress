@@ -6,7 +6,7 @@ def serve(app, **kw):
     _quiet = kw.pop('_quiet', False) # test shim
     if not _quiet: # pragma: no cover
         # idempotent if logging has already been set up
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig()
     server = _server(app, **kw)
     if not _quiet: # pragma: no cover
         print('serving on http://%s:%s' % (server.effective_host,
