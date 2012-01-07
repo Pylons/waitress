@@ -23,7 +23,7 @@ except IOError:
 
 setup(
     name='waitress',
-    version='0.5',
+    version='0.6',
     author='Zope Foundation and Contributors',
     author_email='zope-dev@zope.org',
     maintainer="Chris McDonough",

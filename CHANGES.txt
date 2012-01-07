@@ -1,8 +1,8 @@
 Next release
 ------------
 
-Bug Fixes
-~~~~~~~~~
+0.6 (2012-01-07)
+----------------
 
 - A logic error prevented the internal outbuf buffer of a channel from being
   flushed when the client could not accept the entire contents of the output
