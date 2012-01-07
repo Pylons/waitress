@@ -111,6 +111,18 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(inst.outbuf.lock.acquired)
         self.assertEqual(sock.sent, b'abc')
 
+    def test_handle_write_close_when_flushed(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.outbuf = DummyBuffer(b'abc')
+        inst.will_close = False
+        inst.close_when_flushed = True
+        inst.last_activity = 0
+        result = inst.handle_write()
+        self.assertEqual(result, None)
+        self.assertEqual(inst.will_close, True)
+        self.assertEqual(inst.close_when_flushed, False)
+        self.assertEqual(sock.sent, b'abc')
+
     def test_readable_no_requests_not_will_close(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = []
@@ -378,7 +390,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertTrue(inst.force_flush)
         self.assertTrue(inst.last_activity)
-        self.assertTrue(inst.will_close)
+        self.assertTrue(inst.close_when_flushed)
         self.assertEqual(inst.error_task_class.serviced, False)
 
     def test_service_with_requests_raises_didnt_write_header_expose_tbs(self):
@@ -411,12 +423,11 @@ class TestHTTPChannel(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.service()
         self.assertTrue(request.serviced)
-        self.assertTrue(inst.will_close)
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertTrue(inst.force_flush)
         self.assertTrue(inst.last_activity)
-        self.assertTrue(inst.will_close)
+        self.assertTrue(inst.close_when_flushed)
 
     def test_cancel_no_requests(self):
         inst, sock, map = self._makeOneWithMap()

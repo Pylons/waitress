@@ -49,6 +49,7 @@ class HTTPChannel(logging_dispatcher, object):
     request = None               # A request parser instance
     last_activity = 0            # Time of last activity
     will_close = False           # set to True to close the socket.
+    close_when_flushed = False   # set to True to close the socket when flushed
     requests = ()                # currently pending requests
     sent_continue = False        # used as a latch after sending 100 continue
     task_lock = thread.allocate_lock()  # lock used to push/pop requests
@@ -109,7 +110,6 @@ class HTTPChannel(logging_dispatcher, object):
             # 2. Only try to send if the data in the out buffer is larger
             #    than self.adj_bytes to avoid TCP fragmentation
             flush = self._flush_some_if_lockable
-            self.force_flush = False
         else:
             # 1. There's not enough data in the out buffer to bother to send
             #    right now.
@@ -122,6 +122,10 @@ class HTTPChannel(logging_dispatcher, object):
                 if self.adj.log_socket_errors:
                     self.logger.exception('Socket error')
                 self.will_close = True
+
+        if self.close_when_flushed and not self.outbuf:
+            self.close_when_flushed = False
+            self.will_close = True
 
         if self.will_close:
             self.handle_close()
@@ -256,6 +260,7 @@ class HTTPChannel(logging_dispatcher, object):
             # instruct select to stop blocking), but it slows things down so
             # much that I'll hold off for now; "server push" on otherwise
             # unbusy systems may suffer.
+            self.server.pull_trigger()
             return len(data)
         return 0
 
@@ -288,7 +293,7 @@ class HTTPChannel(logging_dispatcher, object):
                 # we cannot allow self.requests to drop to empty til
                 # here; otherwise the mainloop gets confused
                 if task.close_on_finish:
-                    self.will_close = True
+                    self.close_when_flushed = True
                     self.requests = []
                 else:
                     self.requests.pop(0)

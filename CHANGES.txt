@@ -1,3 +1,19 @@
+Next release
+------------
+
+Bug Fixes
+~~~~~~~~~
+
+- A logic error prevented the internal outbuf buffer of a channel from being
+  flushed when the client could not accept the entire contents of the output
+  buffer in a single succession of socket.send calls when the channel was in
+  a "pending close" state.  The socket in such a case would be closed
+  prematurely, sometimes resulting in partially delivered content.  This was
+  discovered by a user using waitress behind an Nginx reverse proxy, which
+  apparently is not always ready to receive data.  The symptom was that he
+  received "half" of a large CSS file (110K) while serving content via
+  waitress behind the proxy.
+
 0.5 (2012-01-03)
 ----------------
 
