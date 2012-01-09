@@ -1,3 +1,18 @@
+Next release
+------------
+
+Features
+~~~~~~~~
+
+- Default ``send_bytes`` value is now 18000 instead of 9000.  The larger
+  default value prevents asyncore from needing to execute select so many
+  times to serve large files, speeding up file serving by about 15%-20% or
+  so.  This is probably only an optimization for LAN communications, and
+  could slow things down across a WAN (due to higher TCP overhead), but we're
+  likely to be behind a reverse proxy on a LAN anyway if in production.
+
+- Added an (undocumented) profiling feature to the ``serve()`` command.
+
 0.6.1 (2012-01-08)
 ------------------
 

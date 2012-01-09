@@ -50,7 +50,7 @@ class Adjustments(object):
     # of 9000 should avoid partly-filled packets, but don't set this larger
     # than the TCP write buffer size.  In Linux, /proc/sys/net/ipv4/tcp_wmem
     # controls the minimum, default, and maximum sizes of TCP write buffers.
-    send_bytes = 9000
+    send_bytes = 18000
 
     # A tempfile should be created if the pending output is larger than
     # outbuf_overflow, which is measured in bytes. The default is 1MB.  This

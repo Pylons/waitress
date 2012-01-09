@@ -39,7 +39,7 @@ recv_bytes
 
 send_bytes
     send_bytes is the number of bytes to send to socket.send() (integer),
-    default ``9000``.  Multiples of 9000 should avoid partly-filled TCP
+    default ``18000``.  Multiples of 9000 should avoid partly-filled TCP
     packets, but don't set this larger than the TCP write buffer size.  In
     Linux, /proc/sys/net/ipv4/tcp_wmem controls the minimum, default, and
     maximum sizes of TCP write buffers.
