@@ -32,7 +32,7 @@ class WSGIServer(logging_dispatcher, object):
     channel_class = HTTPChannel
     next_channel_cleanup = 0
     socketmod = socket # test shim
-    asyncore = asyncore
+    asyncore = asyncore # test shim
 
     def __init__(self,
                  application,
