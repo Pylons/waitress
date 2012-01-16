@@ -172,8 +172,16 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
         return res
 
     def __iter__(self): # called by task if self.filelike has no seek/tell
-        return iter(lambda: self.file.read(self.block_size), b'')
+        return self
 
+    def next(self):
+        val = self.file.read(self.block_size)
+        if not val:
+            raise StopIteration
+        return val
+
+    __next__ = next # py3
+    
     def append(self, s):
         raise NotImplementedError
 
