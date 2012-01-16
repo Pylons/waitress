@@ -76,10 +76,13 @@ class HTTPChannel(logging_dispatcher, object):
         asyncore.dispatcher.__init__(self, sock, map=map)
 
     def any_outbuf_has_data(self):
-        return any(bool(b) for b in self.outbufs)
+        for outbuf in self.outbufs:
+            if bool(outbuf):
+                return True
+        return False
 
     def total_outbufs_len(self):
-        return sum(len(b) for b in self.outbufs)
+        return sum([len(b) for b in self.outbufs]) # genexpr == more funccalls
 
     def writable(self):
         # if there's data in the out buffer or we've been instructed to close
@@ -293,7 +296,7 @@ class HTTPChannel(logging_dispatcher, object):
     def write_soon(self, data):
         if data:
             # the async mainloop might be popping data off outbuf; we can
-            # block here waiting for it because we're in a thread
+            # block here waiting for it because we're in a task thread
             with self.outbuf_lock:
                 if isinstance(data, ReadOnlyFileBasedBuffer):
                     self.outbufs.append(data)
