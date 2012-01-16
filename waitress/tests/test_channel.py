@@ -239,6 +239,21 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(buffer.skipped, 3)
         self.assertEqual(inst.outbufs, [buffer])
 
+    def test_flush_some_multiple_buffers_close_raises(self):
+        inst, sock, map = self._makeOneWithMap()
+        sock.send = lambda x: len(x)
+        buffer = DummyBuffer(b'abc')
+        inst.outbufs.append(buffer)
+        inst.logger = DummyLogger()
+        def doraise():
+            raise NotImplemented
+        inst.outbufs[0]._close = doraise
+        result = inst._flush_some()
+        self.assertEqual(result, True)
+        self.assertEqual(buffer.skipped, 3)
+        self.assertEqual(inst.outbufs, [buffer])
+        self.assertEqual(len(inst.logger.exceptions), 1)
+
     def test_handle_close(self):
         inst, sock, map = self._makeOneWithMap()
         inst.handle_close()

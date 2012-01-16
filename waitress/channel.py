@@ -228,8 +228,12 @@ class HTTPChannel(logging_dispatcher, object):
             if outbuflen <= 0:
                 if len(self.outbufs) > 1:
                     toclose = self.outbufs.pop(0)
-                    toclose._close()
-                    continue
+                    try:
+                        toclose._close()
+                    except:
+                        self.logger.exception(
+                            'Unexpected error when closing an outbuf')
+                    continue # pragma: no cover (coverage bug, it is hit)
                 else:
                     dobreak = True
 
