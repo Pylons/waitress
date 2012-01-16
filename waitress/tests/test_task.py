@@ -240,6 +240,12 @@ class TestTask(unittest.TestCase):
         self.assertTrue(lines[2].startswith(b'Date:'))
         self.assertEqual(lines[3], b'Server: waitress')
 
+    def test_remove_content_length_header(self):
+        inst = self._makeOne()
+        inst.response_headers = [('Content-Length', '70')]
+        inst.remove_content_length_header()
+        self.assertEqual(inst.response_headers, [])
+
     def test_start(self):
         inst = self._makeOne()
         inst.start()
@@ -490,6 +496,23 @@ class TestWSGITask(unittest.TestCase):
         self.assertTrue(inst.channel.written) # header
         self.assertEqual(inst.channel.otherdata, [app_iter])
         self.assertEqual(inst.content_length, 3)
+
+    def test_execute_app_returns_filewrapper_prepare_returns_True_badcl(self):
+        from waitress.buffers import ReadOnlyFileBasedBuffer
+        f = io.BytesIO(b'abc')
+        app_iter = ReadOnlyFileBasedBuffer(f, 8192)
+        def app(environ, start_response):
+            start_response('200 OK', [])
+            return app_iter
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.content_length = 10
+        inst.response_headers = [('Content-Length', '10')]
+        inst.execute()
+        self.assertTrue(inst.channel.written) # header
+        self.assertEqual(inst.channel.otherdata, [app_iter])
+        self.assertEqual(inst.content_length, 3)
+        self.assertEqual(dict(inst.response_headers)['Content-Length'], '3')
 
     def test_get_environment_already_cached(self):
         inst = self._makeOne()

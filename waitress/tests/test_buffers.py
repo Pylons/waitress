@@ -164,10 +164,55 @@ class TestReadOnlyFileBasedBuffer(unittest.TestCase):
         f = Filelike(b'abc', close=1, tellresults=[0, 10])
         inst = self._makeOne(f)
         result = inst.prepare()
-        self.assertEqual(result, True)
+        self.assertEqual(result, 10)
         self.assertEqual(inst.remain, 10)
         self.assertEqual(inst.file.seeked, 0)
         self.assertFalse(hasattr(inst, 'close'))
+
+    def test_get_numbytes_neg_one(self):
+        f = io.BytesIO(b'abcdef')
+        inst = self._makeOne(f)
+        inst.remain = 2
+        result = inst.get(-1)
+        self.assertEqual(result, b'ab')
+        self.assertEqual(inst.remain, 2)
+        self.assertEqual(f.tell(), 0)
+
+    def test_get_numbytes_gt_remain(self):
+        f = io.BytesIO(b'abcdef')
+        inst = self._makeOne(f)
+        inst.remain = 2
+        result = inst.get(3)
+        self.assertEqual(result, b'ab')
+        self.assertEqual(inst.remain, 2)
+        self.assertEqual(f.tell(), 0)
+
+    def test_get_numbytes_lt_remain(self):
+        f = io.BytesIO(b'abcdef')
+        inst = self._makeOne(f)
+        inst.remain = 2
+        result = inst.get(1)
+        self.assertEqual(result, b'a')
+        self.assertEqual(inst.remain, 2)
+        self.assertEqual(f.tell(), 0)
+
+    def test_get_numbytes_gt_remain_withskip(self):
+        f = io.BytesIO(b'abcdef')
+        inst = self._makeOne(f)
+        inst.remain = 2
+        result = inst.get(3, skip=True)
+        self.assertEqual(result, b'ab')
+        self.assertEqual(inst.remain, 0)
+        self.assertEqual(f.tell(), 2)
+
+    def test_get_numbytes_lt_remain_withskip(self):
+        f = io.BytesIO(b'abcdef')
+        inst = self._makeOne(f)
+        inst.remain = 2
+        result = inst.get(1, skip=True)
+        self.assertEqual(result, b'a')
+        self.assertEqual(inst.remain, 1)
+        self.assertEqual(f.tell(), 1)
 
     def test___iter__(self):
         data = b'a'*10000

@@ -140,19 +140,36 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
         self.file = file
         self.block_size = block_size # for __iter__
 
-    def prepare(self):
+    def prepare(self, size=None):
         if ( hasattr(self.file, 'seek') and
              hasattr(self.file, 'tell') ):
             start_pos = self.file.tell()
             self.file.seek(0, 2)
             end_pos = self.file.tell()
             self.file.seek(start_pos)
-            self.remain = end_pos - start_pos
-            return True
+            fsize = end_pos - start_pos
+            if size is None:
+                self.remain = fsize
+            else:
+                self.remain = min(fsize, size)
         elif hasattr(self.file, 'close'):
             # called by task if self.filelike has no seek/tell
             self.close = self.file.close
-        return False
+        return self.remain
+
+    def get(self, numbytes=-1, skip=False):
+        # never read more than self.remain (it can be user-specified)
+        if numbytes == -1 or numbytes > self.remain:
+            numbytes = self.remain
+        file = self.file
+        if not skip:
+            read_pos = file.tell()
+        res = file.read(numbytes)
+        if skip:
+            self.remain -= len(res)
+        else:
+            file.seek(read_pos)
+        return res
 
     def __iter__(self): # called by task if self.filelike has no seek/tell
         return iter(lambda: self.file.read(self.block_size), b'')

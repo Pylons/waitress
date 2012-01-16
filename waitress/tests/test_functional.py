@@ -969,6 +969,43 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
             self.assertTrue(b'\377\330\377' in response_body)
             # connection has not been closed
 
+    def test_filelike_shortcl_http11(self):
+        to_send = "GET /filelike_shortcl HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        for t in range(0, 2):
+            self.sock.send(to_send)
+            fp = self.sock.makefile('rb', 0)
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, '200', 'OK', 'HTTP/1.1')
+            cl = int(headers['content-length'])
+            self.assertEqual(cl, 1)
+            self.assertEqual(cl, len(response_body))
+            ct = headers['content-type']
+            self.assertEqual(ct, 'image/jpeg')
+            self.assertTrue(b'\377' in response_body)
+            # connection has not been closed
+
+    def test_filelike_longcl_http11(self):
+        to_send = "GET /filelike_longcl HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        for t in range(0, 2):
+            self.sock.send(to_send)
+            fp = self.sock.makefile('rb', 0)
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, '200', 'OK', 'HTTP/1.1')
+            cl = int(headers['content-length'])
+            self.assertEqual(cl, len(response_body))
+            ct = headers['content-type']
+            self.assertEqual(ct, 'image/jpeg')
+            self.assertTrue(b'\377\330\377' in response_body)
+            # connection has not been closed
+
     def test_notfilelike_http11(self):
         to_send = "GET /notfilelike HTTP/1.1\n\n"
         to_send = tobytes(to_send)
@@ -1001,6 +1038,44 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         self.assertEqual(ct, 'image/jpeg')
         self.assertTrue(b'\377\330\377' in response_body)
         # connection has been closed (no content-length)
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_notfilelike_shortcl_http11(self):
+        to_send = "GET /notfilelike_shortcl HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        for t in range(0, 2):
+            self.sock.send(to_send)
+            fp = self.sock.makefile('rb', 0)
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, '200', 'OK', 'HTTP/1.1')
+            cl = int(headers['content-length'])
+            self.assertEqual(cl, 1)
+            self.assertEqual(cl, len(response_body))
+            ct = headers['content-type']
+            self.assertEqual(ct, 'image/jpeg')
+            self.assertTrue(b'\377' in response_body)
+            # connection has not been closed
+
+    def test_notfilelike_longcl_http11(self):
+        to_send = "GET /notfilelike_longcl HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body)+10)
+        ct = headers['content-type']
+        self.assertEqual(ct, 'image/jpeg')
+        self.assertTrue(b'\377\330\377' in response_body)
+        # connection has been closed
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 

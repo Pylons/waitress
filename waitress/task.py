@@ -260,6 +260,11 @@ class Task(object):
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
         return tobytes(res)
 
+    def remove_content_length_header(self):
+        for i, (header_name, header_value) in enumerate(self.response_headers):
+            if header_name.lower() == 'content-length':
+                del self.response_headers[i]
+
     def start(self):
         self.start_time = time.time()
 
@@ -376,10 +381,15 @@ class WSGITask(Task):
 
         try:
             if app_iter.__class__ is ReadOnlyFileBasedBuffer:
-                ok = app_iter.prepare()
-                if ok:
-                    if self.content_length == -1:
-                        self.content_length = len(app_iter)
+                cl = self.content_length
+                if cl == -1:
+                    cl = None
+                size = app_iter.prepare(cl)
+                if size:
+                    if cl != size:
+                        if cl is not None:
+                            self.remove_content_length_header()
+                        self.content_length = size
                     self.write(b'') # generate headers
                     self.channel.write_soon(app_iter)
                     return
