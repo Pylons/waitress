@@ -36,6 +36,11 @@ class TestFixedStreamReceiver(unittest.TestCase):
         inst = self._makeOne(10, buf)
         self.assertEqual(inst.getfile(), buf)
 
+    def test_getbuf(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(10, buf)
+        self.assertEqual(inst.getbuf(), buf)
+
 class TestChunkedReceiver(unittest.TestCase):
     def _makeOne(self, buf):
         from waitress.receiver import ChunkedReceiver
@@ -130,6 +135,10 @@ class TestChunkedReceiver(unittest.TestCase):
         inst = self._makeOne(buf)
         self.assertEqual(inst.getfile(), buf)
     
+    def test_getbuf(self):
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        self.assertEqual(inst.getbuf(), buf)
 
 class DummyBuffer(object):
     def __init__(self):

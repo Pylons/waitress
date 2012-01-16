@@ -184,6 +184,7 @@ Extended Documentation
    differences.rst
    api.rst
    arguments.rst
+   filewrapper.rst
    glossary.rst
 
 Change History

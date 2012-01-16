@@ -48,6 +48,9 @@ class FixedStreamReceiver(object):
     def getfile(self):
         return self.buf.getfile()
 
+    def getbuf(self):
+        return self.buf
+
 class ChunkedReceiver(object):
 
     chunk_remainder = 0
@@ -137,3 +140,7 @@ class ChunkedReceiver(object):
 
     def getfile(self):
         return self.buf.getfile()
+
+    def getbuf(self):
+        return self.buf
+    

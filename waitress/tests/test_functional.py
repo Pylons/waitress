@@ -925,6 +925,159 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
+class TestFileWrapper(SubprocessTests, unittest.TestCase):
+    def setUp(self):
+        echo = os.path.join(here, 'fixtureapps', 'filewrapper.py')
+        self.start_subprocess([self.exe, echo])
+
+    def tearDown(self):
+        self.stop_subprocess()
+    
+    def test_filelike_http11(self):
+        to_send = "GET /filelike HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        for t in range(0, 2):
+            self.sock.send(to_send)
+            fp = self.sock.makefile('rb', 0)
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, '200', 'OK', 'HTTP/1.1')
+            cl = int(headers['content-length'])
+            self.assertEqual(cl, len(response_body))
+            ct = headers['content-type']
+            self.assertEqual(ct, 'image/jpeg')
+            self.assertTrue(b'\377\330\377' in response_body)
+            # connection has not been closed
+
+    def test_filelike_nocl_http11(self):
+        to_send = "GET /filelike_nocl HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        for t in range(0, 2):
+            self.sock.send(to_send)
+            fp = self.sock.makefile('rb', 0)
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, '200', 'OK', 'HTTP/1.1')
+            cl = int(headers['content-length'])
+            self.assertEqual(cl, len(response_body))
+            ct = headers['content-type']
+            self.assertEqual(ct, 'image/jpeg')
+            self.assertTrue(b'\377\330\377' in response_body)
+            # connection has not been closed
+
+    def test_notfilelike_http11(self):
+        to_send = "GET /notfilelike HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        for t in range(0, 2):
+            self.sock.send(to_send)
+            fp = self.sock.makefile('rb', 0)
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, '200', 'OK', 'HTTP/1.1')
+            cl = int(headers['content-length'])
+            self.assertEqual(cl, len(response_body))
+            ct = headers['content-type']
+            self.assertEqual(ct, 'image/jpeg')
+            self.assertTrue(b'\377\330\377' in response_body)
+            # connection has not been closed
+
+    def test_notfilelike_nocl_http11(self):
+        to_send = "GET /notfilelike_nocl HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.1')
+        ct = headers['content-type']
+        self.assertEqual(ct, 'image/jpeg')
+        self.assertTrue(b'\377\330\377' in response_body)
+        # connection has been closed (no content-length)
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_filelike_http10(self):
+        to_send = "GET /filelike HTTP/1.0\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body))
+        ct = headers['content-type']
+        self.assertEqual(ct, 'image/jpeg')
+        self.assertTrue(b'\377\330\377' in response_body)
+        # connection has been closed
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_filelike_nocl_http10(self):
+        to_send = "GET /filelike_nocl HTTP/1.0\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body))
+        ct = headers['content-type']
+        self.assertEqual(ct, 'image/jpeg')
+        self.assertTrue(b'\377\330\377' in response_body)
+        # connection has been closed
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_notfilelike_http10(self):
+        to_send = "GET /notfilelike HTTP/1.0\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body))
+        ct = headers['content-type']
+        self.assertEqual(ct, 'image/jpeg')
+        self.assertTrue(b'\377\330\377' in response_body)
+        # connection has been closed
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_notfilelike_nocl_http10(self):
+        to_send = "GET /notfilelike_nocl HTTP/1.0\n\n"
+        to_send = tobytes(to_send)
+
+        self.sock.connect((self.host, self.port))
+
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '200', 'OK', 'HTTP/1.0')
+        ct = headers['content-type']
+        self.assertEqual(ct, 'image/jpeg')
+        self.assertTrue(b'\377\330\377' in response_body)
+        # connection has been closed (no content-length)
+        self.sock.send(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
     """

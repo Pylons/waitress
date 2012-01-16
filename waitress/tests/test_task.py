@@ -1,4 +1,5 @@
 import unittest
+import io
 
 class TestThreadedTaskDispatcher(unittest.TestCase):
     def _makeOne(self):
@@ -463,6 +464,33 @@ class TestWSGITask(unittest.TestCase):
         inst.execute()
         self.assertEqual(foo.closed, True)
 
+    def test_execute_app_returns_filewrapper_prepare_returns_True(self):
+        from waitress.buffers import ReadOnlyFileBasedBuffer
+        f = io.BytesIO(b'abc')
+        app_iter = ReadOnlyFileBasedBuffer(f, 8192)
+        def app(environ, start_response):
+            start_response('200 OK', [('Content-Length', '3')])
+            return app_iter
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertTrue(inst.channel.written) # header
+        self.assertEqual(inst.channel.otherdata, [app_iter])
+
+    def test_execute_app_returns_filewrapper_prepare_returns_True_nocl(self):
+        from waitress.buffers import ReadOnlyFileBasedBuffer
+        f = io.BytesIO(b'abc')
+        app_iter = ReadOnlyFileBasedBuffer(f, 8192)
+        def app(environ, start_response):
+            start_response('200 OK', [])
+            return app_iter
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertTrue(inst.channel.written) # header
+        self.assertEqual(inst.channel.otherdata, [app_iter])
+        self.assertEqual(inst.content_length, 3)
+
     def test_get_environment_already_cached(self):
         inst = self._makeOne()
         inst.environ = object()
@@ -601,8 +629,12 @@ class DummyChannel(object):
             server = DummyServer()
         self.server = server
         self.written = b''
+        self.otherdata = []
     def write_soon(self, data):
-        self.written += data
+        if isinstance(data, bytes):
+            self.written += data
+        else:
+            self.otherdata.append(data)
         return len(data)
 
 class DummyParser(object):

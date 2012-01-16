@@ -16,6 +16,8 @@ import socket
 import sys
 import time
 
+from waitress.buffers import ReadOnlyFileBasedBuffer
+
 from waitress.compat import (
     tobytes,
     Queue,
@@ -313,8 +315,7 @@ class ErrorTask(Task):
         self.write(tobytes(body))
 
 class WSGITask(Task):
-    """A WSGI task accepts a request and writes to a channel.
-
+    """A WSGI task produces a response from a WSGI application.
     """
 
     environ = None
@@ -374,6 +375,14 @@ class WSGITask(Task):
         app_iter = self.channel.server.application(env, start_response)
 
         try:
+            if app_iter.__class__ is ReadOnlyFileBasedBuffer:
+                ok = app_iter.prepare()
+                if ok:
+                    if self.content_length == -1:
+                        self.content_length = len(app_iter)
+                    self.write(b'') # generate headers
+                    self.channel.write_soon(app_iter)
+                    return
             # By iterating manually at this point, we execute task.write()
             # multiple times, allowing partial data to be sent.
             first_chunk_len = None
@@ -453,6 +462,8 @@ class WSGITask(Task):
         environ['wsgi.multiprocess'] = False
         environ['wsgi.run_once'] = False
         environ['wsgi.input'] = request.get_body_stream()
+        environ['wsgi.file_wrapper'] = ReadOnlyFileBasedBuffer
 
         self.environ = environ
         return environ
+

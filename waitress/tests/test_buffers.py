@@ -103,6 +103,12 @@ class TestFileBasedBuffer(unittest.TestCase):
         inst.prune()
         self.assertTrue(inst.file is f)
 
+    def test__close(self):
+        f = io.BytesIO()
+        inst = self._makeOne(f)
+        inst._close()
+        self.assertTrue(f.closed)
+
 class TestTempfileBasedBuffer(unittest.TestCase):
     def _makeOne(self, from_buffer=None):
         from waitress.buffers import TempfileBasedBuffer
@@ -132,6 +138,49 @@ class TestBytesIOBasedBuffer(unittest.TestCase):
         inst = self._makeOne()
         r = inst.newfile()
         self.assertTrue(hasattr(r, 'read'))
+
+class TestReadOnlyFileBasedBuffer(unittest.TestCase):
+    def _makeOne(self, file, block_size=8192):
+        from waitress.buffers import ReadOnlyFileBasedBuffer
+        return ReadOnlyFileBasedBuffer(file, block_size)
+
+    def test_prepare_not_seekable_not_closeable(self):
+        f = KindaFilelike(b'abc')
+        inst = self._makeOne(f)
+        result = inst.prepare()
+        self.assertEqual(result, False)
+        self.assertEqual(inst.remain, 0)
+        self.assertFalse(hasattr(inst, 'close'))
+
+    def test_prepare_not_seekable_closeable(self):
+        f = KindaFilelike(b'abc', close=1)
+        inst = self._makeOne(f)
+        result = inst.prepare()
+        self.assertEqual(result, False)
+        self.assertEqual(inst.remain, 0)
+        self.assertEqual(inst.close, f.close)
+
+    def test_prepare_seekable_closeable(self):
+        f = Filelike(b'abc', close=1, tellresults=[0, 10])
+        inst = self._makeOne(f)
+        result = inst.prepare()
+        self.assertEqual(result, True)
+        self.assertEqual(inst.remain, 10)
+        self.assertEqual(inst.file.seeked, 0)
+        self.assertFalse(hasattr(inst, 'close'))
+
+    def test___iter__(self):
+        data = b'a'*10000
+        f = io.BytesIO(data)
+        inst = self._makeOne(f)
+        r = b''
+        for val in inst:
+            r += val
+        self.assertEqual(r, data)
+
+    def test_append(self):
+        inst = self._makeOne(None)
+        self.assertRaises(NotImplementedError, inst.append, 'a')
 
 class TestOverflowableBuffer(unittest.TestCase):
     def _makeOne(self, overflow=10):
@@ -270,6 +319,35 @@ class TestOverflowableBuffer(unittest.TestCase):
         inst.buf = buf
         f = inst.getfile()
         self.assertEqual(f, buf)
+
+    def test__close_nobuf(self):
+        inst = self._makeOne()
+        inst.buf = None
+        self.assertEqual(inst._close(), None) # doesnt raise
+
+    def test__close_withbuf(self):
+        class Buffer(object):
+            def _close(self):
+                self.closed = True
+        buf = Buffer()
+        inst = self._makeOne()
+        inst.buf = buf
+        inst._close()
+        self.assertTrue(buf.closed)
         
-        
+class KindaFilelike(object):
+    def __init__(self, bytes, close=None, tellresults=None):
+        self.bytes = bytes
+        self.tellresults = tellresults
+        if close is not None:
+            self.close = close
+
+class Filelike(KindaFilelike):
+    def seek(self, v, whence=0):
+        self.seeked = v
+
+    def tell(self):
+        v = self.tellresults.pop(0)
+        return v
+    
         

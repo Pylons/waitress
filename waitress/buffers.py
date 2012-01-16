@@ -15,8 +15,6 @@
 """
 from io import BytesIO
 
-from waitress.compat import thread
-
 # copy_bytes controls the size of temp. strings for shuffling data around.
 COPY_BYTES = 1 << 18  # 256K
 
@@ -106,7 +104,12 @@ class FileBasedBuffer(object):
     def getfile(self):
         return self.file
 
-
+    def _close(self):
+        # named _close because ReadOnlyFileBasedBuffer is used as
+        # wsgi file.wrapper, and its protocol reserves "close"
+        if hasattr(self.file, 'close'):
+            self.file.close()
+        self.remain = 0
 
 class TempfileBasedBuffer(FileBasedBuffer):
 
@@ -131,7 +134,31 @@ class BytesIOBasedBuffer(FileBasedBuffer):
     def newfile(self):
         return BytesIO()
 
+class ReadOnlyFileBasedBuffer(FileBasedBuffer): 
+    # used as wsgi.file_wrapper
+    def __init__(self, file, block_size=32768):
+        self.file = file
+        self.block_size = block_size # for __iter__
 
+    def prepare(self):
+        if ( hasattr(self.file, 'seek') and
+             hasattr(self.file, 'tell') ):
+            start_pos = self.file.tell()
+            self.file.seek(0, 2)
+            end_pos = self.file.tell()
+            self.file.seek(start_pos)
+            self.remain = end_pos - start_pos
+            return True
+        elif hasattr(self.file, 'close'):
+            # called by task if self.filelike has no seek/tell
+            self.close = self.file.close
+        return False
+
+    def __iter__(self): # called by task if self.filelike has no seek/tell
+        return iter(lambda: self.file.read(self.block_size), b'')
+
+    def append(self, s):
+        raise NotImplementedError
 
 class OverflowableBuffer(object):
     """
@@ -150,7 +177,6 @@ class OverflowableBuffer(object):
     def __init__(self, overflow):
         # overflow is the maximum to be stored in a StringIO buffer.
         self.overflow = overflow
-        self.lock = thread.allocate_lock() # API
 
     def __len__(self):
         buf = self.buf
@@ -240,3 +266,9 @@ class OverflowableBuffer(object):
         if buf is None:
             buf = self._create_buffer()
         return buf.getfile()
+
+    def _close(self):
+        buf = self.buf
+        if buf is not None:
+            buf._close()
+            

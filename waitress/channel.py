@@ -11,14 +11,16 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Dual-mode channel
-"""
 import asyncore
 import socket
 import time
 import traceback
 
-from waitress.buffers import OverflowableBuffer
+from waitress.buffers import (
+    OverflowableBuffer,
+    ReadOnlyFileBasedBuffer,
+    )
+
 from waitress.parser import HTTPRequestParser
 
 from waitress.compat import thread
@@ -34,13 +36,11 @@ from waitress.utilities import (
     )
 
 class HTTPChannel(logging_dispatcher, object):
-    """Channel that switches between asynchronous and synchronous mode.
+    """
+    Setting self.requests = [somerequest] prevents more requests from being
+    received until the out buffers have been flushed.
 
-    Set self.requests = [somerequest] before using a channel in a thread other
-    than the thread handling the main loop.
-
-    Set self.requests = [] to give the channel back to the thread handling
-    the main loop.
+    Setting self.requests = [] allows more requests to be received.
     """
     task_class = WSGITask
     error_task_class = ErrorTask
@@ -53,6 +53,7 @@ class HTTPChannel(logging_dispatcher, object):
     requests = ()                # currently pending requests
     sent_continue = False        # used as a latch after sending 100 continue
     task_lock = thread.allocate_lock()  # lock used to push/pop requests
+    outbuf_lock = thread.allocate_lock() # lock used to access any outbuf
     force_flush = False          # indicates a need to flush the outbuf
 
     #
@@ -70,15 +71,21 @@ class HTTPChannel(logging_dispatcher, object):
         self.server = server
         self.addr = addr
         self.adj = adj
-        self.outbuf = OverflowableBuffer(adj.outbuf_overflow)
+        self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
         self.creation_time = self.last_activity = time.time()
         asyncore.dispatcher.__init__(self, sock, map=map)
+
+    def any_outbuf_has_data(self):
+        return any(bool(b) for b in self.outbufs)
+
+    def total_outbufs_len(self):
+        return sum(len(b) for b in self.outbufs)
 
     def writable(self):
         # if there's data in the out buffer or we've been instructed to close
         # the channel (possibly by our server maintenance logic), run
         # handle_write
-        return bool(self.outbuf) or self.will_close
+        return self.any_outbuf_has_data() or self.will_close
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
@@ -104,7 +111,7 @@ class HTTPChannel(logging_dispatcher, object):
             #    won't get done.
             flush = self._flush_some_if_lockable
             self.force_flush = False
-        elif (len(self.outbuf) >= self.adj.send_bytes):
+        elif (self.total_outbufs_len() >= self.adj.send_bytes):
             # 1. There's a running task, so we need to try to lock
             #    the outbuf before sending
             # 2. Only try to send if the data in the out buffer is larger
@@ -122,8 +129,11 @@ class HTTPChannel(logging_dispatcher, object):
                 if self.adj.log_socket_errors:
                     self.logger.exception('Socket error')
                 self.will_close = True
+            except:
+                self.logger.exception('Unexpected exception when flushing')
+                self.will_close = True
 
-        if self.close_when_flushed and not self.outbuf:
+        if self.close_when_flushed and not self.any_outbuf_has_data():
             self.close_when_flushed = False
             self.will_close = True
 
@@ -136,7 +146,8 @@ class HTTPChannel(logging_dispatcher, object):
         # 2. There's no already currently running task(s).
         # 3. There's no data in the output buffer that needs to be sent
         #    before we potentially create a new task.
-        return not (self.will_close or self.requests or self.outbuf)
+        return not (self.will_close or self.requests or
+                    self.any_outbuf_has_data())
 
     def handle_read(self):
         try:
@@ -152,7 +163,8 @@ class HTTPChannel(logging_dispatcher, object):
 
     def received(self, data):
         """
-        Receives input asynchronously and assigns a task to the channel.
+        Receives input asynchronously and assigns one or more requests to the
+        channel.
         """
         # Preconditions: there's no task(s) already running
         request = self.request
@@ -171,7 +183,7 @@ class HTTPChannel(logging_dispatcher, object):
                 if not self.sent_continue:
                     # there's no current task, so we don't need to try to
                     # lock the outbuf to append to it.
-                    self.outbuf.append(b'HTTP/1.1 100 Continue\r\n\r\n')
+                    self.outbufs[-1].append(b'HTTP/1.1 100 Continue\r\n\r\n')
                     self.sent_expect_continue = True
                     self._flush_some()
                     request.completed = False
@@ -196,34 +208,58 @@ class HTTPChannel(logging_dispatcher, object):
     def _flush_some_if_lockable(self):
         # Since our task may be appending to the outbuf, we try to acquire
         # the lock, but we don't block if we can't.
-        outbuf = self.outbuf
-        locked = outbuf.lock.acquire(0)
+        locked = self.outbuf_lock.acquire(0)
         if locked:
             try:
                 self._flush_some()
             finally:
-                outbuf.lock.release()
+                self.outbuf_lock.release()
 
     def _flush_some(self):
         # Send as much data as possible to our client
-        outbuf = self.outbuf
-        outbuflen = len(outbuf)
+
         sent = 0
-        while outbuflen > 0:
-            chunk = outbuf.get(self.adj.send_bytes)
-            num_sent = self.send(chunk)
-            if num_sent:
-                outbuf.skip(num_sent, True)
-                outbuflen -= num_sent
-                sent += num_sent
-            else:
+        dobreak = False
+
+        while True:
+
+            outbuf = self.outbufs[0]
+            outbuflen = len(outbuf)
+            if outbuflen <= 0:
+                if len(self.outbufs) > 1:
+                    toclose = self.outbufs.pop(0)
+                    toclose._close()
+                    continue
+                else:
+                    dobreak = True
+
+            while outbuflen > 0:
+                chunk = outbuf.get(self.adj.send_bytes)
+                num_sent = self.send(chunk)
+                if num_sent:
+                    outbuf.skip(num_sent, True)
+                    outbuflen -= num_sent
+                    sent += num_sent
+                else:
+                    dobreak = True
+                    break
+
+            if dobreak:
                 break
+
         if sent:
             self.last_activity = time.time()
             return True
+
         return False
 
     def handle_close(self):
+        for outbuf in self.outbufs:
+            try:
+                outbuf._close()
+            except:
+                self.logger.exception(
+                    'Unknown exception while trying to close outbuf')
         self.connected = False
         asyncore.dispatcher.close(self)
 
@@ -254,8 +290,13 @@ class HTTPChannel(logging_dispatcher, object):
         if data:
             # the async mainloop might be popping data off outbuf; we can
             # block here waiting for it because we're in a thread
-            with self.outbuf.lock:
-                self.outbuf.append(data)
+            with self.outbuf_lock:
+                if isinstance(data, ReadOnlyFileBasedBuffer):
+                    self.outbufs.append(data)
+                    nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
+                    self.outbufs.append(nextbuf)
+                else:
+                    self.outbufs[-1].append(data)
             # XXX We might eventually need to pull the trigger here (to
             # instruct select to stop blocking), but it slows things down so
             # much that I'll hold off for now; "server push" on otherwise
@@ -293,9 +334,12 @@ class HTTPChannel(logging_dispatcher, object):
                 # here; otherwise the mainloop gets confused
                 if task.close_on_finish:
                     self.close_when_flushed = True
+                    for request in self.requests:
+                        request._close()
                     self.requests = []
                 else:
-                    self.requests.pop(0)
+                    request = self.requests.pop(0)
+                    request._close()
 
         self.force_flush = True
         self.server.pull_trigger()

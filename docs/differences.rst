@@ -61,3 +61,5 @@ Differences from ``zope.server``
   Content-Length header.
 
 - Dont hang a thread up trying to send data to slow clients.
+
+- Supports ``wsgi.file_wrapper`` protocol.
