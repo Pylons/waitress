@@ -433,7 +433,7 @@ class TestWSGITask(unittest.TestCase):
         inst = self._makeOne()
         inst.channel.server.application = app
         inst.execute()
-        self.assertEqual(inst.content_length, -1)
+        self.assertEqual(inst.content_length, None)
 
     def test_execute_app_returns_too_many_bytes(self):
         def app(environ, start_response):

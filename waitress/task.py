@@ -149,7 +149,7 @@ class Task(object):
     status = '200 OK'
     wrote_header = False
     start_time = 0
-    content_length = -1
+    content_length = None
     content_bytes_written = 0
     logged_write_excess = False
     complete = False
@@ -210,7 +210,7 @@ class Task(object):
             # replace with properly capitalized version
             response_headers[i] = (headername, headerval)
 
-        if content_length_header is None and self.content_length != -1:
+        if content_length_header is None and self.content_length is not None:
             content_length_header = str(self.content_length)
             self.response_headers.append(
                 ('Content-Length', content_length_header)
@@ -291,7 +291,7 @@ class Task(object):
                 # use chunked encoding response
                 towrite = tobytes(hex(len(data))[2:].upper()) + b'\r\n'
                 towrite += data + b'\r\n'
-            elif cl != -1:
+            elif cl is not None:
                 towrite = data[:cl-self.content_bytes_written]
                 self.content_bytes_written += len(towrite)
                 if towrite != data and not self.logged_write_excess:
@@ -382,8 +382,6 @@ class WSGITask(Task):
         try:
             if app_iter.__class__ is ReadOnlyFileBasedBuffer:
                 cl = self.content_length
-                if cl == -1:
-                    cl = None
                 size = app_iter.prepare(cl)
                 if size:
                     if cl != size:
@@ -393,8 +391,7 @@ class WSGITask(Task):
                     self.write(b'') # generate headers
                     self.channel.write_soon(app_iter)
                     return
-            # By iterating manually at this point, we execute task.write()
-            # multiple times, allowing partial data to be sent.
+
             first_chunk_len = None
             for chunk in app_iter:
                 if first_chunk_len is None:
@@ -403,7 +400,7 @@ class WSGITask(Task):
                     # start_response may not have been called until first
                     # iteration as per PEP, so we must reinterrogate
                     # self.content_length here
-                    if self.content_length == -1:
+                    if self.content_length is None:
                         app_iter_len = None
                         if hasattr(app_iter, '__len__'):
                             app_iter_len = len(app_iter)
@@ -415,7 +412,7 @@ class WSGITask(Task):
                     self.write(chunk)
 
             cl = self.content_length
-            if cl != -1:
+            if cl is not None:
                 if self.content_bytes_written != cl:
                     # close the connection so the client isn't sitting around
                     # waiting for more data when there are too few bytes
