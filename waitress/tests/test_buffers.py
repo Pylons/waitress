@@ -18,6 +18,7 @@ class TestFileBasedBuffer(unittest.TestCase):
         self.assertEqual(inst.file, f)
         del from_buffer.getfile
         self.assertEqual(inst.remain, 4)
+        from_buffer.close()
 
     def test___len__(self):
         inst = self._makeOne()
