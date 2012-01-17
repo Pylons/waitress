@@ -422,7 +422,7 @@ class WSGITask(Task):
                     # to service content-length
                     self.close_on_finish = True
                     self.logger.warning(
-                        'appplication returned too few bytes (%s) '
+                        'application returned too few bytes (%s) '
                         'for specified Content-Length (%s) via app_iter' % (
                             self.content_bytes_written, cl),
                         )
