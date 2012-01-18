@@ -225,10 +225,10 @@ class HTTPChannel(logging_dispatcher, object):
         dobreak = False
 
         while True:
-
             outbuf = self.outbufs[0]
             outbuflen = len(outbuf)
             if outbuflen <= 0:
+                # self.outbufs[-1] must always be a writable outbuf
                 if len(self.outbufs) > 1:
                     toclose = self.outbufs.pop(0)
                     try:
@@ -298,7 +298,8 @@ class HTTPChannel(logging_dispatcher, object):
             # the async mainloop might be popping data off outbuf; we can
             # block here waiting for it because we're in a task thread
             with self.outbuf_lock:
-                if isinstance(data, ReadOnlyFileBasedBuffer):
+                if data.__class__ is ReadOnlyFileBasedBuffer:
+                    # they used wsgi.file_wrapper
                     self.outbufs.append(data)
                     nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
                     self.outbufs.append(nextbuf)
