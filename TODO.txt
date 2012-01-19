@@ -13,3 +13,88 @@
 
 - "TCP segment of a reassembled PDU" in wireshark.
 
+- Jim F. would like the server to log request start, request queue (to thread
+  pool), app start, app finish, and request finish (all data has been
+  flushed to client) events.
+ 
+  Some challenges exist trying to divine per-request end time. We currently
+  have the potential for request pipelining; the channel might service more
+  than one request before it closes.  We currently don't preserve any
+  information about which request a response's data belongs to while flushing
+  response data from a connection's output buffer.
+
+  While accepting request data from a client, Waitress will obtain N request
+  bodies and schedule all the requests it receives with the task manager.
+  For example, if it obtains two request bodies in a single recv() call it
+  will create two request objects and schedule *both* of these requests to be
+  serviced by the task manager immediately.
+
+  The task thread manager will service these synchronously: the first request
+  will be run first, then the second.  When the first request runs, it will
+  push data to the out buffer, then it will end.  Then the second request
+  will run, and push data to the same out buffer, and it will end.  While
+  these requests are executing, the channel from whence they came stops
+  accepting requests until the previously scheduled requests have actually
+  been serviced.  The request-burdened channel will be *sending* data to the
+  client while the requests are being serviced, it just won't accept any more
+  data until existing requests have been serviced.  In the meantime, other
+  channels may still be generating requests and adding tasks to the task
+  manager.
+
+  To capture request-end time we could create an output buffer per request or
+  we could keep a dictionary of the final bytestream position of the
+  outbuffer for each response to to request id; either would be a
+  straightforward way to capture the fact that a particular request's
+  response data has been flushed.  We currently don't do that though.
+
+  Here's what we can currently log without changing anything:
+
+  An example of the events logged for a connection that receives two requests
+  and each request succeeds, and the connection is closed after sending all
+  data::
+
+    channel created: channel 1 at time 10
+    request created: channel 1, request id 1 at time 11
+    request created: channel 1, request id 2 at time 12
+    channel requests queued: channel 1, request ids 1,2 at time 13
+    request started: request id 1 at time 14
+    request serviced: request id 1 at time 15
+    request started: request id 2 at time 16
+    request serviced: request id 2 at time 17
+    channel closed: channel 1 at time 18
+
+  An example of the events logged for a connection that receives two requests
+  and the first request fails in such a way that the next request cannot
+  proceed (content-length header of the first response does not match number
+  of bytes sent in response to the first request, for example)::
+
+    channel created: channel 1 at time 10
+    request created: channel 1, request id 1 at time 11
+    request created: channel 1, request id 2 at time 12
+    channel requests queued: channel 1, request ids 1,2 at time 13
+    request started: request id 1 at time 14
+    request serviced: request id 1 at time 15
+    request cancelled: request id 2 at time 17
+    channel closed: channel 1 at time 18
+
+  An example of the events logged for a connection that receives four
+  requests (which all succeed in generating successful responses) but where
+  the client waits for the first two responses to send the second two
+  requests:
+
+    channel created: channel 1 at time 10
+    request created: channel 1, request id 1 at time 11
+    request created: channel 1, request id 2 at time 12
+    channel requests queued: channel 1, request ids 1,2 at time 13
+    request started: request id 1 at time 14
+    request serviced: request id 1 at time 15
+    request started: request id 2 at time 15
+    request serviced: request id 2 at time 16
+    request created: channel 1, request id 3 at time 17
+    request created: channel 1, request id 4 at time 18
+    channel requests queued: channel 1, request ids 3,4 at time 18
+    request started: request id 3 at time 19
+    request serviced: request id 3 at time 20
+    request started: request id 4 at time 21
+    request serviced: request id 4 at time 22
+    channel closed: channel 1 at time 23
