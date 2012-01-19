@@ -3,6 +3,7 @@ Design
 
 Waitress uses a combination of asynchronous and synchronous code to do its
 job.  It handles I/O to and from clients using the :term:`asyncore` library.
+It services requests via threads.
 
 The :term:`asyncore` module in the Python standard library:
 
