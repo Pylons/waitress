@@ -300,7 +300,7 @@ class Task(object):
                         'bytes specified by Content-Length header (%s)' % cl)
                     self.logged_write_excess = True
             if towrite:
-                self.channel.write_soon(towrite)
+                channel.write_soon(towrite)
 
 class ErrorTask(Task):
     """ An error task produces an error response """
