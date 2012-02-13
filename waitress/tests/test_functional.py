@@ -54,8 +54,9 @@ class SleepyThreadTests(SubprocessTests, unittest.TestCase):
         sleepyproc = subprocess.Popen(sleepycmd, stdout=w)
         notsleepyproc = subprocess.Popen(notsleepycmd, stdout=w)
         time.sleep(3)
-        sleepyproc.terminate()
-        notsleepyproc.terminate()
+        for proc in (sleepyproc, notsleepyproc):
+            if proc.returncode is not None: # pragma: no cover
+                sleepyproc.terminate()
         # the notsleepy response should always be first returned (it sleeps
         # for 2 seconds, then returns; the notsleepy response should be 
         # processed in the meantime)
