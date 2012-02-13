@@ -9,7 +9,8 @@ Bug Fixes
   response was fully generated.  This was due to a "task lock" being declared
   as a class attribute rather than as an instance attribute on HTTPChannel.
   ALso took the opportunity to move another lock named "outbuf lock" to the
-  channel instance rather than the class.
+  channel instance rather than the class.  See
+  https://github.com/Pylons/waitress/pull/1 .
 
 0.8 (2012-01-31)
 ----------------
