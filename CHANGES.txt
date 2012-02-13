@@ -2,7 +2,7 @@
 ------------------
 
 Bug Fixes
----------
+~~~~~~~~~
 
 - A brown-bag bug prevented request concurrency.  A slow request would block
   subsequent the responses of subsequent requests until the slow request's
