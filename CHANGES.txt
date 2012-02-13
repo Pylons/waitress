@@ -1,3 +1,16 @@
+Next release
+-------------
+
+Bug Fixes
+---------
+
+- A brown-bag bug prevented request concurrency.  A slow request would block
+  subsequent the responses of subsequent requests until the slow request's
+  response was fully generated.  This was due to a "task lock" being declared
+  as a class attribute rather than as an instance attribute on HTTPChannel.
+  ALso took the opportunity to move another lock named "outbuf lock" to the
+  channel instance rather than the class.
+
 0.8 (2012-01-31)
 ----------------
 

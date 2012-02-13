@@ -19,16 +19,12 @@ class SubprocessTests(object):
     host = 'localhost'
     def start_subprocess(self, cmd):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        cwd = os.getcwd()
-        os.chdir(dn(dn(here)))
         self.proc = subprocess.Popen(cmd)
-        os.chdir(cwd)
         time.sleep(.2)
         if self.proc.returncode is not None: # pragma: no cover
             raise RuntimeError('%s didnt start' % str(cmd))
 
     def stop_subprocess(self):
-        time.sleep(.2)
         if self.proc.returncode is None:
             #self.conn.close()
             self.proc.terminate()
@@ -39,6 +35,32 @@ class SubprocessTests(object):
         self.assertEqual(s, tobytes(status))
         self.assertEqual(r, tobytes(reason))
         self.assertEqual(v, tobytes(version))
+
+class SleepyThreadTests(SubprocessTests, unittest.TestCase):
+    # test that sleepy thread doesnt block other requests
+    def setUp(self):
+        echo = os.path.join(here, 'fixtureapps', 'sleepy.py')
+        self.start_subprocess([self.exe, echo])
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def test_it(self):
+        sleepycmd = [self.exe, os.path.join(here, 'fixtureapps', 'getline.py'),
+                     'http://127.0.0.1:%s/sleepy' % self.port]
+        notsleepycmd = [self.exe,os.path.join(here, 'fixtureapps','getline.py'),
+                        'http://127.0.0.1:%s/' % self.port]
+        r, w = os.pipe()
+        sleepyproc = subprocess.Popen(sleepycmd, stdout=w)
+        notsleepyproc = subprocess.Popen(notsleepycmd, stdout=w)
+        time.sleep(3)
+        sleepyproc.terminate()
+        notsleepyproc.terminate()
+        # the notsleepy response should always be first returned (it sleeps
+        # for 2 seconds, then returns; the notsleepy response should be 
+        # processed in the meantime)
+        result = os.read(r, 10000)
+        self.assertEqual(result, b'notsleepy returned\nsleepy returned\n')
 
 class EchoTests(SubprocessTests, unittest.TestCase):
     def setUp(self):
