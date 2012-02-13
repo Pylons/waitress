@@ -1175,6 +1175,44 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
+
+class TestConcurrentRequests(SubprocessTests, unittest.TestCase):
+
+    def setUp(self):
+        slow = os.path.join(here, 'fixtureapps', 'slow.py')
+        self.start_subprocess([self.exe, slow])
+        self.bodies = []
+        self.sent = []
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def _make_socket(self):
+        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def _send_request(self, path):
+        to_send = "GET %s HTTP/1.0\n\n" % path
+        to_send = tobytes(to_send)
+        socket = self._make_socket()
+        socket.connect((self.host, self.port))
+        socket.send(to_send)
+        self.sent.append(path)
+        fp = socket.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.bodies.append(response_body)
+
+    def test_slow_requests_do_not_block_other_threads(self):
+        import thread
+        thread.start_new_thread(self._send_request, ('/slow', ))
+        # wait a bit to make sure that '/slow' is requested before '/quick'
+        time.sleep(0.3)
+        thread.start_new_thread(self._send_request, ('/quick', ))
+        while len(self.bodies) < 2:
+            time.sleep(.1)  # wait for requests to be sent and processed
+        self.assertEqual(self.sent, ['/slow', '/quick'])
+        self.assertEqual(self.bodies, ['quick', 'slow'])
+
+
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
     """

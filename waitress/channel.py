@@ -78,6 +78,10 @@ class HTTPChannel(logging_dispatcher, object):
         self.outbuf_lock = thread.allocate_lock()
 
         asyncore.dispatcher.__init__(self, sock, map=map)
+        # lock used to push/pop requests
+        self.task_lock = thread.allocate_lock()
+        # lock used to access any outbuf
+        self.outbuf_lock = thread.allocate_lock()
 
     def any_outbuf_has_data(self):
         for outbuf in self.outbufs:
