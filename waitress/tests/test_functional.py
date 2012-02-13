@@ -46,21 +46,25 @@ class SleepyThreadTests(SubprocessTests, unittest.TestCase):
         self.stop_subprocess()
 
     def test_it(self):
-        sleepycmd = [self.exe, os.path.join(here, 'fixtureapps', 'getline.py'),
-                     'http://127.0.0.1:%s/sleepy' % self.port]
-        notsleepycmd = [self.exe,os.path.join(here, 'fixtureapps','getline.py'),
-                        'http://127.0.0.1:%s/' % self.port]
+        getline = os.path.join(here, 'fixtureapps', 'getline.py')
+        cmds = (
+            [self.exe, getline, 'http://127.0.0.1:%s/sleepy' % self.port],
+            [self.exe, getline, 'http://127.0.0.1:%s/' % self.port]
+            )
         r, w = os.pipe()
-        sleepyproc = subprocess.Popen(sleepycmd, stdout=w)
-        notsleepyproc = subprocess.Popen(notsleepycmd, stdout=w)
+        procs = []
+        for cmd in cmds:
+            procs.append(subprocess.Popen(cmd, stdout=w))
         time.sleep(3)
-        for proc in (sleepyproc, notsleepyproc):
+        for proc in procs:
             if proc.returncode is not None: # pragma: no cover
-                sleepyproc.terminate()
+                proc.terminate()
         # the notsleepy response should always be first returned (it sleeps
         # for 2 seconds, then returns; the notsleepy response should be 
         # processed in the meantime)
         result = os.read(r, 10000)
+        os.close(r)
+        os.close(w)
         self.assertEqual(result, b'notsleepy returned\nsleepy returned\n')
 
 class EchoTests(SubprocessTests, unittest.TestCase):
