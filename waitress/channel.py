@@ -52,8 +52,6 @@ class HTTPChannel(logging_dispatcher, object):
     close_when_flushed = False   # set to True to close the socket when flushed
     requests = ()                # currently pending requests
     sent_continue = False        # used as a latch after sending 100 continue
-    task_lock = thread.allocate_lock()  # lock used to push/pop requests
-    outbuf_lock = thread.allocate_lock() # lock used to access any outbuf
     force_flush = False          # indicates a need to flush the outbuf
 
     #
@@ -74,6 +72,10 @@ class HTTPChannel(logging_dispatcher, object):
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
         self.creation_time = self.last_activity = time.time()
         asyncore.dispatcher.__init__(self, sock, map=map)
+        # lock used to push/pop requests
+        self.task_lock = thread.allocate_lock()
+        # lock used to access any outbuf
+        self.outbuf_lock = thread.allocate_lock()
 
     def any_outbuf_has_data(self):
         for outbuf in self.outbufs:
