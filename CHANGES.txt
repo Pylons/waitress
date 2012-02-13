@@ -8,7 +8,7 @@ Bug Fixes
   subsequent the responses of subsequent requests until the slow request's
   response was fully generated.  This was due to a "task lock" being declared
   as a class attribute rather than as an instance attribute on HTTPChannel.
-  ALso took the opportunity to move another lock named "outbuf lock" to the
+  Also took the opportunity to move another lock named "outbuf lock" to the
   channel instance rather than the class.  See
   https://github.com/Pylons/waitress/pull/1 .
 
