@@ -10,6 +10,6 @@ if __name__ == '__main__':
     headers = {'Content-Type':'text/plain; charset=utf-8'}
     resp = urlopen(url)
     line = resp.readline().decode('ascii') # py3
-    sys.stdout.write(line+'\n')
+    sys.stdout.write(line)
     sys.stdout.flush()
     

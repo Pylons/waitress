@@ -65,7 +65,7 @@ class SleepyThreadTests(SubprocessTests, unittest.TestCase):
         result = os.read(r, 10000)
         os.close(r)
         os.close(w)
-        self.assertEqual(result, b'notsleepy returned\nsleepy returned\n')
+        self.assertEqual(result, b'notsleepy returnedsleepy returned')
 
 class EchoTests(SubprocessTests, unittest.TestCase):
     def setUp(self):
