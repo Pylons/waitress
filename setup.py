@@ -21,6 +21,16 @@ try:
 except IOError:
     README = CHANGES = ''
 
+docs_extras = [
+    'Sphinx',
+    'docutils',
+    ]
+
+testing_extras = [
+    'nose',
+    'coverage',
+    ]
+
 setup(
     name='waitress',
     version='0.8.1',
@@ -54,6 +64,10 @@ setup(
     install_requires=[
         'setuptools',
         ],
+    extras_require = {
+        'testing':testing_extras,
+        'docs':docs_extras,
+        },
     include_package_data=True,
     test_suite='waitress',
     zip_safe=False,
