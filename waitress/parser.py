@@ -36,7 +36,11 @@ from waitress.utilities import (
     find_double_newline,
     RequestEntityTooLarge,
     RequestHeaderFieldsTooLarge,
+    BadRequest,
     )
+
+class ParsingError(Exception):
+    pass
 
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
@@ -96,19 +100,24 @@ class HTTPRequestParser(object):
                     self.empty = True
                     self.completed = True
                 else:
-                    self.parse_header(header_plus)
-                    if self.body_rcv is None:
-                        # no content-length header and not a t-e: chunked
-                        # request
+                    try:
+                        self.parse_header(header_plus)
+                    except ParsingError as e:
+                        self.error = BadRequest(e.args[0])
                         self.completed = True
-                    if self.content_length > 0:
-                        max_body = self.adj.max_request_body_size
-                        # we won't accept this request if the content-length
-                        # is too large
-                        if self.content_length >= max_body:
-                            self.error = RequestEntityTooLarge(
-                                'exceeds max_body of %s' % max_body)
+                    else:
+                        if self.body_rcv is None:
+                            # no content-length header and not a t-e: chunked
+                            # request
                             self.completed = True
+                        if self.content_length > 0:
+                            max_body = self.adj.max_request_body_size
+                            # we won't accept this request if the content-length
+                            # is too large
+                            if self.content_length >= max_body:
+                                self.error = RequestEntityTooLarge(
+                                    'exceeds max_body of %s' % max_body)
+                                self.completed = True
                 self.headers_finished = True
                 return consumed
             else:
@@ -244,6 +253,9 @@ def get_header_lines(header):
     lines = header.split(b'\n')
     for line in lines:
         if line.startswith((b' ', b'\t')):
+            if not r:
+                # http://corte.si/posts/code/pathod/pythonservers/index.html
+                raise ParsingError('Malformed header line "%s"' % tostr(line))
             r[-1] = r[-1] + line[1:]
         else:
             r.append(line)

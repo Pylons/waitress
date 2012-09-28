@@ -49,6 +49,19 @@ HTTP/1.0 GET /foobar
         self.assertTrue(self.parser.completed)
         self.assertEqual(self.parser.headers, {})
 
+    def test_received_bad_host_header(self):
+        from waitress.utilities import BadRequest
+        data = b"""\
+HTTP/1.0 GET /foobar
+ Host: foo
+
+
+"""
+        result = self.parser.received(data)
+        self.assertEqual(result, 33)
+        self.assertTrue(self.parser.completed)
+        self.assertEqual(self.parser.error.__class__, BadRequest)
+
     def test_received_nonsense_nothing(self):
         data = b"""\
 
@@ -228,6 +241,12 @@ class Test_get_header_lines(unittest.TestCase):
     def test_get_header_lines_tabbed(self):
         result = self._callFUT(b'slam\n\tslim')
         self.assertEqual(result, [b'slamslim'])
+
+    def test_get_header_lines_malformed(self):
+        # http://corte.si/posts/code/pathod/pythonservers/index.html
+        from waitress.parser import ParsingError
+        self.assertRaises(ParsingError,
+                          self._callFUT, b' Host: localhost\r\n\r\n')
 
 class Test_crack_first_line(unittest.TestCase):
     def _callFUT(self, line):
