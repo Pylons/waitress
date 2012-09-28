@@ -87,6 +87,19 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(headers.get('server'), 'waitress')
         self.assertTrue(headers.get('date'))
 
+    def test_bad_host_header(self):
+        # http://corte.si/posts/code/pathod/pythonservers/index.html
+        to_send = ("GET / HTTP/1.0\n"
+                   " Host: 0\n\n")
+        to_send = tobytes(to_send)
+        self.sock.connect((self.host, self.port))
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '400', 'Bad Request', 'HTTP/1.0')
+        self.assertEqual(headers.get('server'), 'waitress')
+        self.assertTrue(headers.get('date'))
+
     def test_send_with_body(self):
         to_send = ("GET / HTTP/1.0\n"
                    "Content-Length: 5\n\n")
