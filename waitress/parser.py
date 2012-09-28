@@ -255,7 +255,7 @@ def get_header_lines(header):
         if line.startswith((b' ', b'\t')):
             if not r:
                 # http://corte.si/posts/code/pathod/pythonservers/index.html
-                raise ParsingError(b'Malformed header line "%s"' % tostr(line))
+                raise ParsingError('Malformed header line "%s"' % tostr(line))
             r[-1] = r[-1] + line[1:]
         else:
             r.append(line)
