@@ -1240,7 +1240,15 @@ def read_http(fp): # pragma: no cover
   
     if 'content-length' in headers:
         num = int(headers['content-length'])
-        body = fp.read(num)
+        body = b''
+        read = 0
+        while 1:
+            left = num - read
+            data = fp.read(left)
+            if not data:
+                break
+            body += data
+            read += len(data)
     else:
         # read until EOF
         body = fp.read()
