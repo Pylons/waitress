@@ -20,7 +20,7 @@ class SubprocessTests(object):
     def start_subprocess(self, cmd):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.proc = subprocess.Popen(cmd)
-        time.sleep(.2)
+        time.sleep(.5)
         if self.proc.returncode is not None: # pragma: no cover
             raise RuntimeError('%s didnt start' % str(cmd))
 
