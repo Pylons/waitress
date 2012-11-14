@@ -8,6 +8,10 @@ Bug Fixes
   sending a bad header resulted in an exception leading to a 500 response
   instead of the more proper 400 response without an exception.
 
+- Fix a race condition in the test suite.
+
+- Allow "ident" to be used as a keyword to ``serve()`` as per docs.
+
 0.8.1 (2012-02-13)
 ------------------
 
