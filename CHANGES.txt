@@ -1,5 +1,5 @@
-Next release
-------------
+0.8.2 (2012-11-14)
+------------------
 
 Bug Fixes
 ~~~~~~~~~
@@ -11,6 +11,8 @@ Bug Fixes
 - Fix a race condition in the test suite.
 
 - Allow "ident" to be used as a keyword to ``serve()`` as per docs.
+
+- Add py33 to tox.ini.
 
 0.8.1 (2012-02-13)
 ------------------

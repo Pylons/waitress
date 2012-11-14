@@ -33,7 +33,7 @@ testing_extras = [
 
 setup(
     name='waitress',
-    version='0.8.1',
+    version='0.8.2',
     author='Zope Foundation and Contributors',
     author_email='zope-dev@zope.org',
     maintainer="Chris McDonough",
