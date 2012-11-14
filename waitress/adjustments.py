@@ -132,6 +132,8 @@ class Adjustments(object):
                 v = int(v)
             elif k == 'expose_tracebacks':
                 v = asbool(v)
+            elif k == 'ident':
+                v = str(v)
             else:
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, v)
