@@ -418,11 +418,12 @@ class WSGITask(Task):
                     # waiting for more data when there are too few bytes
                     # to service content-length
                     self.close_on_finish = True
-                    self.logger.warning(
-                        'application returned too few bytes (%s) '
-                        'for specified Content-Length (%s) via app_iter' % (
-                            self.content_bytes_written, cl),
-                        )
+                    if self.request.command != 'HEAD':
+                        self.logger.warning(
+                            'application returned too few bytes (%s) '
+                            'for specified Content-Length (%s) via app_iter' % (
+                                self.content_bytes_written, cl),
+                            )
         finally:
             if hasattr(app_iter, 'close'):
                 app_iter.close()
