@@ -25,7 +25,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
         self.assertEqual(inst.threads, {})
-        self.assertTrue(len(inst.logger.logged), 1)
+        self.assertEqual(len(inst.logger.logged), 1)
 
     def test_set_thread_count_increase(self):
         inst = self._makeOne()
@@ -444,7 +444,7 @@ class TestWSGITask(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.execute()
         self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(len(inst.logger.logged), 1)
+        self.assertEqual(len(inst.logger.logged), 1)
 
     def test_execute_app_returns_too_few_bytes(self):
         def app(environ, start_response):
@@ -455,7 +455,7 @@ class TestWSGITask(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.execute()
         self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(len(inst.logger.logged), 1)
+        self.assertEqual(len(inst.logger.logged), 1)
 
     def test_execute_app_returns_closeable(self):
         class closeable(list):
