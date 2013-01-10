@@ -191,7 +191,7 @@ class HTTPChannel(logging_dispatcher, object):
                     # there's no current task, so we don't need to try to
                     # lock the outbuf to append to it.
                     self.outbufs[-1].append(b'HTTP/1.1 100 Continue\r\n\r\n')
-                    self.sent_expect_continue = True
+                    self.sent_continue = True
                     self._flush_some()
                     request.completed = False
             if request.completed:

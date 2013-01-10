@@ -357,7 +357,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(len(inst.requests), 2)
         self.assertEqual(len(inst.server.tasks), 1)
 
-    def test_received_headers_finished_not_expect_continue(self):
+    def test_received_headers_finished_expect_continue_false(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
@@ -372,7 +372,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(inst.outbufs[0].get(100), b'')
 
-    def test_received_headers_finished_expect_continue(self):
+    def test_received_headers_finished_expect_continue_true(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         preq = DummyParser()
@@ -385,7 +385,24 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.request, preq)
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(sock.sent, b'HTTP/1.1 100 Continue\r\n\r\n')
-        self.assertEqual(inst.sent_expect_continue, True)
+        self.assertEqual(inst.sent_continue, True)
+        self.assertEqual(preq.completed, False)
+
+    def test_received_headers_finished_expect_continue_true_sent_true(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.server = DummyServer()
+        preq = DummyParser()
+        inst.request = preq
+        preq.expect_continue = True
+        preq.headers_finished = True
+        preq.completed = False
+        preq.empty = False
+        inst.sent_continue = True
+        inst.received(b'GET / HTTP/1.1\n\n')
+        self.assertEqual(inst.request, preq)
+        self.assertEqual(inst.server.tasks, [])
+        self.assertEqual(sock.sent, b'')
+        self.assertEqual(inst.sent_continue, True)
         self.assertEqual(preq.completed, False)
 
     def test_service_no_requests(self):

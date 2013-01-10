@@ -19,6 +19,10 @@ Bug Fixes
 - Don't complain if there's a response to a HEAD request that contains a
   Content-Length > 0.  See https://github.com/Pylons/waitress/pull/7.
 
+- Fix bug in HTTP Expect/Continue support.  See
+  https://github.com/Pylons/waitress/issues/9 .
+
+
 0.8.2 (2012-11-14)
 ------------------
 
