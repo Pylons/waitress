@@ -98,6 +98,9 @@ class Adjustments(object):
         (socket.SOL_TCP, socket.TCP_NODELAY, 1),
         ]
 
+    # The asyncore.loop timeout value
+    asyncore_loop_timeout = 1
+
     def __init__(self, **kw):
         for k, v in kw.items():
             if k == 'host':
@@ -134,6 +137,8 @@ class Adjustments(object):
                 v = asbool(v)
             elif k == 'ident':
                 v = str(v)
+            elif k == 'asyncore_loop_timeout':
+                v = int(v)
             else:
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, v)

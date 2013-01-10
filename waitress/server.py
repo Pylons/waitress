@@ -126,7 +126,10 @@ class WSGIServer(logging_dispatcher, object):
 
     def run(self):
         try:
-            self.asyncore.loop(map=self._map)
+            self.asyncore.loop(
+                timeout=self.adj.asyncore_loop_timeout,
+                map=self._map
+                )
         except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
 

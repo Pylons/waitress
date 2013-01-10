@@ -1,3 +1,24 @@
+Next release
+------------
+
+Features
+~~~~~~~~
+
+- Add an ``asyncore_loop_timeout`` adjustment value, which controls the
+  ``timeout`` value passed to ``asyncore.loop``; defaults to 1.
+
+Bug Fixes
+~~~~~~~~~
+
+- The default asyncore loop timeout is now 1 second.  This prevents slow
+  shutdown on Windows.  See https://github.com/Pylons/waitress/issues/6 .  This
+  shouldn't matter to anyone in particular, but it can be changed via the
+  ``asyncore_loop_timeout`` adjustment (it used to previously default to 30
+  seconds).
+
+- Don't complain if there's a response to a HEAD request that contains a
+  Content-Length > 0.  See https://github.com/Pylons/waitress/pull/7.
+
 0.8.2 (2012-11-14)
 ------------------
 

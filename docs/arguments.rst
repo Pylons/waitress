@@ -91,3 +91,7 @@ expose_tracebacks
     Boolean: expose tracebacks of unhandled exceptions to client.  Default:
     ``False``.
 
+asyncore_loop_timeout
+    The ``timeout`` value (seconds) passed to ``asyncore.loop`` to run the
+    mainloop.  Default: 1.  (New in 0.8.3.)
+

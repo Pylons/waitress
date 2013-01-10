@@ -235,7 +235,7 @@ class DummyAdj:
     channel_timeout= 300
     
 class DummyAsyncore(object):
-    def loop(self, map):
+    def loop(self, timeout=None, map=None):
         raise SystemExit
     
 class DummyTrigger(object):
