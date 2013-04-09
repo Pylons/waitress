@@ -8,3 +8,4 @@ nosetests.xml
 waitress/coverage.xml
 dist/
 keep/
+coverage.xml
