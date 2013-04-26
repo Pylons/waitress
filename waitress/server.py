@@ -13,6 +13,7 @@
 ##############################################################################
 
 import asyncore
+import os
 import socket
 import time
 
@@ -20,7 +21,7 @@ from waitress import trigger
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
 from waitress.task import ThreadedTaskDispatcher
-from waitress.utilities import logging_dispatcher
+from waitress.utilities import cleanup_unix_socket, logging_dispatcher
 
 class WSGIServer(logging_dispatcher, object):
     """
@@ -52,11 +53,19 @@ class WSGIServer(logging_dispatcher, object):
         self.task_dispatcher = _dispatcher
         self.asyncore.dispatcher.__init__(self, _sock, map=map)
         if _sock is None:
-            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+            af = socket.AF_UNIX if self.adj.unix_socket else socket.AF_INET
+            self.create_socket(af, socket.SOCK_STREAM)
         self.set_reuse_addr()
-        self.bind((self.adj.host, self.adj.port))
+        if self.adj.unix_socket:
+            cleanup_unix_socket(self.adj.unix_socket)
+            self.bind(self.adj.unix_socket)
+            if _sock is None:
+                os.chmod(self.adj.unix_socket, self.adj.unix_socket_perms)
+            self.server_name = self.get_server_name(None)
+        else:
+            self.bind((self.adj.host, self.adj.port))
+            self.server_name = self.get_server_name(self.adj.host)
         self.effective_host, self.effective_port = self.getsockname()
-        self.server_name = self.get_server_name(self.adj.host)
         self.active_channels = {}
         if _start:
             self.accept_connections()
@@ -80,6 +89,8 @@ class WSGIServer(logging_dispatcher, object):
         return server_name
 
     def getsockname(self):
+        if self.socket.family == socket.AF_UNIX:
+            return ('unix', self.socket.getsockname())
         return self.socket.getsockname()
 
     def accept_connections(self):
@@ -120,8 +131,11 @@ class WSGIServer(logging_dispatcher, object):
                 self.logger.warning('server accept() threw an exception',
                                     exc_info=True)
             return
-        for (level, optname, value) in self.adj.socket_options:
-            conn.setsockopt(level, optname, value)
+        if conn.family == socket.AF_INET:
+            for (level, optname, value) in self.adj.socket_options:
+                conn.setsockopt(level, optname, value)
+        if conn.family == socket.AF_UNIX:
+            addr = ('127.0.0.1', None)
         self.channel_class(self, conn, addr, self.adj, map=self._map)
 
     def run(self):

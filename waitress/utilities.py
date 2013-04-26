@@ -15,8 +15,11 @@
 """
 
 import asyncore
+import errno
 import logging
+import os
 import re
+import stat
 import time
 import calendar
 
@@ -175,6 +178,16 @@ class logging_dispatcher(asyncore.dispatcher):
             'error': logging.ERROR,
             }
         self.logger.log(severity.get(type, logging.INFO), message)
+
+def cleanup_unix_socket(path):
+    try:
+        st = os.stat(path)
+    except OSError, exc:
+        if exc.errno != errno.ENOENT:
+            raise  # pragma: no cover
+    else:
+        if stat.S_ISSOCK(st.st_mode):
+            os.remove(path)
 
 class Error(object):
     def __init__(self, body):

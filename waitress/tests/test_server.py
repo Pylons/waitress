@@ -179,15 +179,57 @@ class TestWSGIServer(unittest.TestCase):
         inst.maintenance(10000)
         self.assertEqual(zombie.will_close, True)
 
+class TestUnixWSGIServer(unittest.TestCase):
+    unix_socket = '/tmp/waitress.test.sock'
+    def _makeOne(self, _start=True, _sock=None):
+        from waitress.server import WSGIServer
+        return WSGIServer(
+            None,
+            map={},
+            _start=_start,
+            _sock=_sock,
+            _dispatcher=DummyTaskDispatcher(),
+            unix_socket=self.unix_socket,
+            unix_socket_perms='600'
+            )
+
+    def _makeDummy(self, *args, **kwargs):
+        sock = DummySock(*args, **kwargs)
+        sock.family = socket.AF_UNIX
+        return sock
+
+    def test_unix(self):
+        inst = self._makeOne(_start=False)
+        self.assertEqual(inst.socket.family, socket.AF_UNIX)
+        self.assertEqual(inst.socket.getsockname(), self.unix_socket)
+
+    def test_handle_accept(self):
+        # Working on the assumption that we only have to test the happy path
+        # for Unix domain sockets as the other paths should've been covered
+        # by inet sockets.
+        client = self._makeDummy()
+        listen = self._makeDummy(acceptresult=(client, None))
+        inst = self._makeOne(_sock=listen)
+        self.assertEqual(inst.accepting, True)
+        self.assertEqual(inst.socket.listened, 1024)
+        L = []
+        inst.channel_class = lambda *arg, **kw: L.append(arg)
+        inst.handle_accept()
+        self.assertEqual(inst.socket.accepted, True)
+        self.assertEqual(client.opts, [])
+        self.assertEqual(L, [(inst, client,  ('127.0.0.1', None), inst.adj)])
+
 class DummySock(object):
     accepted = False
     blocking = False
+    family = socket.AF_INET
     def __init__(self, toraise=None, acceptresult=(None, None)):
         self.toraise = toraise
         self.acceptresult = acceptresult
+        self.bound = None
         self.opts = []
     def bind(self, addr):
-        pass
+        self.bound = addr
     def accept(self):
         if self.toraise:
             raise self.toraise
@@ -206,7 +248,7 @@ class DummySock(object):
     def listen(self, num):
         self.listened = num
     def getsockname(self):
-        return '127.0.0.1', 80
+        return self.bound
 
 class DummyTaskDispatcher(object):
     def __init__(self):

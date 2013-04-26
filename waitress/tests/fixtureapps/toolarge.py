@@ -9,12 +9,16 @@ def app(environ, start_response):
 
 if __name__ == '__main__':
     import logging
+    import sys
     class NullHandler(logging.Handler):
         def emit(self, record):
             pass
     h = NullHandler()
     logging.getLogger('waitress').addHandler(h)
     from waitress import serve
-    serve(app, port=61523, _quiet=True, max_request_header_size=1000,
-          max_request_body_size=1000)
-    
+    if len(sys.argv) > 1 and sys.argv[1] == '-u':
+        kwargs = {'unix_socket': '/tmp/waitress.functional.sock'}
+    else:
+        kwargs = {'port': 61523}
+    serve(app, _quiet=True, max_request_header_size=1000,
+          max_request_body_size=1000, **kwargs)
