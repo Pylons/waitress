@@ -1217,7 +1217,7 @@ class UnixTests(SubprocessTests):
         try:
             self.sock.send(to_send)
         except socket.error, exc:
-            assert get_errno(exc) == errno.EPIPE
+            self.assertEqual(get_errno(exc), errno.EPIPE)
 
 class UnixEchoTests(EchoTests, UnixTests):
     def make_http_connection(self):
