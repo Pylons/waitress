@@ -474,4 +474,3 @@ class WSGITask(Task):
 
         self.environ = environ
         return environ
-

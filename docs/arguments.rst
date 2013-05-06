@@ -13,6 +13,15 @@ host
 port
     TCP port (integer) on which to listen, default ``8080``
 
+unix_socket
+    Path of Unix socket (string), default is ``None``. If a socket path is
+    specified, a Unix domain socket is made instead of the usual inet domain
+    socket.
+
+unix_socket_perms
+    Octal permissions to use for the Unix domain socket (string), default is
+    ``600``. Only used if ``unix_socket`` is not ``None``.
+
 threads
     mumber of threads used to process application logic (integer), default
     ``4``
