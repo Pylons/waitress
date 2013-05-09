@@ -42,7 +42,7 @@ def app(environ, start_response):
         if path_info == '/notfilelike':
             headers =  [('Content-Length', str(len(data))),
                         ('Content-Type', 'image/jpeg')]
-            
+
         elif path_info == '/notfilelike_nocl':
             headers = [('Content-Type', 'image/jpeg')]
         elif path_info == '/notfilelike_shortcl':
@@ -63,12 +63,5 @@ def app(environ, start_response):
     return environ['wsgi.file_wrapper'](f, 8192)
 
 if __name__ == '__main__':
-    import logging
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-    h = NullHandler()
-    logging.getLogger('waitress').addHandler(h)
-    from waitress import serve
-    serve(app, port=61523, _quiet=True)
-    
+    from waitress.tests.support import start_server
+    start_server(app)
