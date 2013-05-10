@@ -14,17 +14,6 @@ from waitress.tests.support import TEST_PORT
 dn = os.path.dirname
 here = dn(__file__)
 
-class TcpMixin(object):
-
-    def create_socket(self):
-        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def connect(self):
-        self.sock.connect(('127.0.0.1', TEST_PORT))
-
-    def make_http_connection(self):
-        return httplib.HTTPConnection('127.0.0.1', TEST_PORT)
-
 class SubprocessTests(object):
     exe = sys.executable
 
@@ -47,7 +36,27 @@ class SubprocessTests(object):
         self.assertEqual(r, tobytes(reason))
         self.assertEqual(v, tobytes(version))
 
-class SleepyThreadTests(SubprocessTests, TcpMixin, unittest.TestCase):
+    def create_socket(self):
+        raise NotImplementedError  # pragma: no cover
+
+    def connect(self):
+        raise NotImplementedError  # pragma: no cover
+
+    def make_http_connection(self):
+        raise NotImplementedError  # pragma: no cover
+
+class TcpTests(SubprocessTests):
+
+    def create_socket(self):
+        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def connect(self):
+        self.sock.connect(('127.0.0.1', TEST_PORT))
+
+    def make_http_connection(self):
+        return httplib.HTTPConnection('127.0.0.1', TEST_PORT)
+
+class SleepyThreadTests(TcpTests, unittest.TestCase):
     # test that sleepy thread doesnt block other requests
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'sleepy.py')
@@ -78,7 +87,7 @@ class SleepyThreadTests(SubprocessTests, TcpMixin, unittest.TestCase):
         os.close(w)
         self.assertEqual(result, b'notsleepy returnedsleepy returned')
 
-class EchoTests(SubprocessTests):
+class EchoTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -342,7 +351,7 @@ class EchoTests(SubprocessTests):
         self.assertEqual(int(response.status), 200)
         self.assertEqual(response.getheader('connection'), 'close')
 
-class PipeliningTests(SubprocessTests):
+class PipeliningTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -380,7 +389,7 @@ class PipeliningTests(SubprocessTests):
             self.assertEqual(length, len(response_body))
             self.assertEqual(response_body, expect_body)
 
-class ExpectContinueTests(SubprocessTests):
+class ExpectContinueTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -417,7 +426,7 @@ class ExpectContinueTests(SubprocessTests):
         self.assertEqual(length, len(response_body))
         self.assertEqual(response_body, tobytes(data))
 
-class BadContentLengthTests(SubprocessTests):
+class BadContentLengthTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'badcl.py')
         self.start_subprocess([self.exe, echo])
@@ -481,7 +490,7 @@ class BadContentLengthTests(SubprocessTests):
         response_body = fp.read(content_length)
         self.assertEqual(int(status), 200)
 
-class NoContentLengthTests(SubprocessTests):
+class NoContentLengthTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'nocl.py')
         self.start_subprocess([self.exe, echo])
@@ -613,7 +622,7 @@ class NoContentLengthTests(SubprocessTests):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class WriteCallbackTests(SubprocessTests):
+class WriteCallbackTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'writecb.py')
         self.start_subprocess([self.exe, echo])
@@ -712,7 +721,7 @@ class WriteCallbackTests(SubprocessTests):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class TooLargeTests(SubprocessTests):
+class TooLargeTests(object):
 
     toobig = 1050
 
@@ -912,7 +921,7 @@ class TooLargeTests(SubprocessTests):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class InternalServerErrorTests(SubprocessTests):
+class InternalServerErrorTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'error.py')
         self.start_subprocess([self.exe, echo])
@@ -976,7 +985,7 @@ class InternalServerErrorTests(SubprocessTests):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class FileWrapperTests(SubprocessTests):
+class FileWrapperTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'filewrapper.py')
         self.start_subprocess([self.exe, echo])
@@ -1217,12 +1226,12 @@ SHARED_TESTS = (
 )
 
 # Generate test cases for all socket types.
-for prefix, mixin in (('Tcp', 'TcpMixin'),):
+for prefix, base in (('Tcp', 'TcpTests'),):
     for cls in SHARED_TESTS:
         exec(
-            "class %(prefix)s%(cls)s(%(cls)s, %(mixin)s, unittest.TestCase): pass" % {
+            "class %(prefix)s%(cls)s(%(cls)s, %(base)s, unittest.TestCase): pass" % {
                 'prefix': prefix,
-                'mixin': mixin,
+                'base': base,
                 'cls': cls.__name__
             }
         )
