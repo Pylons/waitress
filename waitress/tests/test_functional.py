@@ -14,7 +14,7 @@ from waitress.tests.support import TEST_PORT
 dn = os.path.dirname
 here = dn(__file__)
 
-class TcpTestMixin(object):
+class TcpMixin(object):
 
     def create_socket(self):
         return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,7 +25,7 @@ class TcpTestMixin(object):
     def make_http_connection(self):
         return httplib.HTTPConnection('127.0.0.1', TEST_PORT)
 
-class SubprocessTests(TcpTestMixin):
+class SubprocessTests(object):
     exe = sys.executable
 
     def start_subprocess(self, cmd):
@@ -47,7 +47,7 @@ class SubprocessTests(TcpTestMixin):
         self.assertEqual(r, tobytes(reason))
         self.assertEqual(v, tobytes(version))
 
-class SleepyThreadTests(SubprocessTests, unittest.TestCase):
+class SleepyThreadTests(SubprocessTests, TcpMixin, unittest.TestCase):
     # test that sleepy thread doesnt block other requests
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'sleepy.py')
@@ -78,7 +78,7 @@ class SleepyThreadTests(SubprocessTests, unittest.TestCase):
         os.close(w)
         self.assertEqual(result, b'notsleepy returnedsleepy returned')
 
-class EchoTests(SubprocessTests, unittest.TestCase):
+class EchoTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -342,7 +342,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(int(response.status), 200)
         self.assertEqual(response.getheader('connection'), 'close')
 
-class PipeliningTests(SubprocessTests, unittest.TestCase):
+class PipeliningTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -380,7 +380,7 @@ class PipeliningTests(SubprocessTests, unittest.TestCase):
             self.assertEqual(length, len(response_body))
             self.assertEqual(response_body, expect_body)
 
-class ExpectContinueTests(SubprocessTests, unittest.TestCase):
+class ExpectContinueTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -417,7 +417,7 @@ class ExpectContinueTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(length, len(response_body))
         self.assertEqual(response_body, tobytes(data))
 
-class BadContentLengthTests(SubprocessTests, unittest.TestCase):
+class BadContentLengthTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'badcl.py')
         self.start_subprocess([self.exe, echo])
@@ -481,7 +481,7 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
         response_body = fp.read(content_length)
         self.assertEqual(int(status), 200)
 
-class NoContentLengthTests(SubprocessTests, unittest.TestCase):
+class NoContentLengthTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'nocl.py')
         self.start_subprocess([self.exe, echo])
@@ -613,7 +613,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class WriteCallbackTests(SubprocessTests, unittest.TestCase):
+class WriteCallbackTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'writecb.py')
         self.start_subprocess([self.exe, echo])
@@ -712,7 +712,7 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class TooLargeTests(SubprocessTests, unittest.TestCase):
+class TooLargeTests(SubprocessTests):
 
     toobig = 1050
 
@@ -912,7 +912,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class TestInternalServerError(SubprocessTests, unittest.TestCase):
+class InternalServerErrorTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'error.py')
         self.start_subprocess([self.exe, echo])
@@ -976,7 +976,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class TestFileWrapper(SubprocessTests, unittest.TestCase):
+class FileWrapperTests(SubprocessTests):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'filewrapper.py')
         self.start_subprocess([self.exe, echo])
@@ -1203,6 +1203,29 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         # connection has been closed (no content-length)
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
+
+SHARED_TESTS = (
+    EchoTests,
+    PipeliningTests,
+    ExpectContinueTests,
+    BadContentLengthTests,
+    NoContentLengthTests,
+    WriteCallbackTests,
+    TooLargeTests,
+    InternalServerErrorTests,
+    FileWrapperTests,
+)
+
+# Generate test cases for all socket types.
+for prefix, mixin in (('Tcp', 'TcpMixin'),):
+    for cls in SHARED_TESTS:
+        exec(
+            "class %(prefix)s%(cls)s(%(cls)s, %(mixin)s, unittest.TestCase): pass" % {
+                'prefix': prefix,
+                'mixin': mixin,
+                'cls': cls.__name__
+            }
+        )
 
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
