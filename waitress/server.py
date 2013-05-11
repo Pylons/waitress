@@ -13,6 +13,8 @@
 ##############################################################################
 
 import asyncore
+import os
+import os.path
 import socket
 import time
 
@@ -20,7 +22,7 @@ from waitress import trigger
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
 from waitress.task import ThreadedTaskDispatcher
-from waitress.utilities import logging_dispatcher
+from waitress.utilities import cleanup_unix_socket, logging_dispatcher
 
 def WSGIServer(application,
                map=None,
@@ -35,7 +37,10 @@ def WSGIServer(application,
         server.run()
     """
     adj = Adjustments(**kw)
-    cls = TcpWSGIServer
+    if adj.unix_socket:
+        cls = UnixWSGIServer
+    else:
+        cls = TcpWSGIServer
     return cls(application, map, _start, _sock, _dispatcher, adj)
 
 class BaseWSGIServer(logging_dispatcher, object):
@@ -181,3 +186,19 @@ class TcpWSGIServer(BaseWSGIServer):
     def set_socket_options(self, conn):
         for (level, optname, value) in self.adj.socket_options:
             conn.setsockopt(level, optname, value)
+
+class UnixWSGIServer(BaseWSGIServer):
+
+    family = socket.AF_UNIX
+
+    def bind_server_socket(self):
+        cleanup_unix_socket(self.adj.unix_socket)
+        self.bind(self.adj.unix_socket)
+        if os.path.exists(self.adj.unix_socket):
+            os.chmod(self.adj.unix_socket, self.adj.unix_socket_perms)
+
+    def getsockname(self):
+        return ('unix', self.socket.getsockname())
+
+    def fix_addr(self, addr):
+        return ('localhost', None)
