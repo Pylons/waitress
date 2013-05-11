@@ -24,12 +24,5 @@ def app(environ, start_response):
     return gen(body)
 
 if __name__ == '__main__':
-    import logging
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-    h = NullHandler()
-    logging.getLogger('waitress').addHandler(h)
-    from waitress import serve
-    serve(app, port=61523, _quiet=True, expose_tracebacks=True)
-    
+    from waitress.tests.support import start_server
+    start_server(app, expose_tracebacks=True)

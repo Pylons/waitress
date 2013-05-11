@@ -67,7 +67,6 @@ class HTTPChannel(logging_dispatcher, object):
             map=None,
             ):
         self.server = server
-        self.addr = addr
         self.adj = adj
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
         self.creation_time = self.last_activity = time.time()
@@ -78,6 +77,9 @@ class HTTPChannel(logging_dispatcher, object):
         self.outbuf_lock = thread.allocate_lock()
 
         asyncore.dispatcher.__init__(self, sock, map=map)
+
+        # Don't let asyncore.dispatcher throttle self.addr on us.
+        self.addr = addr
 
     def any_outbuf_has_data(self):
         for outbuf in self.outbufs:

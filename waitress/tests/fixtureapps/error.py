@@ -1,5 +1,3 @@
-import logging
-
 def app(environ, start_response):
     cl = environ.get('CONTENT_LENGTH', None)
     if cl is not None:
@@ -22,12 +20,5 @@ def app(environ, start_response):
     raise ValueError('wrong')
 
 if __name__ == '__main__':
-    from waitress import serve
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-    h = NullHandler()
-    logging.getLogger('waitress').addHandler(h)
-    serve(app, port=61523, _quiet=True, expose_tracebacks=True)
-    
-    
+    from waitress.tests.support import start_server
+    start_server(app, expose_tracebacks=True)
