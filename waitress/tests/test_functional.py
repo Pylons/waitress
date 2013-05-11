@@ -9,16 +9,16 @@ from waitress.compat import (
     httplib,
     tobytes
     )
+from waitress.tests.support import TEST_PORT
 
 dn = os.path.dirname
 here = dn(__file__)
 
 class SubprocessTests(object):
     exe = sys.executable
-    port = 61523
-    host = 'localhost'
+
     def start_subprocess(self, cmd):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock = self.create_socket()
         self.proc = subprocess.Popen(cmd)
         time.sleep(.5)
         if self.proc.returncode is not None: # pragma: no cover
@@ -36,7 +36,27 @@ class SubprocessTests(object):
         self.assertEqual(r, tobytes(reason))
         self.assertEqual(v, tobytes(version))
 
-class SleepyThreadTests(SubprocessTests, unittest.TestCase):
+    def create_socket(self):
+        raise NotImplementedError  # pragma: no cover
+
+    def connect(self):
+        raise NotImplementedError  # pragma: no cover
+
+    def make_http_connection(self):
+        raise NotImplementedError  # pragma: no cover
+
+class TcpTests(SubprocessTests):
+
+    def create_socket(self):
+        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def connect(self):
+        self.sock.connect(('127.0.0.1', TEST_PORT))
+
+    def make_http_connection(self):
+        return httplib.HTTPConnection('127.0.0.1', TEST_PORT)
+
+class SleepyThreadTests(TcpTests, unittest.TestCase):
     # test that sleepy thread doesnt block other requests
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'sleepy.py')
@@ -48,8 +68,8 @@ class SleepyThreadTests(SubprocessTests, unittest.TestCase):
     def test_it(self):
         getline = os.path.join(here, 'fixtureapps', 'getline.py')
         cmds = (
-            [self.exe, getline, 'http://127.0.0.1:%s/sleepy' % self.port],
-            [self.exe, getline, 'http://127.0.0.1:%s/' % self.port]
+            [self.exe, getline, 'http://127.0.0.1:%s/sleepy' % TEST_PORT],
+            [self.exe, getline, 'http://127.0.0.1:%s/' % TEST_PORT]
             )
         r, w = os.pipe()
         procs = []
@@ -67,7 +87,7 @@ class SleepyThreadTests(SubprocessTests, unittest.TestCase):
         os.close(w)
         self.assertEqual(result, b'notsleepy returnedsleepy returned')
 
-class EchoTests(SubprocessTests, unittest.TestCase):
+class EchoTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -79,7 +99,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         to_send = ("GET / HTTP/1.0\n"
                    "Content-Length: 0\n\n")
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -92,7 +112,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         to_send = ("GET / HTTP/1.0\n"
                    " Host: 0\n\n")
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -105,7 +125,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: 5\n\n")
         to_send += 'hello'
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -117,7 +137,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         to_send = ("GET / HTTP/1.0\n"
                    "Content-Length: 0\n\n")
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -127,13 +147,13 @@ class EchoTests(SubprocessTests, unittest.TestCase):
 
     def test_multiple_requests_with_body(self):
         for x in range(3):
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock = self.create_socket()
             self.test_send_with_body()
             self.sock.close()
 
     def test_multiple_requests_without_body(self):
         for x in range(3):
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock = self.create_socket()
             self.test_send_empty_body()
             self.sock.close()
 
@@ -146,7 +166,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             "\n"
             "%s" % (len(data), data)
             )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(s)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -164,7 +184,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             "\n"
             "%s" % (len(body), body)
             )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(s)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -175,7 +195,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
     def test_many_clients(self):
         conns = []
         for n in range(50):
-            h = httplib.HTTPConnection(self.host, self.port)
+            h = self.make_http_connection()
             h.request("GET", "/", headers={"Accept": "text/plain"})
             conns.append(h)
         responses = []
@@ -191,7 +211,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             "GET / HTTP/1.1\n"
             "Transfer-Encoding: chunked\n\n"
             )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(header)
         self.sock.send(b"0\r\n\r\n")
         fp = self.sock.makefile('rb', 0)
@@ -207,7 +227,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
             "GET / HTTP/1.1\n"
             "Transfer-Encoding: chunked\n\n"
             )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(header)
         fp = self.sock.makefile('rb', 0)
         for n in range(12):
@@ -227,7 +247,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
         to_send += "GET / HTTP/1.1\nTransfer-Encoding: chunked\n\n"
         to_send += (control_line + s)
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -250,7 +270,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
         response.begin()
@@ -272,7 +292,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
             )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
         response.begin()
@@ -290,7 +310,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "Content-Length: %d\n"
              "\n"
              "%s" % (len(data), data))
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
         response.begin()
@@ -307,7 +327,7 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
         response.begin()
@@ -324,14 +344,14 @@ class EchoTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
         response.begin()
         self.assertEqual(int(response.status), 200)
         self.assertEqual(response.getheader('connection'), 'close')
 
-class PipeliningTests(SubprocessTests, unittest.TestCase):
+class PipeliningTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -355,7 +375,7 @@ class PipeliningTests(SubprocessTests, unittest.TestCase):
                 conn = 'close'
             to_send += tobytes(s % (conn, len(body), body))
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         for n in range(count):
@@ -369,7 +389,7 @@ class PipeliningTests(SubprocessTests, unittest.TestCase):
             self.assertEqual(length, len(response_body))
             self.assertEqual(response_body, expect_body)
 
-class ExpectContinueTests(SubprocessTests, unittest.TestCase):
+class ExpectContinueTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -388,7 +408,7 @@ class ExpectContinueTests(SubprocessTests, unittest.TestCase):
              "\n"
              "%s" % (len(data), data)
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line = fp.readline() # continue status line
@@ -406,7 +426,7 @@ class ExpectContinueTests(SubprocessTests, unittest.TestCase):
         self.assertEqual(length, len(response_body))
         self.assertEqual(response_body, tobytes(data))
 
-class BadContentLengthTests(SubprocessTests, unittest.TestCase):
+class BadContentLengthTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'badcl.py')
         self.start_subprocess([self.exe, echo])
@@ -423,7 +443,7 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
              "Content-Length: 0\n"
              "\n"
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line = fp.readline() # status line
@@ -449,7 +469,7 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
              "Content-Length: 0\n"
              "\n"
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line = fp.readline() # status line
@@ -470,7 +490,7 @@ class BadContentLengthTests(SubprocessTests, unittest.TestCase):
         response_body = fp.read(content_length)
         self.assertEqual(int(status), 200)
 
-class NoContentLengthTests(SubprocessTests, unittest.TestCase):
+class NoContentLengthTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'nocl.py')
         self.start_subprocess([self.exe, echo])
@@ -485,7 +505,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: %d\n\n" % len(body))
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -505,7 +525,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: %d\n\n" % len(body))
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -526,7 +546,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: %d\n\n" % len(body))
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -545,7 +565,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: %s\n\n" % len(body))
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb')
         line, headers, response_body = read_http(fp)
@@ -567,7 +587,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: %d\n\n" % len(body))
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -586,7 +606,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: %s\n\n" % len(body))
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb')
         line, headers, response_body = read_http(fp)
@@ -602,7 +622,7 @@ class NoContentLengthTests(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class WriteCallbackTests(SubprocessTests, unittest.TestCase):
+class WriteCallbackTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'writecb.py')
         self.start_subprocess([self.exe, echo])
@@ -619,7 +639,7 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
              "Content-Length: 0\n"
              "\n"
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -643,7 +663,7 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
              "Content-Length: 0\n"
              "\n"
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -666,7 +686,7 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
              "Content-Length: 0\n"
              "\n"
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -689,7 +709,7 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
              "Content-Length: 0\n"
              "\n"
              )
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line = fp.readline() # status line
@@ -701,7 +721,7 @@ class WriteCallbackTests(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class TooLargeTests(SubprocessTests, unittest.TestCase):
+class TooLargeTests(object):
 
     toobig = 1050
 
@@ -718,7 +738,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: 5\n\n")
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb')
         # first request succeeds (content-length 5)
@@ -739,7 +759,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
                    "Connection: Keep-Alive\n\n")
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb')
         # first request succeeds (content-length 5)
@@ -761,7 +781,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         to_send = "GET / HTTP/1.0\n\n"
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -777,7 +797,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         to_send = "GET / HTTP/1.0\nConnection: Keep-Alive\n\n"
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -802,7 +822,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
                    "Content-Length: 5\n\n")
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb')
         # first request succeeds (content-length 5)
@@ -825,7 +845,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         to_send = "GET / HTTP/1.1\nContent-Length: 5\nConnection: close\n\n"
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -842,7 +862,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         to_send = "GET / HTTP/1.1\n\n"
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb')
         # server trusts the content-length header (assumed 0)
@@ -868,7 +888,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         to_send = "GET / HTTP/1.1\nConnection: close\n\n"
         to_send += body
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -887,7 +907,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         repeat = control_line + s
         to_send += repeat * ((self.toobig // len(repeat)) + 1)
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -901,7 +921,7 @@ class TooLargeTests(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class TestInternalServerError(SubprocessTests, unittest.TestCase):
+class InternalServerErrorTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'error.py')
         self.start_subprocess([self.exe, echo])
@@ -912,7 +932,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
     def test_before_start_response(self):
         to_send = "GET /before_start_response HTTP/1.1\n\n"
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -927,7 +947,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
     def test_after_start_response(self):
         to_send = "GET /after_start_response HTTP/1.1\n\n"
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -942,7 +962,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
     def test_after_write_cb(self):
         to_send = "GET /after_write_cb HTTP/1.1\n\n"
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -955,7 +975,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
     def test_in_generator(self):
         to_send = "GET /in_generator HTTP/1.1\n\n"
         to_send = tobytes(to_send)
-        self.sock.connect((self.host, self.port))
+        self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
@@ -965,7 +985,7 @@ class TestInternalServerError(SubprocessTests, unittest.TestCase):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-class TestFileWrapper(SubprocessTests, unittest.TestCase):
+class FileWrapperTests(object):
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'filewrapper.py')
         self.start_subprocess([self.exe, echo])
@@ -977,7 +997,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /filelike HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         for t in range(0, 2):
             self.sock.send(to_send)
@@ -995,7 +1015,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /filelike_nocl HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         for t in range(0, 2):
             self.sock.send(to_send)
@@ -1013,7 +1033,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /filelike_shortcl HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         for t in range(0, 2):
             self.sock.send(to_send)
@@ -1032,7 +1052,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /filelike_longcl HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         for t in range(0, 2):
             self.sock.send(to_send)
@@ -1050,7 +1070,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /notfilelike HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         for t in range(0, 2):
             self.sock.send(to_send)
@@ -1068,7 +1088,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /notfilelike_nocl HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -1085,7 +1105,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /notfilelike_shortcl HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         for t in range(0, 2):
             self.sock.send(to_send)
@@ -1104,7 +1124,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /notfilelike_longcl HTTP/1.1\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -1123,7 +1143,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /filelike HTTP/1.0\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -1142,7 +1162,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /filelike_nocl HTTP/1.0\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -1161,7 +1181,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /notfilelike HTTP/1.0\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -1180,7 +1200,7 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         to_send = "GET /notfilelike_nocl HTTP/1.0\n\n"
         to_send = tobytes(to_send)
 
-        self.sock.connect((self.host, self.port))
+        self.connect()
 
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -1192,6 +1212,33 @@ class TestFileWrapper(SubprocessTests, unittest.TestCase):
         # connection has been closed (no content-length)
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
+
+class TcpEchoTests(EchoTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpPipeliningTests(PipeliningTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpExpectContinueTests(ExpectContinueTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpBadContentLengthTests(BadContentLengthTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpNoContentLengthTests(NoContentLengthTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpWriteCallbackTests(WriteCallbackTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpTooLargeTests(TooLargeTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpInternalServerErrorTests(InternalServerErrorTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
+    pass
 
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.

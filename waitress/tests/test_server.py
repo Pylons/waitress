@@ -182,12 +182,14 @@ class TestWSGIServer(unittest.TestCase):
 class DummySock(object):
     accepted = False
     blocking = False
+    family = socket.AF_INET
     def __init__(self, toraise=None, acceptresult=(None, None)):
         self.toraise = toraise
         self.acceptresult = acceptresult
+        self.bound = None
         self.opts = []
     def bind(self, addr):
-        pass
+        self.bound = addr
     def accept(self):
         if self.toraise:
             raise self.toraise
@@ -206,7 +208,7 @@ class DummySock(object):
     def listen(self, num):
         self.listened = num
     def getsockname(self):
-        return '127.0.0.1', 80
+        return self.bound
 
 class DummyTaskDispatcher(object):
     def __init__(self):
