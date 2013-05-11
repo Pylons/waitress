@@ -1213,28 +1213,32 @@ class FileWrapperTests(object):
         self.sock.send(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
-SHARED_TESTS = (
-    EchoTests,
-    PipeliningTests,
-    ExpectContinueTests,
-    BadContentLengthTests,
-    NoContentLengthTests,
-    WriteCallbackTests,
-    TooLargeTests,
-    InternalServerErrorTests,
-    FileWrapperTests,
-)
+class TcpEchoTests(EchoTests, TcpTests, unittest.TestCase):
+    pass
 
-# Generate test cases for all socket types.
-for prefix, base in (('Tcp', 'TcpTests'),):
-    for cls in SHARED_TESTS:
-        exec(
-            "class %(prefix)s%(cls)s(%(cls)s, %(base)s, unittest.TestCase): pass" % {
-                'prefix': prefix,
-                'base': base,
-                'cls': cls.__name__
-            }
-        )
+class TcpPipeliningTests(PipeliningTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpExpectContinueTests(ExpectContinueTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpBadContentLengthTests(BadContentLengthTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpNoContentLengthTests(NoContentLengthTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpWriteCallbackTests(WriteCallbackTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpTooLargeTests(TooLargeTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpInternalServerErrorTests(InternalServerErrorTests, TcpTests, unittest.TestCase):
+    pass
+
+class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
+    pass
 
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
