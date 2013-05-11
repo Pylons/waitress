@@ -22,29 +22,41 @@ from waitress.channel import HTTPChannel
 from waitress.task import ThreadedTaskDispatcher
 from waitress.utilities import logging_dispatcher
 
-class WSGIServer(logging_dispatcher, object):
+def WSGIServer(application,
+               map=None,
+               _start=True, # test shim
+               _sock=None,  # test shim
+               _dispatcher=None, # test shim
+               **kw # adjustments
+               ):
     """
     if __name__ == '__main__':
         server = WSGIServer(app)
         server.run()
     """
+    adj = Adjustments(**kw)
+    cls = TcpWSGIServer
+    return cls(application, map, _start, _sock, _dispatcher, adj)
+
+class BaseWSGIServer(logging_dispatcher, object):
 
     channel_class = HTTPChannel
     next_channel_cleanup = 0
     socketmod = socket # test shim
     asyncore = asyncore # test shim
+    family = None
 
     def __init__(self,
                  application,
-                 map=None,
-                 _start=True, # test shim
-                 _sock=None,  # test shim
-                 _dispatcher=None, # test shim
-                 **kw # adjustments
+                 map,
+                 _start, # test shim
+                 _sock,  # test shim
+                 _dispatcher, # test shim
+                 adj # adjustments
                  ):
 
         self.application = application
-        self.adj = Adjustments(**kw)
+        self.adj = adj
         self.trigger = trigger.trigger(map)
         if _dispatcher is None:
             _dispatcher = ThreadedTaskDispatcher()
@@ -52,14 +64,17 @@ class WSGIServer(logging_dispatcher, object):
         self.task_dispatcher = _dispatcher
         self.asyncore.dispatcher.__init__(self, _sock, map=map)
         if _sock is None:
-            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.create_socket(self.family, socket.SOCK_STREAM)
         self.set_reuse_addr()
-        self.bind((self.adj.host, self.adj.port))
+        self.bind_server_socket()
         self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.adj.host)
         self.active_channels = {}
         if _start:
             self.accept_connections()
+
+    def bind_server_socket(self):
+        raise NotImplementedError  # pragma: no cover
 
     def get_server_name(self, ip):
         """Given an IP or hostname, try to determine the server name."""
@@ -80,7 +95,7 @@ class WSGIServer(logging_dispatcher, object):
         return server_name
 
     def getsockname(self):
-        return self.socket.getsockname()
+        raise NotImplementedError  # pragma: no cover
 
     def accept_connections(self):
         self.accepting = True
@@ -120,8 +135,8 @@ class WSGIServer(logging_dispatcher, object):
                 self.logger.warning('server accept() threw an exception',
                                     exc_info=True)
             return
-        for (level, optname, value) in self.adj.socket_options:
-            conn.setsockopt(level, optname, value)
+        self.set_socket_options(conn)
+        addr = self.fix_addr(addr)
         self.channel_class(self, conn, addr, self.adj, map=self._map)
 
     def run(self):
@@ -136,6 +151,12 @@ class WSGIServer(logging_dispatcher, object):
     def pull_trigger(self):
         self.trigger.pull_trigger()
 
+    def set_socket_options(self, conn):
+        pass
+
+    def fix_addr(self, addr):
+        return addr
+
     def maintenance(self, now):
         """
         Closes channels that have not had any activity in a while.
@@ -147,3 +168,16 @@ class WSGIServer(logging_dispatcher, object):
             if (not channel.requests) and channel.last_activity < cutoff:
                 channel.will_close = True
 
+class TcpWSGIServer(BaseWSGIServer):
+
+    family = socket.AF_INET
+
+    def bind_server_socket(self):
+        self.bind((self.adj.host, self.adj.port))
+
+    def getsockname(self):
+        return self.socket.getsockname()
+
+    def set_socket_options(self, conn):
+        for (level, optname, value) in self.adj.socket_options:
+            conn.setsockopt(level, optname, value)
