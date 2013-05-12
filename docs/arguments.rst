@@ -18,6 +18,8 @@ unix_socket
     specified, a Unix domain socket is made instead of the usual inet domain
     socket.
 
+    Not available on Windows.
+
 unix_socket_perms
     Octal permissions to use for the Unix domain socket (string), default is
     ``600``. Only used if ``unix_socket`` is not ``None``.
