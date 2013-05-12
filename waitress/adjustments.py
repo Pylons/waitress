@@ -91,6 +91,12 @@ class Adjustments(object):
     # expose tracebacks of uncaught exceptions
     expose_tracebacks = False
 
+    # Path to a Unix domain socket to use.
+    unix_socket = None
+
+    # Path to a Unix domain socket to use.
+    unix_socket_perms = 0600
+
     # The socket options to set on receiving a connection.  It is a list of
     # (level, optname, value) tuples.  TCP_NODELAY disables the Nagle
     # algorithm for writes (Waitress already buffers its writes).
@@ -139,6 +145,10 @@ class Adjustments(object):
                 v = str(v)
             elif k == 'asyncore_loop_timeout':
                 v = int(v)
+            elif k == 'unix_socket':
+                v = str(v)
+            elif k == 'unix_socket_perms':
+                v = int(v, 8)
             else:
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, v)

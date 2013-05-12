@@ -179,6 +179,46 @@ class TestWSGIServer(unittest.TestCase):
         inst.maintenance(10000)
         self.assertEqual(zombie.will_close, True)
 
+class TestUnixWSGIServer(unittest.TestCase):
+    unix_socket = '/tmp/waitress.test.sock'
+    def _makeOne(self, _start=True, _sock=None):
+        from waitress.server import WSGIServer
+        return WSGIServer(
+            None,
+            map={},
+            _start=_start,
+            _sock=_sock,
+            _dispatcher=DummyTaskDispatcher(),
+            unix_socket=self.unix_socket,
+            unix_socket_perms='600'
+            )
+
+    def _makeDummy(self, *args, **kwargs):
+        sock = DummySock(*args, **kwargs)
+        sock.family = socket.AF_UNIX
+        return sock
+
+    def test_unix(self):
+        inst = self._makeOne(_start=False)
+        self.assertEqual(inst.socket.family, socket.AF_UNIX)
+        self.assertEqual(inst.socket.getsockname(), self.unix_socket)
+
+    def test_handle_accept(self):
+        # Working on the assumption that we only have to test the happy path
+        # for Unix domain sockets as the other paths should've been covered
+        # by inet sockets.
+        client = self._makeDummy()
+        listen = self._makeDummy(acceptresult=(client, None))
+        inst = self._makeOne(_sock=listen)
+        self.assertEqual(inst.accepting, True)
+        self.assertEqual(inst.socket.listened, 1024)
+        L = []
+        inst.channel_class = lambda *arg, **kw: L.append(arg)
+        inst.handle_accept()
+        self.assertEqual(inst.socket.accepted, True)
+        self.assertEqual(client.opts, [])
+        self.assertEqual(L, [(inst, client,  ('localhost', None), inst.adj)])
+
 class DummySock(object):
     accepted = False
     blocking = False
