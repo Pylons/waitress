@@ -95,7 +95,7 @@ class Adjustments(object):
     unix_socket = None
 
     # Path to a Unix domain socket to use.
-    unix_socket_perms = 0600
+    unix_socket_perms = 0o600
 
     # The socket options to set on receiving a connection.  It is a list of
     # (level, optname, value) tuples.  TCP_NODELAY disables the Nagle

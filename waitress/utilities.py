@@ -182,7 +182,7 @@ class logging_dispatcher(asyncore.dispatcher):
 def cleanup_unix_socket(path):
     try:
         st = os.stat(path)
-    except OSError, exc:
+    except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise  # pragma: no cover
     else:

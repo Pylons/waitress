@@ -79,7 +79,7 @@ class UnixTests(SubprocessTests):
         # 'Broken pipe' error when the socket it closed.
         try:
             self.sock.send(to_send)
-        except socket.error, exc:
+        except socket.error as exc:
             self.assertEqual(get_errno(exc), errno.EPIPE)
 
 class SleepyThreadTests(TcpTests, unittest.TestCase):

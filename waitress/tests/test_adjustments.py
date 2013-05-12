@@ -71,7 +71,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.asyncore_loop_timeout, 5)
         self.assertEqual(inst.ident, 'abc')
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
-        self.assertEqual(inst.unix_socket_perms, 0777)
+        self.assertEqual(inst.unix_socket_perms, 0o777)
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
