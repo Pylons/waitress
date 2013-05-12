@@ -1,3 +1,8 @@
+Next release
+------------
+
+- Add support for listening on Unix domain sockets.
+
 0.8.3 (2013-04-28)
 ------------------
 
