@@ -189,7 +189,11 @@ class TcpWSGIServer(BaseWSGIServer):
 
 class UnixWSGIServer(BaseWSGIServer):
 
-    family = socket.AF_UNIX
+    @property
+    def family(self):
+        # Windows doesnt support AF_UNIX, so hide in property so we don't fail
+        # at import time on it.
+        return socket.AF_UNIX
 
     def bind_server_socket(self):
         cleanup_unix_socket(self.adj.unix_socket)
