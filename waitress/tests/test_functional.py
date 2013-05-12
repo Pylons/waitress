@@ -1248,10 +1248,14 @@ class TcpPipeliningTests(PipeliningTests, TcpTests, unittest.TestCase):
 class TcpExpectContinueTests(ExpectContinueTests, TcpTests, unittest.TestCase):
     pass
 
-class TcpBadContentLengthTests(BadContentLengthTests, TcpTests, unittest.TestCase):
+class TcpBadContentLengthTests(
+    BadContentLengthTests, TcpTests, unittest.TestCase
+    ):
     pass
 
-class TcpNoContentLengthTests(NoContentLengthTests, TcpTests, unittest.TestCase):
+class TcpNoContentLengthTests(
+    NoContentLengthTests, TcpTests, unittest.TestCase
+    ):
     pass
 
 class TcpWriteCallbackTests(WriteCallbackTests, TcpTests, unittest.TestCase):
@@ -1260,38 +1264,52 @@ class TcpWriteCallbackTests(WriteCallbackTests, TcpTests, unittest.TestCase):
 class TcpTooLargeTests(TooLargeTests, TcpTests, unittest.TestCase):
     pass
 
-class TcpInternalServerErrorTests(InternalServerErrorTests, TcpTests, unittest.TestCase):
+class TcpInternalServerErrorTests(
+    InternalServerErrorTests, TcpTests, unittest.TestCase
+    ):
     pass
 
 class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
     pass
 
-class UnixEchoTests(EchoTests, UnixTests, unittest.TestCase):
-    pass
+if not sys.platform.startswith('win'):
 
-class UnixPipeliningTests(PipeliningTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixEchoTests(EchoTests, UnixTests, unittest.TestCase):
+        pass
 
-class UnixExpectContinueTests(ExpectContinueTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixPipeliningTests(PipeliningTests, UnixTests, unittest.TestCase):
+        pass
 
-class UnixBadContentLengthTests(BadContentLengthTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixExpectContinueTests(
+        ExpectContinueTests, UnixTests, unittest.TestCase
+        ):
+        pass
 
-class UnixNoContentLengthTests(NoContentLengthTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixBadContentLengthTests(
+        BadContentLengthTests, UnixTests, unittest.TestCase
+        ):
+        pass
 
-class UnixWriteCallbackTests(WriteCallbackTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixNoContentLengthTests(
+        NoContentLengthTests, UnixTests, unittest.TestCase
+        ):
+        pass
 
-class UnixTooLargeTests(TooLargeTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixWriteCallbackTests(
+        WriteCallbackTests, UnixTests, unittest.TestCase
+        ):
+        pass
 
-class UnixInternalServerErrorTests(InternalServerErrorTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixTooLargeTests(TooLargeTests, UnixTests, unittest.TestCase):
+        pass
 
-class UnixFileWrapperTests(FileWrapperTests, UnixTests, unittest.TestCase):
-    pass
+    class UnixInternalServerErrorTests(
+        InternalServerErrorTests, UnixTests, unittest.TestCase
+        ):
+        pass
+
+    class UnixFileWrapperTests(FileWrapperTests, UnixTests, unittest.TestCase):
+        pass
 
 def parse_headers(fp):
     """Parses only RFC2822 headers from a file pointer.
