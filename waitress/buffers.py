@@ -47,7 +47,7 @@ class FileBasedBuffer(object):
     def __nonzero__(self):
         return self.remain > 0
 
-    __bool__ = __nonzero__ # py3
+    __bool__ = __nonzero__  # py3
 
     def append(self, s):
         file = self.file
@@ -111,6 +111,7 @@ class FileBasedBuffer(object):
             self.file.close()
         self.remain = 0
 
+
 class TempfileBasedBuffer(FileBasedBuffer):
 
     def __init__(self, from_buffer=None):
@@ -119,7 +120,6 @@ class TempfileBasedBuffer(FileBasedBuffer):
     def newfile(self):
         from tempfile import TemporaryFile
         return TemporaryFile('w+b')
-
 
 
 class BytesIOBasedBuffer(FileBasedBuffer):
@@ -133,6 +133,7 @@ class BytesIOBasedBuffer(FileBasedBuffer):
 
     def newfile(self):
         return BytesIO()
+
 
 class ReadOnlyFileBasedBuffer(FileBasedBuffer): 
     # used as wsgi.file_wrapper
@@ -171,7 +172,7 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
             file.seek(read_pos)
         return res
 
-    def __iter__(self): # called by task if self.filelike has no seek/tell
+    def __iter__(self):  # called by task if self.filelike has no seek/tell
         return self
 
     def next(self):
@@ -180,10 +181,11 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
             raise StopIteration
         return val
 
-    __next__ = next # py3
-    
+    __next__ = next  # py3
+
     def append(self, s):
         raise NotImplementedError
+
 
 class OverflowableBuffer(object):
     """
@@ -213,7 +215,7 @@ class OverflowableBuffer(object):
     def __nonzero__(self):
         return bool(len(self))
 
-    __bool__ = __nonzero__ # py3
+    __bool__ = __nonzero__  # py3
 
     def _create_buffer(self):
         strbuf = self.strbuf
@@ -296,4 +298,3 @@ class OverflowableBuffer(object):
         buf = self.buf
         if buf is not None:
             buf._close()
-            
