@@ -13,7 +13,6 @@
 ##############################################################################
 """Buffers
 """
-import sys
 from io import BytesIO
 
 # copy_bytes controls the size of temp. strings for shuffling data around.
