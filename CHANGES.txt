@@ -1,6 +1,9 @@
 Next release
 ------------
 
+- Fix integer overflow errors on large buffers. Thanks to Marcin Kusminski
+  for the patch.  See: https://github.com/Pylons/waitress/issues/22
+
 - Add support for listening on Unix domain sockets.
 
 0.8.3 (2013-04-28)
