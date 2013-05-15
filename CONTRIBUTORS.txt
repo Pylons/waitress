@@ -107,6 +107,8 @@ Contributors
 
 - Chris McDonough, 2011/12/17
 
+- Georges Dubus, 2012-11-24
+
 - Tres Seaver, 2013/04/09
 
 - Keith Gaughan, 2013/05/11
