@@ -25,7 +25,7 @@ unix_socket_perms
     ``600``. Only used if ``unix_socket`` is not ``None``.
 
 threads
-    mumber of threads used to process application logic (integer), default
+    number of threads used to process application logic (integer), default
     ``4``
 
 url_scheme
