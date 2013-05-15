@@ -206,12 +206,12 @@ class OverflowableBuffer(object):
     def __len__(self):
         buf = self.buf
         if buf is not None:
-            return len(buf)
+            return buf.__len__()
         else:
-            return len(self.strbuf)
+            return self.strbuf.__len__()
 
     def __nonzero__(self):
-        return bool(len(self))
+        return self.__len__() > 0
 
     __bool__ = __nonzero__ # py3
 
