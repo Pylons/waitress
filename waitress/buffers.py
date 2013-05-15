@@ -36,10 +36,10 @@ class FileBasedBuffer(object):
                 data = from_file.read(COPY_BYTES)
                 if not data:
                     break
-                file.write(data)
-            self.remain = int(file.tell() - read_pos)
+                self.file.write(data)
+            self.remain = int(self.file.tell() - read_pos)
             from_file.seek(read_pos)
-            file.seek(read_pos)
+            self.file.seek(read_pos)
 
     def __len__(self):
         return self.remain
@@ -47,29 +47,29 @@ class FileBasedBuffer(object):
     def __nonzero__(self):
         return self.remain > 0
 
-    __bool__ = __nonzero__ # py3
+    __bool__ = __nonzero__  # py3
 
     def append(self, s):
-        file = self.file
-        read_pos = file.tell()
-        file.seek(0, 2)
-        file.write(s)
-        file.seek(read_pos)
+        _file = self.file
+        read_pos = _file.tell()
+        _file.seek(0, 2)
+        _file.write(s)
+        _file.seek(read_pos)
         self.remain = self.remain + len(s)
 
     def get(self, numbytes=-1, skip=False):
-        file = self.file
+        _file = self.file
         if not skip:
-            read_pos = file.tell()
+            read_pos = _file.tell()
         if numbytes < 0:
             # Read all
-            res = file.read()
+            res = _file.read()
         else:
-            res = file.read(numbytes)
+            res = _file.read(numbytes)
         if skip:
             self.remain -= len(res)
         else:
-            file.seek(read_pos)
+            _file.seek(read_pos)
         return res
 
     def skip(self, numbytes, allow_prune=0):
@@ -84,18 +84,18 @@ class FileBasedBuffer(object):
         raise NotImplementedError()
 
     def prune(self):
-        file = self.file
+        _file = self.file
         if self.remain == 0:
-            read_pos = file.tell()
-            file.seek(0, 2)
-            sz = file.tell()
-            file.seek(read_pos)
+            read_pos = _file.tell()
+            _file.seek(0, 2)
+            sz = _file.tell()
+            _file.seek(read_pos)
             if sz == 0:
                 # Nothing to prune.
                 return
         nf = self.newfile()
         while 1:
-            data = file.read(COPY_BYTES)
+            data = _file.read(COPY_BYTES)
             if not data:
                 break
             nf.write(data)
@@ -111,6 +111,7 @@ class FileBasedBuffer(object):
             self.file.close()
         self.remain = 0
 
+
 class TempfileBasedBuffer(FileBasedBuffer):
 
     def __init__(self, from_buffer=None):
@@ -119,7 +120,6 @@ class TempfileBasedBuffer(FileBasedBuffer):
     def newfile(self):
         from tempfile import TemporaryFile
         return TemporaryFile('w+b')
-
 
 
 class BytesIOBasedBuffer(FileBasedBuffer):
@@ -134,11 +134,12 @@ class BytesIOBasedBuffer(FileBasedBuffer):
     def newfile(self):
         return BytesIO()
 
-class ReadOnlyFileBasedBuffer(FileBasedBuffer): 
+
+class ReadOnlyFileBasedBuffer(FileBasedBuffer):
     # used as wsgi.file_wrapper
     def __init__(self, file, block_size=32768):
         self.file = file
-        self.block_size = block_size # for __iter__
+        self.block_size = block_size  # for __iter__
 
     def prepare(self, size=None):
         if ( hasattr(self.file, 'seek') and
@@ -161,17 +162,17 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
         # never read more than self.remain (it can be user-specified)
         if numbytes == -1 or numbytes > self.remain:
             numbytes = self.remain
-        file = self.file
+        _file = self.file
         if not skip:
-            read_pos = file.tell()
-        res = file.read(numbytes)
+            read_pos = _file.tell()
+        res = _file.read(numbytes)
         if skip:
             self.remain -= len(res)
         else:
-            file.seek(read_pos)
+            _file.seek(read_pos)
         return res
 
-    def __iter__(self): # called by task if self.filelike has no seek/tell
+    def __iter__(self):  # called by task if self.filelike has no seek/tell
         return self
 
     def next(self):
@@ -180,10 +181,11 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
             raise StopIteration
         return val
 
-    __next__ = next # py3
-    
+    __next__ = next  # py3
+
     def append(self, s):
         raise NotImplementedError
+
 
 class OverflowableBuffer(object):
     """
@@ -206,14 +208,14 @@ class OverflowableBuffer(object):
     def __len__(self):
         buf = self.buf
         if buf is not None:
-            return len(buf)
+            return buf.__len__()
         else:
-            return len(self.strbuf)
+            return self.strbuf.__len__()
 
     def __nonzero__(self):
-        return bool(len(self))
+        return self.__len__() > 0
 
-    __bool__ = __nonzero__ # py3
+    __bool__ = __nonzero__  # py3
 
     def _create_buffer(self):
         strbuf = self.strbuf
@@ -296,4 +298,3 @@ class OverflowableBuffer(object):
         buf = self.buf
         if buf is not None:
             buf._close()
-            
