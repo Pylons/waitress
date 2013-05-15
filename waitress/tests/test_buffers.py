@@ -249,6 +249,18 @@ class TestOverflowableBuffer(unittest.TestCase):
         inst.buf = b''
         self.assertEqual(bool(inst), False)
 
+    def test___nonzero___on_int_overflow_buffer(self):
+        inst = self._makeOne()
+
+        class int_overflow_buf(bytes):
+            def __len__(self):
+                # maxint + 1
+                return  0x7fffffffffffffff + 1
+        inst.buf = int_overflow_buf()
+        self.assertEqual(bool(inst), True)
+        inst.buf = b''
+        self.assertEqual(bool(inst), False)
+
     def test__create_buffer_large(self):
         from waitress.buffers import TempfileBasedBuffer
         inst = self._makeOne()
