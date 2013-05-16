@@ -17,7 +17,7 @@ if port is None:  # main process
     TEST_PORT = 0xffff - (PID & 0x7ff)
     TEST_SOCKET_PATH = '/tmp/waitress.test-%d.sock' % PID
     os.environ['WAITRESS_TEST_PORT'] = str(TEST_PORT)
-else:               # subprocess
+else:               # pragma NO COVER subprocess
     TEST_PORT = int(port)
 
 socket = os.environ.get('WAITRESS_TEST_SOCKET')
@@ -25,7 +25,7 @@ if socket is None:  # main process
     # To permit parallel testing under 'detox', use a PID-dependent socket.
     TEST_SOCKET_PATH = '/tmp/waitress.test-%d.sock' % PID
     os.environ['WAITRESS_TEST_SOCKET'] = TEST_SOCKET_PATH
-else:               # subprocess
+else:               # pragma NO COVER subprocess
     TEST_SOCKET_PATH = socket
 
 class NullHandler(logging.Handler):  # pragma: no cover
