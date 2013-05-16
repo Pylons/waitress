@@ -1,6 +1,9 @@
 Next release
 ------------
 
+- Allow parallel testing (e.g., under ``detox``) using PID-dependent port /
+  socket for functest servers.
+
 - Fix integer overflow errors on large buffers. Thanks to Marcin Kuzminski
   for the patch.  See: https://github.com/Pylons/waitress/issues/22
 
