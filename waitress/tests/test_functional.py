@@ -10,12 +10,16 @@ from waitress.compat import (
     httplib,
     tobytes
     )
-from waitress.tests.support import TEST_PORT, TEST_SOCKET_PATH
+from waitress.utilities import cleanup_unix_socket
 
 dn = os.path.dirname
 here = dn(__file__)
 
 class SubprocessTests(object):
+
+    # For nose: all tests may be ran in separate processes.
+    _multiprocess_can_split_ = True
+
     exe = sys.executable
 
     def start_subprocess(self, cmd):
@@ -51,28 +55,47 @@ class SubprocessTests(object):
 
 class TcpTests(SubprocessTests):
 
+    @property
+    def port(self):
+        # To permit parallel testing, use a PID-dependent port:
+        # Subtract least-significant 20 bits of the PID from the top of the
+        # allowed port range.
+        return 0xffff - (os.getpid() & 0x7ff)
+
     def create_socket(self):
         return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def connect(self):
-        self.sock.connect(('127.0.0.1', TEST_PORT))
+        self.sock.connect(('127.0.0.1', self.port))
 
     def make_http_connection(self):
-        return httplib.HTTPConnection('127.0.0.1', TEST_PORT)
+        return httplib.HTTPConnection('127.0.0.1', self.port)
+
+    def start_subprocess(self, cmd):
+        super(TcpTests, self).start_subprocess(cmd + ['-p', str(self.port)])
 
 class UnixTests(SubprocessTests):
+
+    @property
+    def path(self):
+        # To permit parallel testing, use a PID-dependent socket.
+        return '/tmp/waitress.test-%d.sock' % os.getpid()
 
     def create_socket(self):
         return socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
     def connect(self):
-        self.sock.connect(TEST_SOCKET_PATH)
+        self.sock.connect(self.path)
 
     def make_http_connection(self):
-        return UnixHTTPConnection(TEST_SOCKET_PATH)
+        return UnixHTTPConnection(self.path)
 
     def start_subprocess(self, cmd):
-        super(UnixTests, self).start_subprocess(cmd + ['-u'])
+        super(UnixTests, self).start_subprocess(cmd + ['-u', self.path])
+
+    def stop_subprocess(self):
+        super(UnixTests, self).stop_subprocess()
+        cleanup_unix_socket(self.path)
 
     def send_check_error(self, to_send):
         # Unlike inet domain sockets, Unix domain sockets can trigger a
@@ -94,8 +117,8 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
     def test_it(self):
         getline = os.path.join(here, 'fixtureapps', 'getline.py')
         cmds = (
-            [self.exe, getline, 'http://127.0.0.1:%s/sleepy' % TEST_PORT],
-            [self.exe, getline, 'http://127.0.0.1:%s/' % TEST_PORT]
+            [self.exe, getline, 'http://127.0.0.1:%d/sleepy' % self.port],
+            [self.exe, getline, 'http://127.0.0.1:%d/' % self.port]
             )
         r, w = os.pipe()
         procs = []
