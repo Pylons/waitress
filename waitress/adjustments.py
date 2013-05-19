@@ -13,6 +13,7 @@
 ##############################################################################
 """Adjustments are tunable parameters.
 """
+import getopt
 import socket
 import sys
 
@@ -160,3 +161,32 @@ class Adjustments(object):
         if (sys.platform[:3] == "win" and
                 self.host == 'localhost'): # pragma: no cover
             self.host = ''
+
+    @classmethod
+    def parse_args(cls, argv):
+        """Parse command line arguments.
+        """
+        long_opts = ['help', 'call']
+        for opt, cast in cls._params:
+            opt = opt.replace('_', '-')
+            if cast is asbool:
+                long_opts.append(opt)
+                long_opts.append('no-' + opt)
+            else:
+                long_opts.append(opt + '=')
+
+        kw = {
+            'help': False,
+            'call': False,
+        }
+        opts, args = getopt.getopt(argv, '', long_opts)
+        for opt, value in opts:
+            param = opt.lstrip('-').replace('-', '_')
+            if param.startswith('no_'):
+                param = param[3:]
+                kw[param] = False
+            elif param in ('help', 'call') or cls._param_map[param] is asbool:
+                kw[param] = True
+            else:
+                kw[param] = cls._param_map[param](value)
+        return kw, args
