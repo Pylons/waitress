@@ -75,5 +75,7 @@ setup(
     entry_points="""
     [paste.server_runner]
     main = waitress:serve_paste
+    [console_scripts]
+    waitress-serve = waitress.runner:run
     """
 )
