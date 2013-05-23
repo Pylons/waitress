@@ -4,8 +4,9 @@ import sys
 import unittest
 
 class TestWSGIServer(unittest.TestCase):
+
     def _makeOne(self, application, host='127.0.0.1', port=0,
-                 _dispatcher=None, adj=None, map=None, _start=True, 
+                 _dispatcher=None, adj=None, map=None, _start=True,
                  _sock=None, _server=None):
         from waitress.server import WSGIServer
         return WSGIServer(
@@ -16,7 +17,7 @@ class TestWSGIServer(unittest.TestCase):
             _dispatcher=_dispatcher,
             _start=_start,
             _sock=_sock)
-    
+
     def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
                         port=0, app=None):
         sock = DummySock()
@@ -30,7 +31,7 @@ class TestWSGIServer(unittest.TestCase):
             _sock=sock,
             _dispatcher=task_dispatcher,
             _start=_start,
-            )
+        )
 
     def test_ctor_start_true(self):
         inst = self._makeOneWithMap(_start=True)
@@ -90,12 +91,12 @@ class TestWSGIServer(unittest.TestCase):
         inst = self._makeOneWithMap()
         inst.accepting = False
         self.assertFalse(inst.readable())
-        
+
     def test_readable_maplen_gt_connection_limit(self):
         inst = self._makeOneWithMap()
         inst.accepting = True
         inst.adj = DummyAdj
-        inst._map = {'a':1, 'b':2}
+        inst._map = {'a': 1, 'b': 2}
         self.assertFalse(inst.readable())
 
     def test_readable_maplen_lt_connection_limit(self):
@@ -128,7 +129,7 @@ class TestWSGIServer(unittest.TestCase):
     def test_writable(self):
         inst = self._makeOneWithMap()
         self.assertFalse(inst.writable())
-        
+
     def test_handle_read(self):
         inst = self._makeOneWithMap()
         self.assertEqual(inst.handle_read(), None)
@@ -145,12 +146,12 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(inst.socket.accepted, False)
 
     def test_handle_accept_other_socket_error(self):
-        import socket
         inst = self._makeOneWithMap()
         eaborted = socket.error(errno.ECONNABORTED)
         inst.socket = DummySock(toraise=eaborted)
         inst.adj = DummyAdj
-        def foo(): raise socket.error
+        def foo():
+            raise socket.error
         inst.accept = foo
         inst.logger = DummyLogger()
         inst.handle_accept()
@@ -171,6 +172,7 @@ class TestWSGIServer(unittest.TestCase):
 
     def test_maintenance(self):
         inst = self._makeOneWithMap()
+
         class DummyChannel(object):
             requests = []
         zombie = DummyChannel()
@@ -181,9 +183,10 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(zombie.will_close, True)
 
 if not sys.platform.startswith('win'):
-        
+
     class TestUnixWSGIServer(unittest.TestCase):
         unix_socket = '/tmp/waitress.test.sock'
+
         def _makeOne(self, _start=True, _sock=None):
             from waitress.server import WSGIServer
             return WSGIServer(
@@ -194,7 +197,7 @@ if not sys.platform.startswith('win'):
                 _dispatcher=DummyTaskDispatcher(),
                 unix_socket=self.unix_socket,
                 unix_socket_perms='600'
-                )
+            )
 
         def _makeDummy(self, *args, **kwargs):
             sock = DummySock(*args, **kwargs)
@@ -222,45 +225,58 @@ if not sys.platform.startswith('win'):
             self.assertEqual(client.opts, [])
             self.assertEqual(
                 L,
-                [(inst, client,  ('localhost', None), inst.adj)]
-                )
+                [(inst, client, ('localhost', None), inst.adj)]
+            )
 
 class DummySock(object):
     accepted = False
     blocking = False
     family = socket.AF_INET
+
     def __init__(self, toraise=None, acceptresult=(None, None)):
         self.toraise = toraise
         self.acceptresult = acceptresult
         self.bound = None
         self.opts = []
+
     def bind(self, addr):
         self.bound = addr
+
     def accept(self):
         if self.toraise:
             raise self.toraise
         self.accepted = True
         return self.acceptresult
+
     def setblocking(self, x):
         self.blocking = True
+
     def fileno(self):
         return 10
+
     def getpeername(self):
         return '127.0.0.1'
+
     def setsockopt(self, *arg):
         self.opts.append(arg)
+
     def getsockopt(self, *arg):
         return 1
+
     def listen(self, num):
         self.listened = num
+
     def getsockname(self):
         return self.bound
 
 class DummyTaskDispatcher(object):
+
     def __init__(self):
         self.tasks = []
+
     def add_task(self, task):
         self.tasks.append(task)
+
     def shutdown(self):
         self.was_shutdown = True
 
@@ -269,9 +285,11 @@ class DummyTask(object):
     start_response_called = False
     wrote_header = False
     status = '200 OK'
+
     def __init__(self):
         self.response_headers = {}
         self.written = ''
+
     def service(self): # pragma: no cover
         self.serviced = True
 
@@ -280,19 +298,22 @@ class DummyAdj:
     log_socket_errors = True
     socket_options = [('level', 'optname', 'value')]
     cleanup_interval = 900
-    channel_timeout= 300
-    
+    channel_timeout = 300
+
 class DummyAsyncore(object):
+
     def loop(self, timeout=None, map=None):
         raise SystemExit
-    
+
 class DummyTrigger(object):
+
     def pull_trigger(self):
         self.pulled = True
-        
+
 class DummyLogger(object):
+
     def __init__(self):
         self.logged = []
+
     def warning(self, msg, **kw):
         self.logged.append(msg)
-        

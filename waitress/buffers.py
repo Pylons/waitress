@@ -16,11 +16,10 @@
 from io import BytesIO
 
 # copy_bytes controls the size of temp. strings for shuffling data around.
-COPY_BYTES = 1 << 18  # 256K
+COPY_BYTES = 1 << 18 # 256K
 
 # The maximum number of bytes to buffer in a simple string.
 STRBUF_LIMIT = 8192
-
 
 class FileBasedBuffer(object):
 
@@ -32,7 +31,7 @@ class FileBasedBuffer(object):
             from_file = from_buffer.getfile()
             read_pos = from_file.tell()
             from_file.seek(0)
-            while 1:
+            while True:
                 data = from_file.read(COPY_BYTES)
                 if not data:
                     break
@@ -76,7 +75,7 @@ class FileBasedBuffer(object):
         if self.remain < numbytes:
             raise ValueError("Can't skip %d bytes in buffer of %d bytes" % (
                 numbytes, self.remain)
-                )
+            )
         self.file.seek(numbytes, 1)
         self.remain = self.remain - numbytes
 
@@ -94,7 +93,7 @@ class FileBasedBuffer(object):
                 # Nothing to prune.
                 return
         nf = self.newfile()
-        while 1:
+        while True:
             data = file.read(COPY_BYTES)
             if not data:
                 break
@@ -120,8 +119,6 @@ class TempfileBasedBuffer(FileBasedBuffer):
         from tempfile import TemporaryFile
         return TemporaryFile('w+b')
 
-
-
 class BytesIOBasedBuffer(FileBasedBuffer):
 
     def __init__(self, from_buffer=None):
@@ -134,15 +131,15 @@ class BytesIOBasedBuffer(FileBasedBuffer):
     def newfile(self):
         return BytesIO()
 
-class ReadOnlyFileBasedBuffer(FileBasedBuffer): 
+class ReadOnlyFileBasedBuffer(FileBasedBuffer):
     # used as wsgi.file_wrapper
+
     def __init__(self, file, block_size=32768):
         self.file = file
         self.block_size = block_size # for __iter__
 
     def prepare(self, size=None):
-        if ( hasattr(self.file, 'seek') and
-             hasattr(self.file, 'tell') ):
+        if hasattr(self.file, 'seek') and hasattr(self.file, 'tell'):
             start_pos = self.file.tell()
             self.file.seek(0, 2)
             end_pos = self.file.tell()
@@ -181,7 +178,7 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
         return val
 
     __next__ = next # py3
-    
+
     def append(self, s):
         raise NotImplementedError
 
@@ -197,7 +194,7 @@ class OverflowableBuffer(object):
 
     overflowed = False
     buf = None
-    strbuf = b''  # Bytes-based buffer.
+    strbuf = b'' # Bytes-based buffer.
 
     def __init__(self, overflow):
         # overflow is the maximum to be stored in a StringIO buffer.
@@ -296,4 +293,3 @@ class OverflowableBuffer(object):
         buf = self.buf
         if buf is not None:
             buf._close()
-            

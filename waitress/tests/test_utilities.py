@@ -15,6 +15,7 @@
 import unittest
 
 class Test_parse_http_date(unittest.TestCase):
+
     def _callFUT(self, v):
         from waitress.utilities import parse_http_date
         return parse_http_date(v)
@@ -35,6 +36,7 @@ class Test_parse_http_date(unittest.TestCase):
         self.assertEqual(result, 0)
 
 class Test_build_http_date(unittest.TestCase):
+
     def test_rountdrip(self):
         from waitress.utilities import build_http_date, parse_http_date
         from time import time
@@ -42,6 +44,7 @@ class Test_build_http_date(unittest.TestCase):
         self.assertEqual(t, parse_http_date(build_http_date(t)))
 
 class Test_unpack_rfc850(unittest.TestCase):
+
     def _callFUT(self, val):
         from waitress.utilities import unpack_rfc850, rfc850_reg
         return unpack_rfc850(rfc850_reg.match(val.lower()))
@@ -52,6 +55,7 @@ class Test_unpack_rfc850(unittest.TestCase):
         self.assertEqual(result, (1994, 2, 8, 14, 15, 29, 0, 0, 0))
 
 class Test_unpack_rfc_822(unittest.TestCase):
+
     def _callFUT(self, val):
         from waitress.utilities import unpack_rfc822, rfc822_reg
         return unpack_rfc822(rfc822_reg.match(val.lower()))
@@ -62,13 +66,14 @@ class Test_unpack_rfc_822(unittest.TestCase):
         self.assertEqual(result, (1994, 2, 8, 14, 15, 29, 0, 0, 0))
 
 class Test_find_double_newline(unittest.TestCase):
+
     def _callFUT(self, val):
         from waitress.utilities import find_double_newline
         return find_double_newline(val)
 
     def test_empty(self):
         self.assertEqual(self._callFUT(b''), -1)
-        
+
     def test_one_linefeed(self):
         self.assertEqual(self._callFUT(b'\n'), -1)
 
@@ -85,6 +90,7 @@ class Test_find_double_newline(unittest.TestCase):
         self.assertEqual(self._callFUT(b'\n\n00\r\n\r\n'), 2)
 
 class Test_logging_dispatcher(unittest.TestCase):
+
     def _makeOne(self):
         from waitress.utilities import logging_dispatcher
         return logging_dispatcher(map={})
@@ -99,6 +105,7 @@ class Test_logging_dispatcher(unittest.TestCase):
         self.assertEqual(logger.message, 'message')
 
 class TestBadRequest(unittest.TestCase):
+
     def _makeOne(self):
         from waitress.utilities import BadRequest
         return BadRequest(1)
@@ -108,9 +115,7 @@ class TestBadRequest(unittest.TestCase):
         self.assertEqual(inst.body, 1)
 
 class DummyLogger(object):
+
     def log(self, severity, message):
         self.severity = severity
         self.message = message
-        
-        
-        

@@ -2,6 +2,7 @@ import unittest
 import io
 
 class TestThreadedTaskDispatcher(unittest.TestCase):
+
     def _makeOne(self):
         from waitress.task import ThreadedTaskDispatcher
         return ThreadedTaskDispatcher()
@@ -37,14 +38,14 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
     def test_set_thread_count_increase_with_existing(self):
         inst = self._makeOne()
         L = []
-        inst.threads = {0:1}
+        inst.threads = {0: 1}
         inst.start_new_thread = lambda *x: L.append(x)
         inst.set_thread_count(2)
         self.assertEqual(L, [(inst.handler_thread, (1,))])
 
     def test_set_thread_count_decrease(self):
         inst = self._makeOne()
-        inst.threads = {'a':1, 'b':2}
+        inst.threads = {'a': 1, 'b': 2}
         inst.set_thread_count(1)
         self.assertEqual(inst.queue.qsize(), 1)
         self.assertEqual(inst.queue.get(), None)
@@ -53,7 +54,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst = self._makeOne()
         L = []
         inst.start_new_thread = lambda *x: L.append(x)
-        inst.threads = {0:1}
+        inst.threads = {0: 1}
         inst.set_thread_count(1)
         self.assertEqual(L, [])
 
@@ -92,6 +93,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
                          False)
 
 class TestTask(unittest.TestCase):
+
     def _makeOne(self, channel=None, request=None):
         if channel is None:
             channel = DummyChannel()
@@ -204,7 +206,7 @@ class TestTask(unittest.TestCase):
         inst = self._makeOne()
         inst.request = DummyParser()
         inst.version = '1.0'
-        inst.response_headers = [('Server',  'abc')]
+        inst.response_headers = [('Server', 'abc')]
         result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 5)
@@ -218,7 +220,7 @@ class TestTask(unittest.TestCase):
         inst = self._makeOne()
         inst.request = DummyParser()
         inst.version = '1.0'
-        inst.response_headers = [('Date',  'date')]
+        inst.response_headers = [('Date', 'date')]
         result = inst.build_response_header()
         lines = filter_lines(result)
         self.assertEqual(len(lines), 4)
@@ -311,6 +313,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(len(inst.logger.logged), 1)
 
 class TestWSGITask(unittest.TestCase):
+
     def _makeOne(self, channel=None, request=None):
         if channel is None:
             channel = DummyChannel()
@@ -472,7 +475,7 @@ class TestWSGITask(unittest.TestCase):
     def test_execute_app_returns_closeable(self):
         class closeable(list):
             def close(self):
-                self.closed  = True
+                self.closed = True
         foo = closeable([b'abc'])
         def app(environ, start_response):
             start_response('200 OK', [('Content-Length', '3')])
@@ -566,8 +569,11 @@ class TestWSGITask(unittest.TestCase):
         import sys
         inst = self._makeOne()
         request = DummyParser()
-        request.headers = {'CONTENT_TYPE':'abc', 'CONTENT_LENGTH':'10',
-                                'X_FOO':'BAR'}
+        request.headers = {
+            'CONTENT_TYPE': 'abc',
+            'CONTENT_LENGTH': '10',
+            'X_FOO': 'BAR',
+        }
         request.query = 'abc'
         inst.request = request
         environ = inst.get_environment()
@@ -593,6 +599,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(inst.environ, environ)
 
 class TestErrorTask(unittest.TestCase):
+
     def _makeOne(self, channel=None, request=None):
         if channel is None:
             channel = DummyChannel()
@@ -626,6 +633,7 @@ class DummyTask(object):
     serviced = False
     deferred = False
     cancelled = False
+
     def __init__(self, toraise=None):
         self.toraise = toraise
 
@@ -651,6 +659,7 @@ class DummyAdj(object):
 class DummyServer(object):
     server_name = 'localhost'
     effective_port = 80
+
     def __init__(self):
         self.adj = DummyAdj()
 
@@ -659,12 +668,14 @@ class DummyChannel(object):
     adj = DummyAdj()
     creation_time = 0
     addr = ['127.0.0.1']
+
     def __init__(self, server=None):
         if server is None:
             server = DummyServer()
         self.server = server
         self.written = b''
         self.otherdata = []
+
     def write_soon(self, data):
         if isinstance(data, bytes):
             self.written += data
@@ -680,8 +691,10 @@ class DummyParser(object):
     url_scheme = 'http'
     expect_continue = False
     headers_finished = False
+
     def __init__(self):
         self.headers = {}
+
     def get_body_stream(self):
         return 'stream'
 
@@ -689,10 +702,12 @@ def filter_lines(s):
     return list(filter(None, s.split(b'\r\n')))
 
 class DummyLogger(object):
+
     def __init__(self):
         self.logged = []
+
     def warning(self, msg):
         self.logged.append(msg)
+
     def exception(self, msg):
         self.logged.append(msg)
-

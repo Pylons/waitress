@@ -19,6 +19,7 @@ import sys
 class Adjustments(object):
     """This class contains tunable parameters.
     """
+
     # hostname or IP address to listen on
     host = '0.0.0.0'
 
@@ -102,7 +103,7 @@ class Adjustments(object):
     # algorithm for writes (Waitress already buffers its writes).
     socket_options = [
         (socket.SOL_TCP, socket.TCP_NODELAY, 1),
-        ]
+    ]
 
     # The asyncore.loop timeout value
     asyncore_loop_timeout = 1
@@ -153,8 +154,8 @@ class Adjustments(object):
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, v)
         if (sys.platform[:3] == "win" and
-            self.host == 'localhost' ): # pragma: no cover
-            self.host= ''
+                self.host == 'localhost'): # pragma: no cover
+            self.host = ''
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
 
@@ -170,4 +171,3 @@ def asbool(s):
         return s
     s = str(s).strip()
     return s.lower() in truthy
-

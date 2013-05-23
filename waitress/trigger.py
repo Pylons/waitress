@@ -52,7 +52,7 @@ from waitress.compat import thread
 class _triggerbase(object):
     """OS-independent base class for OS-dependent trigger class."""
 
-    kind = None  # subclass must set to "pipe" or "loopback"; used by repr
+    kind = None # subclass must set to "pipe" or "loopback"; used by repr
 
     def __init__(self):
         self._closed = False
@@ -86,7 +86,7 @@ class _triggerbase(object):
         if not self._closed:
             self._closed = True
             self.del_channel()
-            self._close()  # subclass does OS-specific stuff
+            self._close() # subclass does OS-specific stuff
 
     def pull_trigger(self, thunk=None):
         if thunk:
@@ -156,42 +156,42 @@ else: # pragma: no cover
             w.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
             count = 0
-            while 1:
-               count += 1
-               # Bind to a local port; for efficiency, let the OS pick
-               # a free port for us.
-               # Unfortunately, stress tests showed that we may not
-               # be able to connect to that port ("Address already in
-               # use") despite that the OS picked it.  This appears
-               # to be a race bug in the Windows socket implementation.
-               # So we loop until a connect() succeeds (almost always
-               # on the first try).  See the long thread at
-               # http://mail.zope.org/pipermail/zope/2005-July/160433.html
-               # for hideous details.
-               a = socket.socket()
-               a.bind(("127.0.0.1", 0))
-               connect_address = a.getsockname()  # assigned (host, port) pair
-               a.listen(1)
-               try:
-                   w.connect(connect_address)
-                   break    # success
-               except socket.error as detail:
-                   if detail[0] != errno.WSAEADDRINUSE:
-                       # "Address already in use" is the only error
-                       # I've seen on two WinXP Pro SP2 boxes, under
-                       # Pythons 2.3.5 and 2.4.1.
-                       raise
-                   # (10048, 'Address already in use')
-                   # assert count <= 2 # never triggered in Tim's tests
-                   if count >= 10:  # I've never seen it go above 2
-                       a.close()
-                       w.close()
-                       raise RuntimeError("Cannot bind trigger!")
-                   # Close `a` and try again.  Note:  I originally put a short
-                   # sleep() here, but it didn't appear to help or hurt.
-                   a.close()
+            while True:
+                count += 1
+                # Bind to a local port; for efficiency, let the OS pick
+                # a free port for us.
+                # Unfortunately, stress tests showed that we may not
+                # be able to connect to that port ("Address already in
+                # use") despite that the OS picked it.  This appears
+                # to be a race bug in the Windows socket implementation.
+                # So we loop until a connect() succeeds (almost always
+                # on the first try).  See the long thread at
+                # http://mail.zope.org/pipermail/zope/2005-July/160433.html
+                # for hideous details.
+                a = socket.socket()
+                a.bind(("127.0.0.1", 0))
+                connect_address = a.getsockname() # assigned (host, port) pair
+                a.listen(1)
+                try:
+                    w.connect(connect_address)
+                    break # success
+                except socket.error as detail:
+                    if detail[0] != errno.WSAEADDRINUSE:
+                        # "Address already in use" is the only error
+                        # I've seen on two WinXP Pro SP2 boxes, under
+                        # Pythons 2.3.5 and 2.4.1.
+                        raise
+                    # (10048, 'Address already in use')
+                    # assert count <= 2 # never triggered in Tim's tests
+                    if count >= 10: # I've never seen it go above 2
+                        a.close()
+                        w.close()
+                        raise RuntimeError("Cannot bind trigger!")
+                    # Close `a` and try again.  Note:  I originally put a short
+                    # sleep() here, but it didn't appear to help or hurt.
+                    a.close()
 
-            r, addr = a.accept()  # r becomes asyncore's (self.)socket
+            r, addr = a.accept() # r becomes asyncore's (self.)socket
             a.close()
             self.trigger = w
             asyncore.dispatcher.__init__(self, r, map=map)

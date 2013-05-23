@@ -19,7 +19,7 @@ import traceback
 from waitress.buffers import (
     OverflowableBuffer,
     ReadOnlyFileBasedBuffer,
-    )
+)
 
 from waitress.parser import HTTPRequestParser
 
@@ -28,12 +28,12 @@ from waitress.compat import thread
 from waitress.task import (
     ErrorTask,
     WSGITask,
-    )
+)
 
 from waitress.utilities import (
     logging_dispatcher,
     InternalServerError,
-    )
+)
 
 class HTTPChannel(logging_dispatcher, object):
     """
@@ -42,6 +42,7 @@ class HTTPChannel(logging_dispatcher, object):
 
     Setting self.requests = [] allows more requests to be received.
     """
+
     task_class = WSGITask
     error_task_class = ErrorTask
     parser_class = HTTPRequestParser
@@ -64,15 +65,14 @@ class HTTPChannel(logging_dispatcher, object):
             sock,
             addr,
             adj,
-            map=None,
-            ):
+            map=None):
         self.server = server
         self.adj = adj
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
         self.creation_time = self.last_activity = time.time()
 
         # task_lock used to push/pop requests
-        self.task_lock = thread.allocate_lock() 
+        self.task_lock = thread.allocate_lock()
         # outbuf_lock used to access any outbuf
         self.outbuf_lock = thread.allocate_lock()
 

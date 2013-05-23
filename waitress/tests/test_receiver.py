@@ -1,6 +1,7 @@
 import unittest
 
 class TestFixedStreamReceiver(unittest.TestCase):
+
     def _makeOne(self, buf, cl):
         from waitress.receiver import FixedStreamReceiver
         return FixedStreamReceiver(buf, cl)
@@ -42,6 +43,7 @@ class TestFixedStreamReceiver(unittest.TestCase):
         self.assertEqual(inst.getbuf(), buf)
 
 class TestChunkedReceiver(unittest.TestCase):
+
     def _makeOne(self, buf):
         from waitress.receiver import ChunkedReceiver
         return ChunkedReceiver(buf)
@@ -134,17 +136,19 @@ class TestChunkedReceiver(unittest.TestCase):
         buf = DummyBuffer()
         inst = self._makeOne(buf)
         self.assertEqual(inst.getfile(), buf)
-    
+
     def test_getbuf(self):
         buf = DummyBuffer()
         inst = self._makeOne(buf)
         self.assertEqual(inst.getbuf(), buf)
 
 class DummyBuffer(object):
+
     def __init__(self):
         self.data = []
+
     def append(self, s):
         self.data.append(s)
+
     def getfile(self):
         return self
-    

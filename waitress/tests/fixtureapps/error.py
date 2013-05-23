@@ -9,7 +9,7 @@ def app(environ, start_response):
     write = start_response(
         '200 OK',
         [('Content-Length', cl), ('Content-Type', 'text/plain')]
-        )
+    )
     if environ['PATH_INFO'] == '/after_write_cb':
         write('abc')
     if environ['PATH_INFO'] == '/in_generator':

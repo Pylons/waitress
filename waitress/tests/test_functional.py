@@ -9,7 +9,7 @@ import unittest
 from waitress.compat import (
     httplib,
     tobytes
-    )
+)
 from waitress.tests.support import TEST_PORT, TEST_SOCKET_PATH
 
 dn = os.path.dirname
@@ -27,7 +27,6 @@ class SubprocessTests(object):
 
     def stop_subprocess(self):
         if self.proc.returncode is None:
-            #self.conn.close()
             self.proc.terminate()
         self.sock.close()
 
@@ -38,13 +37,13 @@ class SubprocessTests(object):
         self.assertEqual(v, tobytes(version))
 
     def create_socket(self):
-        raise NotImplementedError  # pragma: no cover
+        raise NotImplementedError # pragma: no cover
 
     def connect(self):
-        raise NotImplementedError  # pragma: no cover
+        raise NotImplementedError # pragma: no cover
 
     def make_http_connection(self):
-        raise NotImplementedError  # pragma: no cover
+        raise NotImplementedError # pragma: no cover
 
     def send_check_error(self, to_send):
         self.sock.send(to_send)
@@ -84,6 +83,7 @@ class UnixTests(SubprocessTests):
 
 class SleepyThreadTests(TcpTests, unittest.TestCase):
     # test that sleepy thread doesnt block other requests
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'sleepy.py')
         self.start_subprocess([self.exe, echo])
@@ -96,7 +96,7 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
         cmds = (
             [self.exe, getline, 'http://127.0.0.1:%s/sleepy' % TEST_PORT],
             [self.exe, getline, 'http://127.0.0.1:%s/' % TEST_PORT]
-            )
+        )
         r, w = os.pipe()
         procs = []
         for cmd in cmds:
@@ -106,7 +106,7 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
             if proc.returncode is not None: # pragma: no cover
                 proc.terminate()
         # the notsleepy response should always be first returned (it sleeps
-        # for 2 seconds, then returns; the notsleepy response should be 
+        # for 2 seconds, then returns; the notsleepy response should be
         # processed in the meantime)
         result = os.read(r, 10000)
         os.close(r)
@@ -114,6 +114,7 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
         self.assertEqual(result, b'notsleepy returnedsleepy returned')
 
 class EchoTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -191,7 +192,7 @@ class EchoTests(object):
             "Content-Length: %d\n"
             "\n"
             "%s" % (len(data), data)
-            )
+        )
         self.connect()
         self.sock.send(s)
         fp = self.sock.makefile('rb', 0)
@@ -209,7 +210,7 @@ class EchoTests(object):
             "Content-Length: %d\n"
             "\n"
             "%s" % (len(body), body)
-            )
+        )
         self.connect()
         self.sock.send(s)
         fp = self.sock.makefile('rb', 0)
@@ -236,7 +237,7 @@ class EchoTests(object):
         header = tobytes(
             "GET / HTTP/1.1\n"
             "Transfer-Encoding: chunked\n\n"
-            )
+        )
         self.connect()
         self.sock.send(header)
         self.sock.send(b"0\r\n\r\n")
@@ -246,13 +247,13 @@ class EchoTests(object):
         self.assertEqual(response_body, b'')
 
     def test_chunking_request_with_content(self):
-        control_line = b"20;\r\n"  # 20 hex = 32 dec
+        control_line = b"20;\r\n" # 20 hex = 32 dec
         s = b'This string has 32 characters.\r\n'
         expected = s * 12
         header = tobytes(
             "GET / HTTP/1.1\n"
             "Transfer-Encoding: chunked\n\n"
-            )
+        )
         self.connect()
         self.sock.send(header)
         fp = self.sock.makefile('rb', 0)
@@ -265,7 +266,7 @@ class EchoTests(object):
         self.assertEqual(response_body, expected)
 
     def test_broken_chunked_encoding(self):
-        control_line = "20;\r\n"  # 20 hex = 32 dec
+        control_line = "20;\r\n" # 20 hex = 32 dec
         s = 'This string has 32 characters.\r\n'
         to_send = "GET / HTTP/1.1\nTransfer-Encoding: chunked\n\n"
         to_send += (control_line + s)
@@ -292,10 +293,10 @@ class EchoTests(object):
         data = "Default: Don't keep me alive"
         s = tobytes(
             "GET / HTTP/1.0\n"
-             "Content-Length: %d\n"
-             "\n"
-             "%s" % (len(data), data)
-             )
+            "Content-Length: %d\n"
+            "\n"
+            "%s" % (len(data), data)
+        )
         self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
@@ -313,11 +314,11 @@ class EchoTests(object):
         data = "Keep me alive"
         s = tobytes(
             "GET / HTTP/1.0\n"
-             "Connection: Keep-Alive\n"
-             "Content-Length: %d\n"
-             "\n"
-             "%s" % (len(data), data)
-            )
+            "Connection: Keep-Alive\n"
+            "Content-Length: %d\n"
+            "\n"
+            "%s" % (len(data), data)
+        )
         self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
@@ -333,9 +334,9 @@ class EchoTests(object):
         data = "Default: Keep me alive"
         s = tobytes(
             "GET / HTTP/1.1\n"
-             "Content-Length: %d\n"
-             "\n"
-             "%s" % (len(data), data))
+            "Content-Length: %d\n"
+            "\n"
+            "%s" % (len(data), data))
         self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
@@ -348,11 +349,11 @@ class EchoTests(object):
         data = "Default: Keep me alive"
         s = tobytes(
             "GET / HTTP/1.1\n"
-             "Connection: keep-alive\n"
-             "Content-Length: %d\n"
-             "\n"
-             "%s" % (len(data), data)
-             )
+            "Connection: keep-alive\n"
+            "Content-Length: %d\n"
+            "\n"
+            "%s" % (len(data), data)
+        )
         self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
@@ -365,11 +366,11 @@ class EchoTests(object):
         data = "Don't keep me alive"
         s = tobytes(
             "GET / HTTP/1.1\n"
-             "Connection: close\n"
-             "Content-Length: %d\n"
-             "\n"
-             "%s" % (len(data), data)
-             )
+            "Connection: close\n"
+            "Content-Length: %d\n"
+            "\n"
+            "%s" % (len(data), data)
+        )
         self.connect()
         self.sock.send(s)
         response = httplib.HTTPResponse(self.sock)
@@ -378,6 +379,7 @@ class EchoTests(object):
         self.assertEqual(response.getheader('connection'), 'close')
 
 class PipeliningTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -416,6 +418,7 @@ class PipeliningTests(object):
             self.assertEqual(response_body, expect_body)
 
 class ExpectContinueTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'echo.py')
         self.start_subprocess([self.exe, echo])
@@ -428,12 +431,12 @@ class ExpectContinueTests(object):
         data = "I have expectations"
         to_send = tobytes(
             "GET / HTTP/1.1\n"
-             "Connection: close\n"
-             "Content-Length: %d\n"
-             "Expect: 100-continue\n"
-             "\n"
-             "%s" % (len(data), data)
-             )
+            "Connection: close\n"
+            "Content-Length: %d\n"
+            "Expect: 100-continue\n"
+            "\n"
+            "%s" % (len(data), data)
+        )
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -453,6 +456,7 @@ class ExpectContinueTests(object):
         self.assertEqual(response_body, tobytes(data))
 
 class BadContentLengthTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'badcl.py')
         self.start_subprocess([self.exe, echo])
@@ -465,10 +469,10 @@ class BadContentLengthTests(object):
         # for cl header
         to_send = tobytes(
             "GET /short_body HTTP/1.0\n"
-             "Connection: Keep-Alive\n"
-             "Content-Length: 0\n"
-             "\n"
-             )
+            "Connection: Keep-Alive\n"
+            "Content-Length: 0\n"
+            "\n"
+        )
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -479,7 +483,7 @@ class BadContentLengthTests(object):
         response_body = fp.read(content_length)
         self.assertEqual(int(status), 200)
         self.assertNotEqual(content_length, len(response_body))
-        self.assertEqual(len(response_body), content_length-1)
+        self.assertEqual(len(response_body), content_length - 1)
         self.assertEqual(response_body, tobytes('abcdefghi'))
         # remote closed connection (despite keepalive header); not sure why
         # first send succeeds
@@ -491,10 +495,10 @@ class BadContentLengthTests(object):
         # for cl header
         to_send = tobytes(
             "GET /long_body HTTP/1.0\n"
-             "Connection: Keep-Alive\n"
-             "Content-Length: 0\n"
-             "\n"
-             )
+            "Connection: Keep-Alive\n"
+            "Content-Length: 0\n"
+            "\n"
+        )
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -517,6 +521,7 @@ class BadContentLengthTests(object):
         self.assertEqual(int(status), 200)
 
 class NoContentLengthTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'nocl.py')
         self.start_subprocess([self.exe, echo])
@@ -600,7 +605,7 @@ class NoContentLengthTests(object):
         for chunk in chunks(body, 10):
             expected += tobytes(
                 '%s\r\n%s\r\n' % (str(hex(len(chunk))[2:].upper()), chunk)
-                )
+            )
         expected += b'0\r\n\r\n'
         self.assertEqual(response_body, expected)
         # connection is always closed at the end of a chunked response
@@ -641,7 +646,7 @@ class NoContentLengthTests(object):
         for chunk in (body[0], body[1:]):
             expected += tobytes(
                 '%s\r\n%s\r\n' % (str(hex(len(chunk))[2:].upper()), chunk)
-                )
+            )
         expected += b'0\r\n\r\n'
         self.assertEqual(response_body, expected)
         # connection is always closed at the end of a chunked response
@@ -649,6 +654,7 @@ class NoContentLengthTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 class WriteCallbackTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'writecb.py')
         self.start_subprocess([self.exe, echo])
@@ -661,10 +667,10 @@ class WriteCallbackTests(object):
         # for cl header
         to_send = tobytes(
             "GET /short_body HTTP/1.0\n"
-             "Connection: Keep-Alive\n"
-             "Content-Length: 0\n"
-             "\n"
-             )
+            "Connection: Keep-Alive\n"
+            "Content-Length: 0\n"
+            "\n"
+        )
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -674,7 +680,7 @@ class WriteCallbackTests(object):
         cl = int(headers['content-length'])
         self.assertEqual(cl, 9)
         self.assertNotEqual(cl, len(response_body))
-        self.assertEqual(len(response_body), cl-1)
+        self.assertEqual(len(response_body), cl - 1)
         self.assertEqual(response_body, tobytes('abcdefgh'))
         # remote closed connection (despite keepalive header)
         self.send_check_error(to_send)
@@ -685,10 +691,10 @@ class WriteCallbackTests(object):
         # for cl header
         to_send = tobytes(
             "GET /long_body HTTP/1.0\n"
-             "Connection: Keep-Alive\n"
-             "Content-Length: 0\n"
-             "\n"
-             )
+            "Connection: Keep-Alive\n"
+            "Content-Length: 0\n"
+            "\n"
+        )
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -708,10 +714,10 @@ class WriteCallbackTests(object):
         # cl header
         to_send = tobytes(
             "GET /equal_body HTTP/1.0\n"
-             "Connection: Keep-Alive\n"
-             "Content-Length: 0\n"
-             "\n"
-             )
+            "Connection: Keep-Alive\n"
+            "Content-Length: 0\n"
+            "\n"
+        )
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -731,10 +737,10 @@ class WriteCallbackTests(object):
         # wtf happens when there's no content-length
         to_send = tobytes(
             "GET /no_content_length HTTP/1.0\n"
-             "Connection: Keep-Alive\n"
-             "Content-Length: 0\n"
-             "\n"
-             )
+            "Connection: Keep-Alive\n"
+            "Content-Length: 0\n"
+            "\n"
+        )
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
@@ -858,8 +864,8 @@ class TooLargeTests(object):
         self.assertEqual(cl, len(response_body))
         # second response is an error response
         line, headers, response_body = read_http(fp)
-        self.assertline(line, '431', 'Request Header Fields Too Large', 
-                             'HTTP/1.0')
+        self.assertline(line, '431', 'Request Header Fields Too Large',
+                        'HTTP/1.0')
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
@@ -901,8 +907,8 @@ class TooLargeTests(object):
         # so entire body looks like the header of the subsequent request
         # second response is an error response
         line, headers, response_body = read_http(fp)
-        self.assertline(line, '431', 'Request Header Fields Too Large', 
-                             'HTTP/1.0')
+        self.assertline(line, '431', 'Request Header Fields Too Large',
+                        'HTTP/1.0')
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         # connection has been closed
@@ -927,7 +933,7 @@ class TooLargeTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_request_body_too_large_chunked_encoding(self):
-        control_line = "20;\r\n"  # 20 hex = 32 dec
+        control_line = "20;\r\n" # 20 hex = 32 dec
         s = 'This string has 32 characters.\r\n'
         to_send = "GET / HTTP/1.1\nTransfer-Encoding: chunked\n\n"
         repeat = control_line + s
@@ -948,13 +954,14 @@ class TooLargeTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 class InternalServerErrorTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'error.py')
         self.start_subprocess([self.exe, echo])
 
     def tearDown(self):
         self.stop_subprocess()
-    
+
     def test_before_start_response(self):
         to_send = "GET /before_start_response HTTP/1.1\n\n"
         to_send = tobytes(to_send)
@@ -1012,13 +1019,14 @@ class InternalServerErrorTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 class FileWrapperTests(object):
+
     def setUp(self):
         echo = os.path.join(here, 'fixtureapps', 'filewrapper.py')
         self.start_subprocess([self.exe, echo])
 
     def tearDown(self):
         self.stop_subprocess()
-    
+
     def test_filelike_http11(self):
         to_send = "GET /filelike HTTP/1.1\n\n"
         to_send = tobytes(to_send)
@@ -1157,7 +1165,7 @@ class FileWrapperTests(object):
         line, headers, response_body = read_http(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
         cl = int(headers['content-length'])
-        self.assertEqual(cl, len(response_body)+10)
+        self.assertEqual(cl, len(response_body) + 10)
         ct = headers['content-type']
         self.assertEqual(ct, 'image/jpeg')
         self.assertTrue(b'\377\330\377' in response_body)
@@ -1249,13 +1257,11 @@ class TcpExpectContinueTests(ExpectContinueTests, TcpTests, unittest.TestCase):
     pass
 
 class TcpBadContentLengthTests(
-    BadContentLengthTests, TcpTests, unittest.TestCase
-    ):
+        BadContentLengthTests, TcpTests, unittest.TestCase):
     pass
 
 class TcpNoContentLengthTests(
-    NoContentLengthTests, TcpTests, unittest.TestCase
-    ):
+        NoContentLengthTests, TcpTests, unittest.TestCase):
     pass
 
 class TcpWriteCallbackTests(WriteCallbackTests, TcpTests, unittest.TestCase):
@@ -1265,8 +1271,7 @@ class TcpTooLargeTests(TooLargeTests, TcpTests, unittest.TestCase):
     pass
 
 class TcpInternalServerErrorTests(
-    InternalServerErrorTests, TcpTests, unittest.TestCase
-    ):
+        InternalServerErrorTests, TcpTests, unittest.TestCase):
     pass
 
 class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
@@ -1281,31 +1286,26 @@ if not sys.platform.startswith('win'):
         pass
 
     class UnixExpectContinueTests(
-        ExpectContinueTests, UnixTests, unittest.TestCase
-        ):
+            ExpectContinueTests, UnixTests, unittest.TestCase):
         pass
 
     class UnixBadContentLengthTests(
-        BadContentLengthTests, UnixTests, unittest.TestCase
-        ):
+            BadContentLengthTests, UnixTests, unittest.TestCase):
         pass
 
     class UnixNoContentLengthTests(
-        NoContentLengthTests, UnixTests, unittest.TestCase
-        ):
+            NoContentLengthTests, UnixTests, unittest.TestCase):
         pass
 
     class UnixWriteCallbackTests(
-        WriteCallbackTests, UnixTests, unittest.TestCase
-        ):
+            WriteCallbackTests, UnixTests, unittest.TestCase):
         pass
 
     class UnixTooLargeTests(TooLargeTests, UnixTests, unittest.TestCase):
         pass
 
     class UnixInternalServerErrorTests(
-        InternalServerErrorTests, UnixTests, unittest.TestCase
-        ):
+            InternalServerErrorTests, UnixTests, unittest.TestCase):
         pass
 
     class UnixFileWrapperTests(FileWrapperTests, UnixTests, unittest.TestCase):
@@ -1327,9 +1327,11 @@ def parse_headers(fp):
 class UnixHTTPConnection(httplib.HTTPConnection):
     """Patched version of HTTPConnection that uses Unix domain sockets.
     """
+
     def __init__(self, path):
         httplib.HTTPConnection.__init__(self, 'localhost')
         self.path = path
+
     def connect(self):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.connect(self.path)
@@ -1348,7 +1350,7 @@ def read_http(fp): # pragma: no cover
         raise
     if not response_line:
         raise ConnectionClosed
-  
+
     header_lines = []
     while True:
         line = fp.readline()
@@ -1366,7 +1368,7 @@ def read_http(fp): # pragma: no cover
         value = value.decode('iso-8859-1')
         assert key not in headers, "%s header duplicated" % key
         headers[key] = value
-  
+
     if 'content-length' in headers:
         num = int(headers['content-length'])
         body = b''
@@ -1380,7 +1382,7 @@ def read_http(fp): # pragma: no cover
     else:
         # read until EOF
         body = fp.read()
-  
+
     return response_line, headers, body
 
 # stolen from gevent
@@ -1393,9 +1395,9 @@ def get_errno(exc): # pragma: no cover
     i.e. http://bugs.python.org/issue6471
     Maybe there are cases when errno is set, but it is not the first argument?
     """
-  
     try:
-        if exc.errno is not None: return exc.errno
+        if exc.errno is not None:
+            return exc.errno
     except AttributeError:
         pass
     try:
@@ -1407,4 +1409,4 @@ def chunks(l, n):
     """ Yield successive n-sized chunks from l.
     """
     for i in range(0, len(l), n):
-        yield l[i:i+n]
+        yield l[i:i + n]

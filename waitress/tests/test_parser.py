@@ -18,9 +18,10 @@ import unittest
 from waitress.compat import (
     text_,
     tobytes,
-    )
+)
 
 class TestHTTPRequestParser(unittest.TestCase):
+
     def setUp(self):
         from waitress.parser import HTTPRequestParser
         from waitress.adjustments import Adjustments
@@ -94,7 +95,7 @@ GET /foobar HTTP/8.4
 Content-Length: 10
 
 """
-        result =self.parser.received(data)
+        result = self.parser.received(data)
         self.assertEqual(result, 41)
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
@@ -106,7 +107,7 @@ Content-Length: 10
 GET /foobar HTTP/8.4
 X-Foo: 1
 """
-        result =self.parser.received(data)
+        result = self.parser.received(data)
         self.assertEqual(result, 30)
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error,
@@ -171,7 +172,7 @@ foo: bar"""
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__,
                          'ChunkedReceiver')
-        
+
     def test_parse_header_11_expect_continue(self):
         data = b"GET /foobar HTTP/1.1\nexpect: 100-continue"
         self.parser.parse_header(data)
@@ -193,13 +194,14 @@ foo: bar"""
         self.parser._close() # doesn't raise
 
 class Test_split_uri(unittest.TestCase):
+
     def _callFUT(self, uri):
         from waitress.parser import split_uri
         (self.proxy_scheme,
          self.proxy_netloc,
          self.path,
          self.query, self.fragment) = split_uri(uri)
-    
+
     def test_split_uri_unquoting_unneeded(self):
         self._callFUT(b'http://localhost:8080/abc def')
         self.assertEqual(self.path, '/abc def')
@@ -230,10 +232,11 @@ class Test_split_uri(unittest.TestCase):
         self.assertEqual(self.proxy_netloc, 'localhost:8080')
 
 class Test_get_header_lines(unittest.TestCase):
+
     def _callFUT(self, data):
         from waitress.parser import get_header_lines
         return get_header_lines(data)
-    
+
     def test_get_header_lines(self):
         result = self._callFUT(b'slam\nslim')
         self.assertEqual(result, [b'slam', b'slim'])
@@ -249,6 +252,7 @@ class Test_get_header_lines(unittest.TestCase):
                           self._callFUT, b' Host: localhost\r\n\r\n')
 
 class Test_crack_first_line(unittest.TestCase):
+
     def _callFUT(self, line):
         from waitress.parser import crack_first_line
         return crack_first_line(line)
@@ -372,12 +376,13 @@ Hello.
         self.feed(data)
         self.assertTrue(self.parser.completed)
         self.assertEqual(self.parser.headers, {
-                'CONTENT_LENGTH': '7',
-                'X_FORWARDED_FOR':
-                    '10.11.12.13, unknown,127.0.0.1, 255.255.255.255',
-                })
+            'CONTENT_LENGTH': '7',
+            'X_FORWARDED_FOR':
+                '10.11.12.13, unknown,127.0.0.1, 255.255.255.255',
+        })
 
 class DummyBodyStream(object):
+
     def getfile(self):
         return self
 
@@ -386,4 +391,3 @@ class DummyBodyStream(object):
 
     def _close(self):
         self.closed = True
-        

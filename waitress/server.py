@@ -26,10 +26,10 @@ from waitress.utilities import cleanup_unix_socket, logging_dispatcher
 
 def WSGIServer(application,
                map=None,
-               _start=True, # test shim
-               _sock=None,  # test shim
+               _start=True,      # test shim
+               _sock=None,       # test shim
                _dispatcher=None, # test shim
-               **kw # adjustments
+               **kw              # adjustments
                ):
     """
     if __name__ == '__main__':
@@ -54,10 +54,10 @@ class BaseWSGIServer(logging_dispatcher, object):
     def __init__(self,
                  application,
                  map,
-                 _start, # test shim
-                 _sock,  # test shim
+                 _start,      # test shim
+                 _sock,       # test shim
                  _dispatcher, # test shim
-                 adj # adjustments
+                 adj          # adjustments
                  ):
 
         self.application = application
@@ -79,7 +79,7 @@ class BaseWSGIServer(logging_dispatcher, object):
             self.accept_connections()
 
     def bind_server_socket(self):
-        raise NotImplementedError  # pragma: no cover
+        raise NotImplementedError # pragma: no cover
 
     def get_server_name(self, ip):
         """Given an IP or hostname, try to determine the server name."""
@@ -100,11 +100,11 @@ class BaseWSGIServer(logging_dispatcher, object):
         return server_name
 
     def getsockname(self):
-        raise NotImplementedError  # pragma: no cover
+        raise NotImplementedError # pragma: no cover
 
     def accept_connections(self):
         self.accepting = True
-        self.socket.listen(self.adj.backlog)  # Get around asyncore NT limit
+        self.socket.listen(self.adj.backlog) # Get around asyncore NT limit
 
     def add_task(self, task):
         self.task_dispatcher.add_task(task)
@@ -149,7 +149,7 @@ class BaseWSGIServer(logging_dispatcher, object):
             self.asyncore.loop(
                 timeout=self.adj.asyncore_loop_timeout,
                 map=self._map
-                )
+            )
         except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
 

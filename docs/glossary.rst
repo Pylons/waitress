@@ -13,5 +13,3 @@ Glossary
    asyncore
       A standard library module for asynchronous communications.  See
       http://docs.python.org/library/asyncore.html .
-
-

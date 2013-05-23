@@ -16,7 +16,7 @@
 import doctest
 
 class FakeSocket: # pragma: no cover
-    data        = ''
+    data = ''
     setblocking = lambda *_: None
     close = lambda *_: None
 
@@ -35,7 +35,6 @@ class FakeSocket: # pragma: no cover
 
     def recv(self, data):
         return 'data'
-
 
 def zombies_test():
     """Regression test for HTTPChannel.maintenance method

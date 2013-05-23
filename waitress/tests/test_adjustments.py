@@ -1,6 +1,7 @@
 import unittest
 
 class Test_asbool(unittest.TestCase):
+
     def _callFUT(self, s):
         from waitress.adjustments import asbool
         return asbool(s)
@@ -8,11 +9,11 @@ class Test_asbool(unittest.TestCase):
     def test_s_is_None(self):
         result = self._callFUT(None)
         self.assertEqual(result, False)
-        
+
     def test_s_is_True(self):
         result = self._callFUT(True)
         self.assertEqual(result, True)
-        
+
     def test_s_is_False(self):
         result = self._callFUT(False)
         self.assertEqual(result, False)
@@ -38,10 +39,11 @@ class Test_asbool(unittest.TestCase):
         self.assertEqual(result, True)
 
 class TestAdjustments(unittest.TestCase):
+
     def _makeOne(self, **kw):
         from waitress.adjustments import Adjustments
         return Adjustments(**kw)
-    
+
     def test_goodvars(self):
         inst = self._makeOne(
             host='host', port='8080', threads='5',
@@ -75,4 +77,3 @@ class TestAdjustments(unittest.TestCase):
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
-
