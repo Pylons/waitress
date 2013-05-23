@@ -2,6 +2,7 @@ import unittest
 import io
 
 class TestHTTPChannel(unittest.TestCase):
+
     def _makeOne(self, sock, addr, adj, map=None):
         from waitress.channel import HTTPChannel
         server = DummyServer()
@@ -37,7 +38,7 @@ class TestHTTPChannel(unittest.TestCase):
 
     def test_handle_write_not_connected(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.connected  = False
+        inst.connected = False
         self.assertFalse(inst.handle_write())
 
     def test_handle_write_with_requests(self):
@@ -175,7 +176,8 @@ class TestHTTPChannel(unittest.TestCase):
         import socket
         inst, sock, map = self._makeOneWithMap()
         inst.will_close = False
-        def recv(b): raise socket.error
+        def recv(b):
+            raise socket.error
         inst.recv = recv
         inst.last_activity = 0
         inst.logger = DummyLogger()
@@ -246,7 +248,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.outbufs.append(buffer)
         inst.logger = DummyLogger()
         def doraise():
-            raise NotImplemented
+            raise NotImplementedError
         inst.outbufs[0]._close = doraise
         result = inst._flush_some()
         self.assertEqual(result, True)
@@ -543,36 +545,48 @@ class TestHTTPChannel(unittest.TestCase):
 class DummySock(object):
     blocking = False
     closed = False
+
     def __init__(self):
         self.sent = b''
+
     def setblocking(self, *arg):
         self.blocking = True
+
     def fileno(self):
         return 100
+
     def getpeername(self):
         return '127.0.0.1'
+
     def close(self):
         self.closed = True
+
     def send(self, data):
         self.sent += data
         return len(data)
 
 class DummyLock(object):
+
     def __init__(self, acquirable=True):
         self.acquirable = acquirable
+
     def acquire(self, val):
         self.val = val
         self.acquired = True
         return self.acquirable
+
     def release(self):
         self.released = True
+
     def __exit__(self, type, val, traceback):
         self.acquire(True)
+
     def __enter__(self):
         pass
 
 class DummyBuffer(object):
     closed = False
+
     def __init__(self, data, toraise=None):
         self.data = data
         self.toraise = toraise
@@ -609,11 +623,14 @@ class DummyAdjustments(object):
 class DummyServer(object):
     trigger_pulled = False
     adj = DummyAdjustments()
+
     def __init__(self):
         self.tasks = []
         self.active_channels = {}
+
     def add_task(self, task):
         self.tasks.append(task)
+
     def pull_trigger(self):
         self.trigger_pulled = True
 
@@ -627,6 +644,7 @@ class DummyParser(object):
     retval = None
     error = None
     connection_close = False
+
     def received(self, data):
         self.data = data
         if self.retval is not None:
@@ -638,14 +656,18 @@ class DummyRequest(object):
     path = '/'
     version = '1.0'
     closed = False
+
     def __init__(self):
         self.headers = {}
+
     def _close(self):
         self.closed = True
-    
+
 class DummyLogger(object):
+
     def __init__(self):
         self.exceptions = []
+
     def exception(self, msg):
         self.exceptions.append(msg)
 
@@ -671,5 +693,3 @@ class DummyTaskClass(object):
         self.request.serviced = True
         if self.toraise:
             raise self.toraise
-
-    

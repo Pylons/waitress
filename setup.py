@@ -24,12 +24,12 @@ except IOError:
 docs_extras = [
     'Sphinx',
     'docutils',
-    ]
+]
 
 testing_extras = [
     'nose',
     'coverage',
-    ]
+]
 
 setup(
     name='waitress',
@@ -39,10 +39,10 @@ setup(
     maintainer="Chris McDonough",
     maintainer_email="chrism@plope.com",
     description='Waitress WSGI server',
-    long_description = README +'\n\n' + CHANGES,
+    long_description=README + '\n\n' + CHANGES,
     license='ZPL 2.1',
     keywords='waitress wsgi server http',
-    classifiers = [
+    classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
@@ -59,16 +59,16 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Topic :: Internet :: WWW/HTTP',
-        ],
+    ],
     url='https://github.com/Pylons/waitress',
     packages=find_packages(),
     install_requires=[
         'setuptools',
-        ],
-    extras_require = {
-        'testing':testing_extras,
-        'docs':docs_extras,
-        },
+    ],
+    extras_require={
+        'testing': testing_extras,
+        'docs': docs_extras,
+    },
     include_package_data=True,
     test_suite='waitress',
     zip_safe=False,
@@ -76,4 +76,4 @@ setup(
     [paste.server_runner]
     main = waitress:serve_paste
     """
-    )
+)

@@ -5,6 +5,7 @@ import sys
 if not sys.platform.startswith("win"):
 
     class Test_trigger(unittest.TestCase):
+
         def _makeOne(self, map):
             from waitress.trigger import trigger
             return trigger(map)
@@ -44,7 +45,7 @@ if not sys.platform.startswith("win"):
             inst = self._makeOne(map)
             self.assertEqual(inst.close(), None)
             self.assertEqual(inst._closed, True)
-            
+
         def test_handle_close(self):
             map = {}
             inst = self._makeOne(map)
@@ -57,7 +58,7 @@ if not sys.platform.startswith("win"):
             self.assertEqual(inst.pull_trigger(), None)
             r = os.read(inst._fds[0], 1)
             self.assertEqual(r, b'x')
-        
+
         def test_pull_trigger_thunk(self):
             map = {}
             inst = self._makeOne(map)
@@ -71,14 +72,14 @@ if not sys.platform.startswith("win"):
             inst = self._makeOne(map)
             result = inst.handle_read()
             self.assertEqual(result, None)
-            
+
         def test_handle_read_no_socket_error(self):
             map = {}
             inst = self._makeOne(map)
             inst.pull_trigger()
             result = inst.handle_read()
             self.assertEqual(result, None)
-            
+
         def test_handle_read_thunk(self):
             map = {}
             inst = self._makeOne(map)
@@ -102,4 +103,3 @@ if not sys.platform.startswith("win"):
             self.assertEqual(result, None)
             self.assertEqual(len(L), 1)
             self.assertEqual(inst.thunks, [])
-        

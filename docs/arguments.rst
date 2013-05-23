@@ -58,7 +58,7 @@ send_bytes
 outbuf_overflow
     A tempfile should be created if the pending output is larger than
     outbuf_overflow, which is measured in bytes. The default is 1MB
-    (``104856``).  This is conservative.
+    (``1048576``).  This is conservative.
 
 inbuf_overflow
     A tempfile should be created if the pending input is larger than
@@ -86,7 +86,7 @@ channel_timeout
     ``120``.  "Inactive" is defined as "has received no data from a client
     and has sent no data to a client".
 
-log_socket_errors 
+log_socket_errors
     Boolean: turn off to not log premature client disconnect tracebacks.
     Default: ``True``.
 
@@ -105,4 +105,3 @@ expose_tracebacks
 asyncore_loop_timeout
     The ``timeout`` value (seconds) passed to ``asyncore.loop`` to run the
     mainloop.  Default: 1.  (New in 0.8.3.)
-

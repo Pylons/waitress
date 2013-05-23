@@ -3,6 +3,7 @@
 import unittest
 
 class Test_unquote_bytes_to_wsgi(unittest.TestCase):
+
     def _callFUT(self, v):
         from waitress.compat import unquote_bytes_to_wsgi
         return unquote_bytes_to_wsgi(v)
@@ -17,4 +18,3 @@ class Test_unquote_bytes_to_wsgi(unittest.TestCase):
         else: # pragma: no cover
             # sanity
             self.assertEqual(result, b'/a\xc5\x9b')
-        

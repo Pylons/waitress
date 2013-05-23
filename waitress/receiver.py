@@ -32,7 +32,7 @@ class FixedStreamReceiver(object):
         'See IStreamConsumer'
         rm = self.remain
         if rm < 1:
-            self.completed = True  # Avoid any chance of spinning
+            self.completed = True # Avoid any chance of spinning
             return 0
         datalen = len(data)
         if rm <= datalen:
@@ -62,7 +62,6 @@ class ChunkedReceiver(object):
 
     # max_control_line = 1024
     # max_trailer = 65536
-
 
     def __init__(self, buf):
         self.buf = buf
@@ -102,7 +101,7 @@ class ChunkedReceiver(object):
                             # discard extension info.
                             line = line[:semi]
                         try:
-                            sz = int(line.strip(), 16)  # hexadecimal
+                            sz = int(line.strip(), 16) # hexadecimal
                         except ValueError: # garbage in input
                             self.error = BadRequest(
                                 'garbage in chunked encoding input')
@@ -137,10 +136,8 @@ class ChunkedReceiver(object):
                     return orig_size - (len(trailer) - pos)
         return orig_size
 
-
     def getfile(self):
         return self.buf.getfile()
 
     def getbuf(self):
         return self.buf
-    

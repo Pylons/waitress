@@ -7,7 +7,7 @@ def app(environ, start_response):
     start_response(
         '200 OK',
         [('Content-Length', cl), ('Content-Type', 'text/plain')]
-        )
+    )
     return [body]
 
 if __name__ == '__main__':

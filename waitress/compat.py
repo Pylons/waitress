@@ -45,10 +45,12 @@ if PY3: # pragma: no cover
         if isinstance(s, text_type):
             s = s.encode('latin-1')
         return str(s, 'latin-1', 'strict')
+
     def tobytes(s):
         return bytes(s, 'latin-1')
 else:
     tostr = str
+
     def tobytes(s):
         return s
 
@@ -56,18 +58,17 @@ try:
     from Queue import (
         Queue,
         Empty,
-        )
+    )
 except ImportError: # pragma: no cover
     from queue import (
         Queue,
         Empty,
-        )
+    )
 
 try:
     import thread
 except ImportError: # pragma: no cover
     import _thread as thread
-    
 
 if PY3: # pragma: no cover
     import builtins
@@ -79,7 +80,6 @@ if PY3: # pragma: no cover
         if value.__traceback__ is not tb:
             raise value.with_traceback(tb)
         raise value
-
 
     del builtins
 
@@ -96,13 +96,11 @@ else: # pragma: no cover
             locs = globs
         exec("""exec code in globs, locs""")
 
-
     exec_("""def reraise(tp, value, tb=None):
     raise tp, value, tb
 """)
 
-
-try: 
+try:
     from StringIO import StringIO as NativeIO
 except ImportError: # pragma: no cover
     from io import StringIO as NativeIO
@@ -111,4 +109,3 @@ try:
     import httplib
 except ImportError: # pragma: no cover
     from http import client as httplib
-    

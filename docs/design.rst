@@ -52,4 +52,3 @@ entirely.
 Periodic maintenance is done by the main thread (the thread handling I/O).
 If a channel hasn't sent or received any data in a while, the channel's
 connection is closed, and the channel is destroyed.
-

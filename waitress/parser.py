@@ -23,21 +23,21 @@ from waitress.compat import (
     tostr,
     urlparse,
     unquote_bytes_to_wsgi,
-    )
+)
 
 from waitress.buffers import OverflowableBuffer
 
 from waitress.receiver import (
     FixedStreamReceiver,
     ChunkedReceiver,
-    )
+)
 
 from waitress.utilities import (
     find_double_newline,
     RequestEntityTooLarge,
     RequestHeaderFieldsTooLarge,
     BadRequest,
-    )
+)
 
 class ParsingError(Exception):
     pass
@@ -50,8 +50,8 @@ class HTTPRequestParser(object):
 
     """
 
-    completed = False  # Set once request is completed.
-    empty = False        # Set if no request was made.
+    completed = False # Set once request is completed.
+    empty = False # Set if no request was made.
     expect_continue = False # client sent "Expect: 100-continue" header
     headers_finished = False # True when headers have been read
     header_plus = b''
@@ -83,7 +83,7 @@ class HTTPRequestParser(object):
         body have been received.
         """
         if self.completed:
-            return 0  # Can't consume any more.
+            return 0 # Can't consume any more.
         datalen = len(data)
         br = self.body_rcv
         if br is None:
@@ -175,7 +175,7 @@ class HTTPRequestParser(object):
                 key1 = tostr(key.upper().replace(b'-', b'_'))
                 # If a header already exists, we append subsequent values
                 # seperated by a comma. Applications already need to handle
-                # the comma seperated values, as HTTP front ends might do 
+                # the comma seperated values, as HTTP front ends might do
                 # the concatenation for you (behavior specified in RFC2616).
                 try:
                     headers[key1] += tostr(b', ' + value)
@@ -243,7 +243,7 @@ def split_uri(uri):
         unquote_bytes_to_wsgi(path),
         tostr(query),
         tostr(fragment),
-        )
+    )
 
 def get_header_lines(header):
     """
@@ -262,7 +262,7 @@ def get_header_lines(header):
     return r
 
 first_line_re = re.compile(
-b'([^ ]+) ((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)(( HTTP/([0-9.]+))$|$)')
+    b'([^ ]+) ((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)(( HTTP/([0-9.]+))$|$)')
 
 def crack_first_line(line):
     m = first_line_re.match(line)

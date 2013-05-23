@@ -24,18 +24,18 @@ from waitress.compat import (
     Empty,
     thread,
     reraise,
-    )
+)
 
 from waitress.utilities import (
     build_http_date,
     logger,
-    )
+)
 
 rename_headers = {
-    'CONTENT_LENGTH' : 'CONTENT_LENGTH',
-    'CONTENT_TYPE'   : 'CONTENT_TYPE',
-    'CONNECTION'     : 'CONNECTION_TYPE',
-    }
+    'CONTENT_LENGTH': 'CONTENT_LENGTH',
+    'CONTENT_TYPE': 'CONTENT_TYPE',
+    'CONNECTION': 'CONNECTION_TYPE',
+}
 
 hop_by_hop = frozenset((
     'connection',
@@ -46,7 +46,7 @@ hop_by_hop = frozenset((
     'trailers',
     'transfer-encoding',
     'upgrade'
-    ))
+))
 
 class JustTesting(Exception):
     pass
@@ -55,12 +55,12 @@ class ThreadedTaskDispatcher(object):
     """A Task Dispatcher that creates a thread for each task.
     """
 
-    stop_count = 0  # Number of threads that will stop soon.
+    stop_count = 0 # Number of threads that will stop soon.
     start_new_thread = thread.start_new_thread
     logger = logger
 
     def __init__(self):
-        self.threads = {}  # { thread number -> 1 }
+        self.threads = {} # { thread number -> 1 }
         self.queue = Queue()
         self.thread_mgmt_lock = thread.allocate_lock()
 
@@ -128,7 +128,9 @@ class ThreadedTaskDispatcher(object):
         expiration = time.time() + timeout
         while threads:
             if time.time() >= expiration:
-                self.logger.warning("%d thread(s) still running" % len(threads))
+                self.logger.warning(
+                    "%d thread(s) still running" %
+                    len(threads))
                 break
             time.sleep(0.1)
         if cancel_pending:
@@ -198,7 +200,7 @@ class Task(object):
         for i, (headername, headerval) in enumerate(response_headers):
             headername = '-'.join(
                 [x.capitalize() for x in headername.split('-')]
-                )
+            )
             if headername == 'Content-Length':
                 content_length_header = headerval
             if headername == 'Date':
@@ -214,7 +216,7 @@ class Task(object):
             content_length_header = str(self.content_length)
             self.response_headers.append(
                 ('Content-Length', content_length_header)
-                )
+            )
 
         def close_on_finish():
             if connection_close_header is None:
@@ -292,7 +294,7 @@ class Task(object):
                 towrite = tobytes(hex(len(data))[2:].upper()) + b'\r\n'
                 towrite += data + b'\r\n'
             elif cl is not None:
-                towrite = data[:cl-self.content_bytes_written]
+                towrite = data[:cl - self.content_bytes_written]
                 self.content_bytes_written += len(towrite)
                 if towrite != data and not self.logged_write_excess:
                     self.logger.warning(
@@ -304,7 +306,9 @@ class Task(object):
 
 class ErrorTask(Task):
     """ An error task produces an error response """
+
     complete = True
+
     def execute(self):
         e = self.request.error
         body = '%s\r\n\r\n%s' % (e.reason, e.body)
@@ -358,11 +362,11 @@ class WSGITask(Task):
                 if not k.__class__ is str:
                     raise AssertionError(
                         'Header name %r is not a string in %r' % (k, (k, v))
-                        )
+                    )
                 if not v.__class__ is str:
                     raise AssertionError(
                         'Header value %r is not a string in %r' % (v, (k, v))
-                        )
+                    )
                 kl = k.lower()
                 if kl == 'content-length':
                     self.content_length = int(v)
@@ -423,7 +427,7 @@ class WSGITask(Task):
                             'application returned too few bytes (%s) '
                             'for specified Content-Length (%s) via app_iter' % (
                                 self.content_bytes_written, cl),
-                            )
+                        )
         finally:
             if hasattr(app_iter, 'close'):
                 app_iter.close()
@@ -463,7 +467,7 @@ class WSGITask(Task):
                 environ[mykey] = value
 
         # the following environment variables are required by the WSGI spec
-        environ['wsgi.version'] = (1,0)
+        environ['wsgi.version'] = (1, 0)
         environ['wsgi.url_scheme'] = request.url_scheme
         environ['wsgi.errors'] = sys.stderr # apps should use the logging module
         environ['wsgi.multithread'] = True
@@ -474,4 +478,3 @@ class WSGITask(Task):
 
         self.environ = environ
         return environ
-
