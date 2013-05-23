@@ -14,7 +14,7 @@
 """Command line runner.
 """
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import getopt
 import os.path
@@ -27,7 +27,7 @@ from waitress.adjustments import Adjustments
 HELP = """\
 Usage:
 
-    %(name)s [OPTS] MODULE:OBJECT
+    {0} [OPTS] MODULE:OBJECT
 
 Standard options:
 
@@ -132,7 +132,7 @@ RUNNER_PATTERN = re.compile(r"""
 def match(obj_name):
     matches = RUNNER_PATTERN.match(obj_name)
     if not matches:
-        raise ValueError("Malformed application '%s'" % obj_name)
+        raise ValueError("Malformed application '{0}'".format(obj_name))
     return matches.group('module'), matches.group('object')
 
 def resolve(module_name, object_name):
@@ -144,8 +144,8 @@ def resolve(module_name, object_name):
 
 def show_help(stream, name, error=None):  # pragma: no cover
     if error is not None:
-        print('Error: %s\n' % error, file=stream)
-    print(HELP % {'name': name}, file=stream)
+        print('Error: {0}\n'.format(error), file=stream)
+    print(HELP.format(name), file=stream)
 
 def run(argv=sys.argv, _serve=serve):
     """Command line runner."""
@@ -154,7 +154,7 @@ def run(argv=sys.argv, _serve=serve):
     try:
         kw, args = Adjustments.parse_args(argv[1:])
     except getopt.GetoptError as exc:
-        show_help(sys.stderr, name, exc.msg)
+        show_help(sys.stderr, name, str(exc))
         return 1
 
     if kw['help']:
@@ -167,18 +167,18 @@ def run(argv=sys.argv, _serve=serve):
 
     try:
         module, obj_name = match(args[0])
-    except ValueError, exc:
-        show_help(sys.stderr, name, exc.message)
+    except ValueError as exc:
+        show_help(sys.stderr, name, str(exc))
         return 1
 
     # Get the WSGI function.
     try:
         app = resolve(module, obj_name)
     except ImportError:
-        show_help(sys.stderr, name, "Bad module '%s'" % module)
+        show_help(sys.stderr, name, "Bad module '{0}'".format(module))
         return 1
     except AttributeError:
-        show_help(sys.stderr, name, "Bad object name '%s'" % obj_name)
+        show_help(sys.stderr, name, "Bad object name '{0}'".format(obj_name))
         return 1
     if kw['call']:
         app = app()

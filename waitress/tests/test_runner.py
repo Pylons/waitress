@@ -127,9 +127,12 @@ class Test_run(unittest.TestCase):
 
 @contextlib.contextmanager
 def capture():
-    import StringIO
+    try:
+        from io import StringIO
+    except ImportError:
+        from StringIO import StringIO
     import sys
-    fd = StringIO.StringIO()
+    fd = StringIO()
     sys.stdout = fd
     sys.stderr = fd
     yield fd
