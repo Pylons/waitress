@@ -47,12 +47,10 @@ class HTTPRequestParser(object):
 
     Once the stream is completed, the instance is passed to
     a server task constructor.
-
     """
-
-    completed = False # Set once request is completed.
-    empty = False # Set if no request was made.
-    expect_continue = False # client sent "Expect: 100-continue" header
+    completed = False        # Set once request is completed.
+    empty = False            # Set if no request was made.
+    expect_continue = False  # client sent "Expect: 100-continue" header
     headers_finished = False # True when headers have been read
     header_plus = b''
     chunked = False
@@ -262,7 +260,10 @@ def get_header_lines(header):
     return r
 
 first_line_re = re.compile(
-    b'([^ ]+) ((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)(( HTTP/([0-9.]+))$|$)')
+    b'([^ ]+) '
+    b'((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)'
+    b'(( HTTP/([0-9.]+))$|$)'
+)
 
 def crack_first_line(line):
     m = first_line_re.match(line)

@@ -65,7 +65,8 @@ class HTTPChannel(logging_dispatcher, object):
             sock,
             addr,
             adj,
-            map=None):
+            map=None,
+            ):
         self.server = server
         self.adj = adj
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]

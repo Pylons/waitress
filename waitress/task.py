@@ -54,7 +54,6 @@ class JustTesting(Exception):
 class ThreadedTaskDispatcher(object):
     """A Task Dispatcher that creates a thread for each task.
     """
-
     stop_count = 0 # Number of threads that will stop soon.
     start_new_thread = thread.start_new_thread
     logger = logger
@@ -305,8 +304,8 @@ class Task(object):
                 channel.write_soon(towrite)
 
 class ErrorTask(Task):
-    """ An error task produces an error response """
-
+    """ An error task produces an error response
+    """
     complete = True
 
     def execute(self):
@@ -326,7 +325,6 @@ class ErrorTask(Task):
 class WSGITask(Task):
     """A WSGI task produces a response from a WSGI application.
     """
-
     environ = None
 
     def execute(self):
