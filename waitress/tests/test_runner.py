@@ -1,5 +1,10 @@
 import contextlib
-import unittest
+import sys
+
+if sys.version_info[:2] == (2, 6): # pragma: no cover
+    import unittest2 as unittest
+else: # pragma: no cover
+    import unittest
 
 from waitress import runner
 
@@ -127,12 +132,8 @@ class Test_run(unittest.TestCase):
 
 @contextlib.contextmanager
 def capture():
-    try:
-        from io import StringIO
-    except ImportError:
-        from StringIO import StringIO
-    import sys
-    fd = StringIO()
+    from waitress.compat import NativeIO
+    fd = NativeIO()
     sys.stdout = fd
     sys.stderr = fd
     yield fd
