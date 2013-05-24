@@ -75,7 +75,7 @@ Tuning options:
 
     --send-bytes=INT
         Number of bytes to send to socket.send(). Default is 18000.
-        Multiples of 9000 should avoice partly-filled TCP packets.
+        Multiples of 9000 should avoid partly-filled TCP packets.
 
     --outbuf-overflow=INT
         A temporary file should be created if the pending output is larger
