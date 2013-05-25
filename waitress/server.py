@@ -149,7 +149,7 @@ class BaseWSGIServer(logging_dispatcher, object):
             self.asyncore.loop(
                 timeout=self.adj.asyncore_loop_timeout,
                 map=self._map,
-                use_poll=True,
+                use_poll=self.adj.asyncore_use_poll,
             )
         except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()

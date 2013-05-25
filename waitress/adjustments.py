@@ -108,6 +108,9 @@ class Adjustments(object):
     # The asyncore.loop timeout value
     asyncore_loop_timeout = 1
 
+    # The asyncore.loop flag to use poll() instead of the default select().
+    asyncore_use_poll = False
+
     def __init__(self, **kw):
         for k, v in kw.items():
             if k == 'host':
@@ -146,6 +149,8 @@ class Adjustments(object):
                 v = str(v)
             elif k == 'asyncore_loop_timeout':
                 v = int(v)
+            elif k == 'asyncore_use_poll':
+                v = asbool(v)
             elif k == 'unix_socket':
                 v = str(v)
             elif k == 'unix_socket_perms':
