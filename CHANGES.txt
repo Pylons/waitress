@@ -1,6 +1,10 @@
 Next release
 ------------
 
+- Add a command-line runner called ``waitress-serve`` to allow Waitress
+  to run WSGI applications without any addional machinery. This is
+  essentially a thin wrapper around the ``waitress.serve()`` function.
+
 - Allow parallel testing (e.g., under ``detox`` or ``nosetests --processes``)
   using PID-dependent port / socket for functest servers.
 

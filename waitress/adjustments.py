@@ -13,12 +13,57 @@
 ##############################################################################
 """Adjustments are tunable parameters.
 """
+import getopt
 import socket
 import sys
+
+truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
+
+def asbool(s):
+    """ Return the boolean value ``True`` if the case-lowered value of string
+    input ``s`` is any of ``t``, ``true``, ``y``, ``on``, or ``1``, otherwise
+    return the boolean value ``False``.  If ``s`` is the value ``None``,
+    return ``False``.  If ``s`` is already one of the boolean values ``True``
+    or ``False``, return it."""
+    if s is None:
+        return False
+    if isinstance(s, bool):
+        return s
+    s = str(s).strip()
+    return s.lower() in truthy
+
+def asoctal(s):
+    """Convert the given octal string to an actual number."""
+    return int(s, 8)
 
 class Adjustments(object):
     """This class contains tunable parameters.
     """
+
+    _params = (
+        ('host', str),
+        ('port', int),
+        ('threads', int),
+        ('url_scheme', str),
+        ('backlog', int),
+        ('recv_bytes', int),
+        ('send_bytes', int),
+        ('outbuf_overflow', int),
+        ('inbuf_overflow', int),
+        ('connection_limit', int),
+        ('cleanup_interval', int),
+        ('channel_timeout', int),
+        ('log_socket_errors', asbool),
+        ('max_request_header_size', int),
+        ('max_request_body_size', int),
+        ('expose_tracebacks', asbool),
+        ('ident', str),
+        ('asyncore_loop_timeout', int),
+        ('unix_socket', str),
+        ('unix_socket_perms', asoctal),
+    )
+
+    _param_map = dict(_params)
 
     # hostname or IP address to listen on
     host = '0.0.0.0'
@@ -110,64 +155,38 @@ class Adjustments(object):
 
     def __init__(self, **kw):
         for k, v in kw.items():
-            if k == 'host':
-                v = str(v)
-            elif k == 'port':
-                v = int(v)
-            elif k == 'threads':
-                v = int(v)
-            elif k == 'url_scheme':
-                v = str(v)
-            elif k == 'backlog':
-                v = int(v)
-            elif k == 'recv_bytes':
-                v = int(v)
-            elif k == 'send_bytes':
-                v = int(v)
-            elif k == 'outbuf_overflow':
-                v = int(v)
-            elif k == 'inbuf_overflow':
-                v = int(v)
-            elif k == 'connection_limit':
-                v = int(v)
-            elif k == 'cleanup_interval':
-                v = int(v)
-            elif k == 'channel_timeout':
-                v = int(v)
-            elif k == 'log_socket_errors':
-                v = asbool(v)
-            elif k == 'max_request_header_size':
-                v = int(v)
-            elif k == 'max_request_body_size':
-                v = int(v)
-            elif k == 'expose_tracebacks':
-                v = asbool(v)
-            elif k == 'ident':
-                v = str(v)
-            elif k == 'asyncore_loop_timeout':
-                v = int(v)
-            elif k == 'unix_socket':
-                v = str(v)
-            elif k == 'unix_socket_perms':
-                v = int(v, 8)
-            else:
+            if k not in self._param_map:
                 raise ValueError('Unknown adjustment %r' % k)
-            setattr(self, k, v)
+            setattr(self, k, self._param_map[k](v))
         if (sys.platform[:3] == "win" and
                 self.host == 'localhost'): # pragma: no cover
             self.host = ''
 
-truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
+    @classmethod
+    def parse_args(cls, argv):
+        """Parse command line arguments.
+        """
+        long_opts = ['help', 'call']
+        for opt, cast in cls._params:
+            opt = opt.replace('_', '-')
+            if cast is asbool:
+                long_opts.append(opt)
+                long_opts.append('no-' + opt)
+            else:
+                long_opts.append(opt + '=')
 
-def asbool(s):
-    """ Return the boolean value ``True`` if the case-lowered value of string
-    input ``s`` is any of ``t``, ``true``, ``y``, ``on``, or ``1``, otherwise
-    return the boolean value ``False``.  If ``s`` is the value ``None``,
-    return ``False``.  If ``s`` is already one of the boolean values ``True``
-    or ``False``, return it."""
-    if s is None:
-        return False
-    if isinstance(s, bool):
-        return s
-    s = str(s).strip()
-    return s.lower() in truthy
+        kw = {
+            'help': False,
+            'call': False,
+        }
+        opts, args = getopt.getopt(argv, '', long_opts)
+        for opt, value in opts:
+            param = opt.lstrip('-').replace('-', '_')
+            if param.startswith('no_'):
+                param = param[3:]
+                kw[param] = False
+            elif param in ('help', 'call') or cls._param_map[param] is asbool:
+                kw[param] = True
+            else:
+                kw[param] = cls._param_map[param](value)
+        return kw, args

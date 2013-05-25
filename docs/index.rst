@@ -38,6 +38,14 @@ lets you use Waitress's WSGI gateway from a configuration file, e.g.::
 You can find more settings to tweak (arguments to ``waitress.serve`` or
 equivalent settings in PasteDeploy) in :ref:`arguments`.
 
+Additionally, there is a command line runner called ``waitress-serve``, which
+can be used in development and in situations where the likes of
+:term:`PasteDeploy` is not necessary::
+
+    waitress-serve --port-8041 myapp:wsgifunc
+
+For more information on this, see :ref:`runner`.
+
 .. _logging:
 
 Logging
@@ -185,6 +193,7 @@ Extended Documentation
    api.rst
    arguments.rst
    filewrapper.rst
+   runner.rst
    glossary.rst
 
 Change History

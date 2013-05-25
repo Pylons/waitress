@@ -12,6 +12,7 @@
 #
 ##############################################################################
 import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -30,6 +31,9 @@ testing_extras = [
     'nose',
     'coverage',
 ]
+
+if sys.version_info[:2] == (2, 6):
+    testing_extras.append('unittest2')
 
 setup(
     name='waitress',
@@ -75,5 +79,7 @@ setup(
     entry_points="""
     [paste.server_runner]
     main = waitress:serve_paste
+    [console_scripts]
+    waitress-serve = waitress.runner:run
     """
 )

@@ -1,4 +1,9 @@
-import unittest
+import sys
+
+if sys.version_info[:2] == (2, 6): # pragma: no cover
+    import unittest2 as unittest
+else: # pragma: no cover
+    import unittest
 
 class Test_asbool(unittest.TestCase):
 
@@ -77,3 +82,56 @@ class TestAdjustments(unittest.TestCase):
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
+
+class TestCLI(unittest.TestCase):
+
+    def parse(self, argv):
+        from waitress.adjustments import Adjustments
+        return Adjustments.parse_args(argv)
+
+    def test_noargs(self):
+        opts, args = self.parse([])
+        self.assertDictEqual(opts, {'call': False, 'help': False})
+        self.assertSequenceEqual(args, [])
+
+    def test_help(self):
+        opts, args = self.parse(['--help'])
+        self.assertDictEqual(opts, {'call': False, 'help': True})
+        self.assertSequenceEqual(args, [])
+
+    def test_call(self):
+        opts, args = self.parse(['--call'])
+        self.assertDictEqual(opts, {'call': True, 'help': False})
+        self.assertSequenceEqual(args, [])
+
+    def test_both(self):
+        opts, args = self.parse(['--call', '--help'])
+        self.assertDictEqual(opts, {'call': True, 'help': True})
+        self.assertSequenceEqual(args, [])
+
+    def test_positive_boolean(self):
+        opts, args = self.parse(['--expose-tracebacks'])
+        self.assertDictContainsSubset({'expose_tracebacks': True}, opts)
+        self.assertSequenceEqual(args, [])
+
+    def test_negative_boolean(self):
+        opts, args = self.parse(['--no-expose-tracebacks'])
+        self.assertDictContainsSubset({'expose_tracebacks': False}, opts)
+        self.assertSequenceEqual(args, [])
+
+    def test_cast_params(self):
+        opts, args = self.parse([
+            '--host=localhost',
+            '--port=80',
+            '--unix-socket-perms=777'
+        ])
+        self.assertDictContainsSubset({
+            'host': 'localhost',
+            'port': 80,
+            'unix_socket_perms': 0o777,
+        }, opts)
+        self.assertSequenceEqual(args, [])
+
+    def test_bad_param(self):
+        import getopt
+        self.assertRaises(getopt.GetoptError, self.parse, ['--no-host'])
