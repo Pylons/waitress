@@ -8,6 +8,10 @@ Waitress comes bundled with a thin command-line wrapper around the
 development, and in production situations where serving of static assets is
 delegated to a reverse proxy, such as Nginx or Apache.
 
+.. note::
+
+   This feature is new as of Waitress 0.8.4.
+
 ``waitress-serve`` takes the very same :ref:`arguments <arguments>` as the
 ``waitress.serve`` function, but where the function's arguments have
 underscores, ``waitress-serve`` uses hyphens. Thus::
