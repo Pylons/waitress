@@ -1,5 +1,5 @@
-Next release
-------------
+0.8.4 (2013-05-24)
+------------------
 
 - Add a command-line runner called ``waitress-serve`` to allow Waitress
   to run WSGI applications without any addional machinery. This is
