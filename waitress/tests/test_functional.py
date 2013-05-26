@@ -73,37 +73,6 @@ class TcpTests(SubprocessTests):
     def start_subprocess(self, cmd):
         super(TcpTests, self).start_subprocess(cmd + ['-p', str(self.port)])
 
-class UnixTests(SubprocessTests):
-
-    @property
-    def path(self):
-        # To permit parallel testing, use a PID-dependent socket.
-        return '/tmp/waitress.test-%d.sock' % os.getpid()
-
-    def create_socket(self):
-        return socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-
-    def connect(self):
-        self.sock.connect(self.path)
-
-    def make_http_connection(self):
-        return UnixHTTPConnection(self.path)
-
-    def start_subprocess(self, cmd):
-        super(UnixTests, self).start_subprocess(cmd + ['-u', self.path])
-
-    def stop_subprocess(self):
-        super(UnixTests, self).stop_subprocess()
-        cleanup_unix_socket(self.path)
-
-    def send_check_error(self, to_send):
-        # Unlike inet domain sockets, Unix domain sockets can trigger a
-        # 'Broken pipe' error when the socket it closed.
-        try:
-            self.sock.send(to_send)
-        except socket.error as exc:
-            self.assertEqual(get_errno(exc), errno.EPIPE)
-
 class SleepyThreadTests(TcpTests, unittest.TestCase):
     # test that sleepy thread doesnt block other requests
 
@@ -1300,7 +1269,38 @@ class TcpInternalServerErrorTests(
 class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
     pass
 
-if not sys.platform.startswith('win'):
+if hasattr(socket, 'AF_UNIX'):
+
+    class UnixTests(SubprocessTests):
+
+        @property
+        def path(self):
+            # To permit parallel testing, use a PID-dependent socket.
+            return '/tmp/waitress.test-%d.sock' % os.getpid()
+
+        def create_socket(self):
+            return socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+        def connect(self):
+            self.sock.connect(self.path)
+
+        def make_http_connection(self):
+            return UnixHTTPConnection(self.path)
+
+        def start_subprocess(self, cmd):
+            super(UnixTests, self).start_subprocess(cmd + ['-u', self.path])
+
+        def stop_subprocess(self):
+            super(UnixTests, self).stop_subprocess()
+            cleanup_unix_socket(self.path)
+
+        def send_check_error(self, to_send):
+            # Unlike inet domain sockets, Unix domain sockets can trigger a
+            # 'Broken pipe' error when the socket it closed.
+            try:
+                self.sock.send(to_send)
+            except socket.error as exc:
+                self.assertEqual(get_errno(exc), errno.EPIPE)
 
     class UnixEchoTests(EchoTests, UnixTests, unittest.TestCase):
         pass

@@ -37,7 +37,7 @@ def create_server(application,
         server.run()
     """
     adj = Adjustments(**kw)
-    if adj.unix_socket:
+    if adj.unix_socket and hasattr(socket, 'AF_UNIX'):
         cls = UnixWSGIServer
     else:
         cls = TcpWSGIServer
@@ -189,25 +189,23 @@ class TcpWSGIServer(BaseWSGIServer):
         for (level, optname, value) in self.adj.socket_options:
             conn.setsockopt(level, optname, value)
 
-class UnixWSGIServer(BaseWSGIServer):
+if hasattr(socket, 'AF_UNIX'):
 
-    @property
-    def family(self):
-        # Windows doesnt support AF_UNIX, so hide in property so we don't fail
-        # at import time on it.
-        return socket.AF_UNIX
+    class UnixWSGIServer(BaseWSGIServer):
 
-    def bind_server_socket(self):
-        cleanup_unix_socket(self.adj.unix_socket)
-        self.bind(self.adj.unix_socket)
-        if os.path.exists(self.adj.unix_socket):
-            os.chmod(self.adj.unix_socket, self.adj.unix_socket_perms)
+        family = socket.AF_UNIX
 
-    def getsockname(self):
-        return ('unix', self.socket.getsockname())
+        def bind_server_socket(self):
+            cleanup_unix_socket(self.adj.unix_socket)
+            self.bind(self.adj.unix_socket)
+            if os.path.exists(self.adj.unix_socket):
+                os.chmod(self.adj.unix_socket, self.adj.unix_socket_perms)
 
-    def fix_addr(self, addr):
-        return ('localhost', None)
+        def getsockname(self):
+            return ('unix', self.socket.getsockname())
+
+        def fix_addr(self, addr):
+            return ('localhost', None)
 
 # Compatibility alias.
 WSGIServer = TcpWSGIServer
