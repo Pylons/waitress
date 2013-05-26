@@ -1,4 +1,4 @@
-def app(environ, start_response):
+def app(environ, start_response): # pragma: no cover
     path_info = environ['PATH_INFO']
     if path_info == '/no_content_length':
         headers = []
@@ -12,7 +12,3 @@ def app(environ, start_response):
     else:
         write(b'abcdefghi')
     return []
-
-if __name__ == '__main__':
-    from waitress.tests.support import start_server
-    start_server(app)

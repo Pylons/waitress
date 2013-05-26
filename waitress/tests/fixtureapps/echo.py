@@ -1,4 +1,4 @@
-def app(environ, start_response):
+def app(environ, start_response): # pragma: no cover
     cl = environ.get('CONTENT_LENGTH', None)
     if cl is not None:
         cl = int(cl)
@@ -9,7 +9,3 @@ def app(environ, start_response):
         [('Content-Length', cl), ('Content-Type', 'text/plain')]
     )
     return [body]
-
-if __name__ == '__main__':
-    from waitress.tests.support import start_server
-    start_server(app)

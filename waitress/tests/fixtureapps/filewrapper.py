@@ -3,7 +3,7 @@ import os
 here = os.path.dirname(os.path.abspath(__file__))
 fn = os.path.join(here, 'groundhog1.jpg')
 
-class KindaFilelike(object):
+class KindaFilelike(object): # pragma: no cover
 
     def __init__(self, bytes):
         self.bytes = bytes
@@ -13,7 +13,7 @@ class KindaFilelike(object):
         self.bytes = self.bytes[n:]
         return bytes
 
-def app(environ, start_response):
+def app(environ, start_response): # pragma: no cover
     path_info = environ['PATH_INFO']
     if path_info.startswith('/filelike'):
         f = open(fn, 'rb')
@@ -68,7 +68,3 @@ def app(environ, start_response):
         headers
     )
     return environ['wsgi.file_wrapper'](f, 8192)
-
-if __name__ == '__main__':
-    from waitress.tests.support import start_server
-    start_server(app)
