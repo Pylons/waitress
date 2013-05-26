@@ -1,3 +1,9 @@
+Next Release
+------------
+
+- For compatibility, WSGIServer is now an alias of TcpWSGIServer. The
+  signature of BaseWSGIServer is now compatible with WSGIServer pre-0.8.4.
+
 0.8.4 (2013-05-24)
 ------------------
 
