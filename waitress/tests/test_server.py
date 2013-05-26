@@ -8,8 +8,8 @@ class TestWSGIServer(unittest.TestCase):
     def _makeOne(self, application, host='127.0.0.1', port=0,
                  _dispatcher=None, adj=None, map=None, _start=True,
                  _sock=None, _server=None):
-        from waitress.server import WSGIServer
-        return WSGIServer(
+        from waitress.server import create_server
+        return create_server(
             application,
             host=host,
             port=port,
@@ -182,14 +182,23 @@ class TestWSGIServer(unittest.TestCase):
         inst.maintenance(10000)
         self.assertEqual(zombie.will_close, True)
 
+    def test_backward_compatibility(self):
+        from waitress.server import WSGIServer, TcpWSGIServer
+        from waitress.adjustments import Adjustments
+        self.assertTrue(WSGIServer is TcpWSGIServer)
+        inst = WSGIServer(None, _start=False, port=1234)
+        # Ensure the adjustment was actually applied.
+        self.assertNotEqual(Adjustments.port, 1234)
+        self.assertEqual(inst.adj.port, 1234)
+
 if not sys.platform.startswith('win'):
 
     class TestUnixWSGIServer(unittest.TestCase):
         unix_socket = '/tmp/waitress.test.sock'
 
         def _makeOne(self, _start=True, _sock=None):
-            from waitress.server import WSGIServer
-            return WSGIServer(
+            from waitress.server import create_server
+            return create_server(
                 None,
                 map={},
                 _start=_start,

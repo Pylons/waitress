@@ -1,8 +1,8 @@
-from waitress.server import WSGIServer
+from waitress.server import WSGIServer, create_server
 import logging
 
 def serve(app, **kw):
-    _server = kw.pop('_server', WSGIServer) # test shim
+    _server = kw.pop('_server', create_server) # test shim
     _quiet = kw.pop('_quiet', False) # test shim
     _profile = kw.pop('_profile', False) # test shim
     if not _quiet: # pragma: no cover

@@ -24,16 +24,16 @@ from waitress.channel import HTTPChannel
 from waitress.task import ThreadedTaskDispatcher
 from waitress.utilities import cleanup_unix_socket, logging_dispatcher
 
-def WSGIServer(application,
-               map=None,
-               _start=True,      # test shim
-               _sock=None,       # test shim
-               _dispatcher=None, # test shim
-               **kw              # adjustments
-               ):
+def create_server(application,
+                  map=None,
+                  _start=True,      # test shim
+                  _sock=None,       # test shim
+                  _dispatcher=None, # test shim
+                  **kw              # adjustments
+                  ):
     """
     if __name__ == '__main__':
-        server = WSGIServer(app)
+        server = create_server(app)
         server.run()
     """
     adj = Adjustments(**kw)
@@ -53,13 +53,15 @@ class BaseWSGIServer(logging_dispatcher, object):
 
     def __init__(self,
                  application,
-                 map,
-                 _start,      # test shim
-                 _sock,       # test shim
-                 _dispatcher, # test shim
-                 adj          # adjustments
+                 map=None,
+                 _start=True,      # test shim
+                 _sock=None,       # test shim
+                 _dispatcher=None, # test shim
+                 adj=None,         # adjustments
+                 **kw
                  ):
-
+        if adj is None:
+            adj = Adjustments(**kw)
         self.application = application
         self.adj = adj
         self.trigger = trigger.trigger(map)
@@ -206,3 +208,6 @@ class UnixWSGIServer(BaseWSGIServer):
 
     def fix_addr(self, addr):
         return ('localhost', None)
+
+# Compatibility alias.
+WSGIServer = TcpWSGIServer
