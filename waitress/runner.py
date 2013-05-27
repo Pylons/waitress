@@ -137,8 +137,19 @@ def match(obj_name):
 
 def resolve(module_name, object_name):
     """Resolve a named object in a module."""
-    obj = __import__(module_name, fromlist=[object_name.split('.', 1)[0]])
-    for segment in object_name.split('.'):
+    # We cast each segments due to an issue that has been found to manifest
+    # in Python 2.6.6, but not 2.6.8, and may affect other revisions of Python
+    # 2.6 and 2.7, whereby ``__import__`` chokes if the list passed in the
+    # ``fromlist`` argument are unicode strings rather than 8-bit strings.
+    # The error triggered is "TypeError: Item in ``fromlist '' not a string".
+    # My guess is that this was fixed by checking against ``basestring``
+    # rather than ``str`` sometime between the release of 2.6.6 and 2.6.8,
+    # but I've yet to go over the commits. I know, however, that the NEWS
+    # file makes no mention of such a change to the behaviour of
+    # ``__import__``.
+    segments = [str(segment) for segment in object_name.split('.')]
+    obj = __import__(module_name, fromlist=segments[:1])
+    for segment in segments:
         obj = getattr(obj, segment)
     return obj
 
