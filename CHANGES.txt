@@ -1,6 +1,9 @@
 Next Release
 ------------
 
+- Fix runner multisegment imports in some Python 2 revisions (see
+  https://github.com/Pylons/waitress/pull/34).
+
 - For compatibility, WSGIServer is now an alias of TcpWSGIServer. The
   signature of BaseWSGIServer is now compatible with WSGIServer pre-0.8.4.
 
