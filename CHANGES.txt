@@ -1,3 +1,12 @@
+Next release
+------------
+
+- Do alternate type of checking for UNIX socket support, instead of checking
+  for platform == windows.
+
+- Functional tests now use multiprocessing module instead of subprocess module,
+  speeding up test suite and making concurrent execution more reliable.
+
 0.8.5 (2013-05-27)
 ------------------
 
