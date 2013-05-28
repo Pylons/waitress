@@ -115,6 +115,11 @@ Tuning options:
 
     --asyncore-loop-timeout=INT
         The timeout value in seconds passed to asyncore.loop(). Default is 1.
+
+    --asyncore-use-poll
+        The use_poll argument passed to ``asyncore.loop()``. Helps overcome open
+        file descriptors limit. Default is False.
+
 """
 
 RUNNER_PATTERN = re.compile(r"""
