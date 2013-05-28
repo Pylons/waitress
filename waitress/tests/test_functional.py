@@ -1,4 +1,6 @@
 import errno
+import logging
+import multiprocessing
 import os
 import socket
 import string
@@ -6,6 +8,7 @@ import subprocess
 import sys
 import time
 import unittest
+from waitress import server
 from waitress.compat import (
     httplib,
     tobytes
@@ -15,6 +18,28 @@ from waitress.utilities import cleanup_unix_socket
 dn = os.path.dirname
 here = dn(__file__)
 
+class NullHandler(logging.Handler): # pragma: no cover
+    """A logging handler that swallows all emitted messages.
+    """
+    def emit(self, record):
+        pass
+
+def start_server(app, svr, queue, **kwargs): # pragma: no cover
+    """Run a fixture application.
+    """
+    logging.getLogger('waitress').addHandler(NullHandler())
+    svr(app, queue, **kwargs).run()
+
+class FixtureTcpWSGIServer(server.TcpWSGIServer):
+    """A version of TcpWSGIServer that relays back what it's bound to.
+    """
+
+    def __init__(self, application, queue, **kw): # pragma: no cover
+        # Coverage doesn't see this as it's ran in a separate process.
+        kw['port'] = 0 # Bind to any available port.
+        super(FixtureTcpWSGIServer, self).__init__(application, **kw)
+        queue.put(self.socket.getsockname())
+
 class SubprocessTests(object):
 
     # For nose: all tests may be ran in separate processes.
@@ -22,15 +47,25 @@ class SubprocessTests(object):
 
     exe = sys.executable
 
-    def start_subprocess(self, cmd):
+    server = None
+
+    def start_subprocess(self, target, **kw):
+        # Spawn a server process.
+        queue = multiprocessing.Queue()
+        self.proc = multiprocessing.Process(
+            target=start_server,
+            args=(target, self.server, queue),
+            kwargs=kw,
+        )
+        self.proc.start()
+        if self.proc.exitcode is not None: # pragma: no cover
+            raise RuntimeError("%s didn't start" % str(target))
+        # Get the socket the server is listening on.
+        self.bound_to = queue.get(timeout=5)
         self.sock = self.create_socket()
-        self.proc = subprocess.Popen(cmd)
-        time.sleep(.5)
-        if self.proc.returncode is not None: # pragma: no cover
-            raise RuntimeError('%s didnt start' % str(cmd))
 
     def stop_subprocess(self):
-        if self.proc.returncode is None:
+        if self.proc.exitcode is None:
             self.proc.terminate()
         self.sock.close()
 
@@ -41,10 +76,10 @@ class SubprocessTests(object):
         self.assertEqual(v, tobytes(version))
 
     def create_socket(self):
-        raise NotImplementedError # pragma: no cover
+        return socket.socket(self.server.family, socket.SOCK_STREAM)
 
     def connect(self):
-        raise NotImplementedError # pragma: no cover
+        self.sock.connect(self.bound_to)
 
     def make_http_connection(self):
         raise NotImplementedError # pragma: no cover
@@ -54,62 +89,17 @@ class SubprocessTests(object):
 
 class TcpTests(SubprocessTests):
 
-    @property
-    def port(self):
-        # To permit parallel testing, use a PID-dependent port:
-        # Subtract least-significant 20 bits of the PID from the top of the
-        # allowed port range.
-        return 0xffff - (os.getpid() & 0x7ff)
-
-    def create_socket(self):
-        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def connect(self):
-        self.sock.connect(('127.0.0.1', self.port))
+    server = FixtureTcpWSGIServer
 
     def make_http_connection(self):
-        return httplib.HTTPConnection('127.0.0.1', self.port)
-
-    def start_subprocess(self, cmd):
-        super(TcpTests, self).start_subprocess(cmd + ['-p', str(self.port)])
-
-class UnixTests(SubprocessTests):
-
-    @property
-    def path(self):
-        # To permit parallel testing, use a PID-dependent socket.
-        return '/tmp/waitress.test-%d.sock' % os.getpid()
-
-    def create_socket(self):
-        return socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-
-    def connect(self):
-        self.sock.connect(self.path)
-
-    def make_http_connection(self):
-        return UnixHTTPConnection(self.path)
-
-    def start_subprocess(self, cmd):
-        super(UnixTests, self).start_subprocess(cmd + ['-u', self.path])
-
-    def stop_subprocess(self):
-        super(UnixTests, self).stop_subprocess()
-        cleanup_unix_socket(self.path)
-
-    def send_check_error(self, to_send):
-        # Unlike inet domain sockets, Unix domain sockets can trigger a
-        # 'Broken pipe' error when the socket it closed.
-        try:
-            self.sock.send(to_send)
-        except socket.error as exc:
-            self.assertEqual(get_errno(exc), errno.EPIPE)
+        return httplib.HTTPConnection(*self.bound_to)
 
 class SleepyThreadTests(TcpTests, unittest.TestCase):
     # test that sleepy thread doesnt block other requests
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'sleepy.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import sleepy
+        self.start_subprocess(sleepy.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -117,8 +107,8 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
     def test_it(self):
         getline = os.path.join(here, 'fixtureapps', 'getline.py')
         cmds = (
-            [self.exe, getline, 'http://127.0.0.1:%d/sleepy' % self.port],
-            [self.exe, getline, 'http://127.0.0.1:%d/' % self.port]
+            [self.exe, getline, 'http://%s:%d/sleepy' % self.bound_to],
+            [self.exe, getline, 'http://%s:%d/' % self.bound_to]
         )
         r, w = os.pipe()
         procs = []
@@ -139,8 +129,8 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
 class EchoTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'echo.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import echo
+        self.start_subprocess(echo.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -404,8 +394,8 @@ class EchoTests(object):
 class PipeliningTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'echo.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import echo
+        self.start_subprocess(echo.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -443,8 +433,8 @@ class PipeliningTests(object):
 class ExpectContinueTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'echo.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import echo
+        self.start_subprocess(echo.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -481,8 +471,8 @@ class ExpectContinueTests(object):
 class BadContentLengthTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'badcl.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import badcl
+        self.start_subprocess(badcl.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -546,8 +536,8 @@ class BadContentLengthTests(object):
 class NoContentLengthTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'nocl.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import nocl
+        self.start_subprocess(nocl.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -679,8 +669,8 @@ class NoContentLengthTests(object):
 class WriteCallbackTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'writecb.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import writecb
+        self.start_subprocess(writecb.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -781,8 +771,10 @@ class TooLargeTests(object):
     toobig = 1050
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'toolarge.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import toolarge
+        self.start_subprocess(toolarge.app,
+                              max_request_header_size=1000,
+                              max_request_body_size=1000)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -979,8 +971,8 @@ class TooLargeTests(object):
 class InternalServerErrorTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'error.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import error
+        self.start_subprocess(error.app, expose_tracebacks=True)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -1044,8 +1036,8 @@ class InternalServerErrorTests(object):
 class FileWrapperTests(object):
 
     def setUp(self):
-        echo = os.path.join(here, 'fixtureapps', 'filewrapper.py')
-        self.start_subprocess([self.exe, echo])
+        from waitress.tests.fixtureapps import filewrapper
+        self.start_subprocess(filewrapper.app)
 
     def tearDown(self):
         self.stop_subprocess()
@@ -1300,7 +1292,37 @@ class TcpInternalServerErrorTests(
 class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
     pass
 
-if not sys.platform.startswith('win'):
+if hasattr(socket, 'AF_UNIX'):
+
+    class FixtureUnixWSGIServer(server.UnixWSGIServer):
+        """A version of UnixWSGIServer that relays back what it's bound to.
+        """
+
+        def __init__(self, application, queue, **kw): # pragma: no cover
+            # Coverage doesn't see this as it's ran in a separate process.
+            # To permit parallel testing, use a PID-dependent socket.
+            kw['unix_socket'] = '/tmp/waitress.test-%d.sock' % os.getpid()
+            super(FixtureUnixWSGIServer, self).__init__(application, **kw)
+            queue.put(self.socket.getsockname())
+
+    class UnixTests(SubprocessTests):
+
+        server = FixtureUnixWSGIServer
+
+        def make_http_connection(self):
+            return UnixHTTPConnection(self.bound_to)
+
+        def stop_subprocess(self):
+            super(UnixTests, self).stop_subprocess()
+            cleanup_unix_socket(self.bound_to)
+
+        def send_check_error(self, to_send):
+            # Unlike inet domain sockets, Unix domain sockets can trigger a
+            # 'Broken pipe' error when the socket it closed.
+            try:
+                self.sock.send(to_send)
+            except socket.error as exc:
+                self.assertEqual(get_errno(exc), errno.EPIPE)
 
     class UnixEchoTests(EchoTests, UnixTests, unittest.TestCase):
         pass

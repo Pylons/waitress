@@ -1,6 +1,6 @@
 import time
 
-def app(environ, start_response):
+def app(environ, start_response): # pragma: no cover
     if environ['PATH_INFO'] == '/sleepy':
         time.sleep(2)
         body = b'sleepy returned'
@@ -12,7 +12,3 @@ def app(environ, start_response):
         [('Content-Length', cl), ('Content-Type', 'text/plain')]
     )
     return [body]
-
-if __name__ == '__main__':
-    from waitress.tests.support import start_server
-    start_server(app)

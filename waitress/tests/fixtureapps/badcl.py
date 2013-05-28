@@ -1,4 +1,4 @@
-def app(environ, start_response):
+def app(environ, start_response): # pragma: no cover
     body = b'abcdefghi'
     cl = len(body)
     if environ['PATH_INFO'] == '/short_body':
@@ -10,7 +10,3 @@ def app(environ, start_response):
         [('Content-Length', str(cl)), ('Content-Type', 'text/plain')]
     )
     return [body]
-
-if __name__ == '__main__':
-    from waitress.tests.support import start_server
-    start_server(app)

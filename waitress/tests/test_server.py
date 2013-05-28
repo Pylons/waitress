@@ -1,6 +1,5 @@
 import errno
 import socket
-import sys
 import unittest
 
 class TestWSGIServer(unittest.TestCase):
@@ -191,7 +190,7 @@ class TestWSGIServer(unittest.TestCase):
         self.assertNotEqual(Adjustments.port, 1234)
         self.assertEqual(inst.adj.port, 1234)
 
-if not sys.platform.startswith('win'):
+if hasattr(socket, 'AF_UNIX'):
 
     class TestUnixWSGIServer(unittest.TestCase):
         unix_socket = '/tmp/waitress.test.sock'
