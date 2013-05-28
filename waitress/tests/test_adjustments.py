@@ -58,7 +58,8 @@ class TestAdjustments(unittest.TestCase):
             channel_timeout='1200', log_socket_errors='true',
             max_request_header_size='1300', max_request_body_size='1400',
             expose_tracebacks='true', ident='abc', asyncore_loop_timeout='5',
-            unix_socket='/tmp/waitress.sock', unix_socket_perms='777')
+            asyncore_use_poll=True, unix_socket='/tmp/waitress.sock',
+            unix_socket_perms='777')
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
@@ -76,6 +77,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.max_request_body_size, 1400)
         self.assertEqual(inst.expose_tracebacks, True)
         self.assertEqual(inst.asyncore_loop_timeout, 5)
+        self.assertEqual(inst.asyncore_use_poll, True)
         self.assertEqual(inst.ident, 'abc')
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)

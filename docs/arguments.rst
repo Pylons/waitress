@@ -105,3 +105,10 @@ expose_tracebacks
 asyncore_loop_timeout
     The ``timeout`` value (seconds) passed to ``asyncore.loop`` to run the
     mainloop.  Default: 1.  (New in 0.8.3.)
+
+asyncore_use_poll
+    Boolean: switch from using select() to poll() in ``asyncore.loop``.
+    By default asyncore.loop() uses select() which has a limit of 1024
+    file descriptors. Select() and poll() provide basically the same
+    functionality, but poll() doesn't have the file descriptors limit.
+    Default: False (New in 0.8.6)
