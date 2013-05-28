@@ -37,7 +37,7 @@ if sys.version_info[:2] == (2, 6):
 
 setup(
     name='waitress',
-    version='0.8.4',
+    version='0.8.5',
     author='Zope Foundation and Contributors',
     author_email='zope-dev@zope.org',
     maintainer="Chris McDonough",

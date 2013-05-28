@@ -1,5 +1,5 @@
-Next Release
-------------
+0.8.5 (2013-05-27)
+------------------
 
 - Fix runner multisegment imports in some Python 2 revisions (see
   https://github.com/Pylons/waitress/pull/34).
