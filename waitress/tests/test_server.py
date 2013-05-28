@@ -310,7 +310,7 @@ class DummyAdj:
 
 class DummyAsyncore(object):
 
-    def loop(self, timeout=None, map=None):
+    def loop(self, timeout=30.0, use_poll=False, map=None, count=None):
         raise SystemExit
 
 class DummyTrigger(object):

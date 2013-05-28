@@ -59,6 +59,7 @@ class Adjustments(object):
         ('expose_tracebacks', asbool),
         ('ident', str),
         ('asyncore_loop_timeout', int),
+        ('asyncore_use_poll', asbool),
         ('unix_socket', str),
         ('unix_socket_perms', asoctal),
     )
@@ -152,6 +153,9 @@ class Adjustments(object):
 
     # The asyncore.loop timeout value
     asyncore_loop_timeout = 1
+
+    # The asyncore.loop flag to use poll() instead of the default select().
+    asyncore_use_poll = False
 
     def __init__(self, **kw):
         for k, v in kw.items():
