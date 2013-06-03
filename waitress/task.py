@@ -461,7 +461,7 @@ class WSGITask(Task):
             mykey = rename_headers.get(key, None)
             if mykey is None:
                 mykey = 'HTTP_%s' % key
-            if not mykey in environ:
+            if mykey not in environ:
                 environ[mykey] = value
 
         # the following environment variables are required by the WSGI spec
