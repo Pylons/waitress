@@ -211,7 +211,7 @@ class EchoTests(object):
         fp = self.sock.makefile('rb', 0)
         line, headers, response_body = read_http(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.0')
-        headers['content-length']
+        self.assertEqual(int(headers['content-length']), len(data))
         self.assertEqual(len(response_body), len(data))
         self.assertEqual(response_body, tobytes(data))
 
