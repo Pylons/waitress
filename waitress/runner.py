@@ -117,8 +117,8 @@ Tuning options:
         The timeout value in seconds passed to asyncore.loop(). Default is 1.
 
     --asyncore-use-poll
-        The use_poll argument passed to ``asyncore.loop()``. Helps overcome open
-        file descriptors limit. Default is False.
+        The use_poll argument passed to ``asyncore.loop()``. Helps overcome
+        open file descriptors limit. Default is False.
 
 """
 
@@ -158,7 +158,7 @@ def resolve(module_name, object_name):
         obj = getattr(obj, segment)
     return obj
 
-def show_help(stream, name, error=None):  # pragma: no cover
+def show_help(stream, name, error=None): # pragma: no cover
     if error is not None:
         print('Error: {0}\n'.format(error), file=stream)
     print(HELP.format(name), file=stream)
