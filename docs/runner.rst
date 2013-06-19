@@ -56,6 +56,11 @@ cases like these, ``waitress-serve`` has the ``--call`` flag. Thus::
 Would load the ``myapp.mymodule`` module, and call ``app.wsgi_factory`` to get
 a WSGI application function to be passed to ``waitress.server``.
 
+.. note::
+
+   As of 0.8.6, the current directory is automatically included on
+   ``sys.path``.
+
 .. _invocation:
 
 Invocation

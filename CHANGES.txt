@@ -8,7 +8,8 @@ Next release
   speeding up test suite and making concurrent execution more reliable.
 
 - Runner now appends the current working directory to ``sys.path`` to support
-  running WSGI applications from a directory (ie not installed in a virtualenv).
+  running WSGI applications from a directory (i.e., not installed in a
+  virtualenv).
 
 0.8.5 (2013-05-27)
 ------------------
