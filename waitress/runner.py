@@ -189,7 +189,7 @@ def run(argv=sys.argv, _serve=serve):
         return 1
 
     # Add the current directory onto sys.path
-    sys.path.append(os.curdir)
+    sys.path.append(os.getcwd())
 
     # Get the WSGI function.
     try:
