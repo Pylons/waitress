@@ -1,6 +1,6 @@
 import contextlib
-import sys
 import os
+import sys
 
 if sys.version_info[:2] == (2, 6): # pragma: no cover
     import unittest2 as unittest
@@ -101,14 +101,20 @@ class Test_run(unittest.TestCase):
             "^Error: Bad module 'nonexistent'")
 
     def test_cwd_added_to_path(self):
+        def null_serve(app, **kw):
+            pass
         sys_path = sys.path
-        os.chdir(os.path.dirname(__file__))
-        argv = [
-            'waitress-serve',
-            'fixtureapps.runner:app',
-        ]
-        self.assertEqual(runner.run(argv=argv, _serve=lambda *a, **kw: None), 0)
-        sys.path = sys_path
+        current_dir = os.getcwd()
+        try:
+            os.chdir(os.path.dirname(__file__))
+            argv = [
+                'waitress-serve',
+                'fixtureapps.runner:app',
+            ]
+            self.assertEqual(runner.run(argv=argv, _serve=null_serve), 0)
+        finally:
+            sys.path = sys_path
+            os.chdir(current_dir)
 
     def test_bad_app_object(self):
         self.match_output(
