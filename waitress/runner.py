@@ -17,6 +17,7 @@
 from __future__ import print_function, unicode_literals
 
 import getopt
+import os
 import os.path
 import re
 import sys
@@ -193,6 +194,9 @@ def run(argv=sys.argv, _serve=serve):
     except ValueError as exc:
         show_help(sys.stderr, name, str(exc))
         return 1
+
+    # Add the current directory onto sys.path
+    sys.path.append(os.getcwd())
 
     # Get the WSGI function.
     try:
