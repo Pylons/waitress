@@ -1,5 +1,5 @@
-Next release
-------------
+0.8.6 (2013-08-12)
+------------------
 
 - Do alternate type of checking for UNIX socket support, instead of checking
   for platform == windows.
@@ -17,7 +17,7 @@ Next release
   ``SCRIPT_NAME`` value to be the value passed minus any trailing slashes you
   add, and it will cause the ``PATH_INFO`` of any request which is prefixed
   with this value to be stripped of the prefix.  You can use this instead of
-  PasteDeploy's ``prefixmiddleware``to always prefix the path.
+  PasteDeploy's ``prefixmiddleware`` to always prefix the path.
 
 0.8.5 (2013-05-27)
 ------------------
