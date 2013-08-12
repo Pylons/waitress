@@ -442,8 +442,12 @@ class WSGITask(Task):
         channel = self.channel
         server = channel.server
 
-        while path and path.startswith('/'):
-            path = path[1:]
+        path = path.lstrip('/')
+
+        url_prefix_with_slash = server.adj.url_prefix.lstrip('/') + '/'
+
+        if url_prefix_with_slash and path.startswith(url_prefix_with_slash):
+            path = path[len(url_prefix_with_slash):]
 
         environ = {}
         environ['REQUEST_METHOD'] = request.command.upper()
@@ -451,7 +455,7 @@ class WSGITask(Task):
         environ['SERVER_NAME'] = server.server_name
         environ['SERVER_SOFTWARE'] = server.adj.ident
         environ['SERVER_PROTOCOL'] = 'HTTP/%s' % self.version
-        environ['SCRIPT_NAME'] = ''
+        environ['SCRIPT_NAME'] = server.adj.url_prefix
         environ['PATH_INFO'] = '/' + path
         environ['QUERY_STRING'] = request.query
         environ['REMOTE_ADDR'] = channel.addr[0]

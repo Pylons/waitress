@@ -1,4 +1,4 @@
-from waitress.server import WSGIServer, create_server
+from waitress.server import create_server
 import logging
 
 def serve(app, **kw):

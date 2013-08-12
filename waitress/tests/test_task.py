@@ -565,6 +565,26 @@ class TestWSGITask(unittest.TestCase):
         environ = inst.get_environment()
         self.assertEqual(environ['QUERY_STRING'], 'abc')
 
+    def test_get_environ_with_url_prefix_miss(self):
+        inst = self._makeOne()
+        inst.channel.server.adj.url_prefix = '/foo'
+        request = DummyParser()
+        request.path = '/bar'
+        inst.request = request
+        environ = inst.get_environment()
+        self.assertEqual(environ['PATH_INFO'], '/bar')
+        self.assertEqual(environ['SCRIPT_NAME'], '/foo')
+        
+    def test_get_environ_with_url_prefix_hit(self):
+        inst = self._makeOne()
+        inst.channel.server.adj.url_prefix = '/foo'
+        request = DummyParser()
+        request.path = '/foo/fuz'
+        inst.request = request
+        environ = inst.get_environment()
+        self.assertEqual(environ['PATH_INFO'], '/fuz')
+        self.assertEqual(environ['SCRIPT_NAME'], '/foo')
+
     def test_get_environment_values(self):
         import sys
         inst = self._makeOne()
@@ -655,6 +675,7 @@ class DummyAdj(object):
     ident = 'waitress'
     host = '127.0.0.1'
     port = 80
+    url_prefix = ''
 
 class DummyServer(object):
     server_name = 'localhost'

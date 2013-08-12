@@ -112,3 +112,10 @@ asyncore_use_poll
     file descriptors. Select() and poll() provide basically the same
     functionality, but poll() doesn't have the file descriptors limit.
     Default: False (New in 0.8.6)
+
+url_prefix
+    String: the value used as the WSGI ``SCRIPT_NAME`` value.  Setting this to
+    anything except the empty string will cause the WSGI ``SCRIPT_NAME`` value
+    to be the value passed minus any trailing slashes you add, and it will
+    cause the ``PATH_INFO`` of any request which is prefixed with this value to
+    be stripped of the prefix.  Default: the empty string.

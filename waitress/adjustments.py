@@ -36,6 +36,9 @@ def asoctal(s):
     """Convert the given octal string to an actual number."""
     return int(s, 8)
 
+def slash_suffix_stripped_str(s):
+    return s.rstrip('/')
+
 class Adjustments(object):
     """This class contains tunable parameters.
     """
@@ -45,6 +48,7 @@ class Adjustments(object):
         ('port', int),
         ('threads', int),
         ('url_scheme', str),
+        ('url_prefix', slash_suffix_stripped_str),
         ('backlog', int),
         ('recv_bytes', int),
         ('send_bytes', int),
@@ -77,6 +81,10 @@ class Adjustments(object):
 
     # default ``wsgi.url_scheme`` value
     url_scheme = 'http'
+
+    # default ``SCRIPT_NAME`` value, also helps reset ``PATH_INFO``
+    # when nonempty
+    url_prefix = ''
 
     # server identity (sent in Server: header)
     ident = 'waitress'

@@ -92,6 +92,13 @@ Common options:
 
 ``--url-scheme=STR``
     Default ``wsgi.url_scheme`` value, default is 'http'.
+`
+``--url-prefix=STR``
+    The ``SCRIPT_NAME`` WSGI environment value.  Setting this to anything
+    except the empty string will cause the WSGI ``SCRIPT_NAME`` value to be the
+    value passed minus any trailing slashes you add, and it will cause the
+    ``PATH_INFO`` of any request which is prefixed with this value to be
+    stripped of the prefix.  Default is the empty string.
 
 ``--ident=STR``
     Server identity used in the 'Server' header in responses. Default

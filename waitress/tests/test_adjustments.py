@@ -59,7 +59,7 @@ class TestAdjustments(unittest.TestCase):
             max_request_header_size='1300', max_request_body_size='1400',
             expose_tracebacks='true', ident='abc', asyncore_loop_timeout='5',
             asyncore_use_poll=True, unix_socket='/tmp/waitress.sock',
-            unix_socket_perms='777')
+            unix_socket_perms='777', url_prefix='/foo')
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
@@ -81,6 +81,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.ident, 'abc')
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
+        self.assertEqual(inst.url_prefix, '/foo')
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)

@@ -16,7 +16,6 @@ import asyncore
 import os
 import os.path
 import socket
-import sys
 import time
 
 from waitress import trigger
