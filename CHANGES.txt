@@ -4,6 +4,9 @@ Next release
 - The HTTP version of the response returned by waitress when it catches an
   exception will now match the HTTP request version.
 
+- Fix: CONNECTION header will be HTTP_CONNECTION and not CONNECTION_TYPE
+  (see https://github.com/Pylons/waitress/issues/13)
+
 0.8.6 (2013-08-12)
 ------------------
 
@@ -277,5 +280,3 @@ Features
 ----------------
 
 - Initial release.
-
-

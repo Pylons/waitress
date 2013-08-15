@@ -31,10 +31,9 @@ from waitress.utilities import (
     logger,
 )
 
-rename_headers = {
+rename_headers = {  # or keep them without the HTTP_ prefix added
     'CONTENT_LENGTH': 'CONTENT_LENGTH',
     'CONTENT_TYPE': 'CONTENT_TYPE',
-    'CONNECTION': 'CONNECTION_TYPE',
 }
 
 hop_by_hop = frozenset((
