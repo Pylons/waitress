@@ -339,8 +339,10 @@ class HTTPChannel(logging_dispatcher, object):
                         else:
                             body = ('The server encountered an unexpected '
                                     'internal server error')
+                        req_version = request.version
                         request = self.parser_class(self.adj)
                         request.error = InternalServerError(body)
+                        request.version = req_version
                         task = self.error_task_class(self, request)
                         task.service() # must not fail
                     else:
