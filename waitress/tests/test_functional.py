@@ -296,7 +296,7 @@ class EchoTests(object):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         self.assertEqual(sorted(headers.keys()),
-            [u'content-length', u'content-type', u'date', u'server'])
+            ['content-length', 'content-type', 'date', 'server'])
         self.assertEqual(headers['content-type'], 'text/plain')
         # connection has been closed
         self.send_check_error(to_send)
@@ -1005,7 +1005,7 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
         self.assertEqual(sorted(headers.keys()),
-            [u'content-length', u'content-type', u'date', u'server'])
+            ['content-length', 'content-type', 'date', 'server'])
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1023,8 +1023,8 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
         self.assertEqual(sorted(headers.keys()),
-            [u'connection', u'content-length', u'content-type', u'date',
-             u'server'])
+            ['connection', 'content-length', 'content-type', 'date',
+             'server'])
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
@@ -1042,8 +1042,8 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
         self.assertEqual(sorted(headers.keys()),
-            [u'connection', u'content-length', u'content-type', u'date',
-             u'server'])
+            ['connection', 'content-length', 'content-type', 'date',
+             'server'])
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
@@ -1061,7 +1061,7 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
         self.assertEqual(sorted(headers.keys()),
-            [u'content-length', u'content-type', u'date', u'server'])
+            ['content-length', 'content-type', 'date', 'server'])
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1079,8 +1079,8 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
         self.assertEqual(sorted(headers.keys()),
-            [u'connection', u'content-length', u'content-type', u'date',
-             u'server'])
+            ['connection', 'content-length', 'content-type', 'date',
+             'server'])
         self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
