@@ -123,6 +123,10 @@ class HTTPRequestParser(object):
                 self.header_bytes_received += datalen
                 max_header = self.adj.max_request_header_size
                 if self.header_bytes_received >= max_header:
+                    # malformed header, we need to construct some request
+                    # on our own. we disregard the incoming(?) requests HTTP
+                    # version and just use 1.0. IOW someone just sent garbage
+                    # over the wire
                     self.parse_header(b'GET / HTTP/1.0\n')
                     self.error = RequestHeaderFieldsTooLarge(
                         'exceeds max_header of %s' % max_header)
