@@ -295,8 +295,9 @@ class EchoTests(object):
         self.assertline(line, '400', 'Bad Request', 'HTTP/1.1')
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
+        self.assertEqual(sorted(headers.keys()),
+            [u'content-length', u'content-type', u'date', u'server'])
         self.assertEqual(headers['content-type'], 'text/plain')
-        self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
@@ -963,7 +964,6 @@ class TooLargeTests(object):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         self.assertEqual(headers['content-type'], 'text/plain')
-        self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
@@ -988,6 +988,7 @@ class InternalServerErrorTests(object):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
+        self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1003,6 +1004,28 @@ class InternalServerErrorTests(object):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
+        self.assertEqual(sorted(headers.keys()),
+            [u'content-length', u'content-type', u'date', u'server'])
+        # connection has been closed
+        self.send_check_error(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_before_start_response_http_11_close(self):
+        to_send = tobytes(
+            "GET /before_start_response HTTP/1.1\n"
+            "Connection: close\n\n")
+        self.connect()
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '500', 'Internal Server Error', 'HTTP/1.1')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body))
+        self.assertTrue(response_body.startswith(b'Internal Server Error'))
+        self.assertEqual(sorted(headers.keys()),
+            [u'connection', u'content-length', u'content-type', u'date',
+             u'server'])
+        self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1018,10 +1041,14 @@ class InternalServerErrorTests(object):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
+        self.assertEqual(sorted(headers.keys()),
+            [u'connection', u'content-length', u'content-type', u'date',
+             u'server'])
+        self.assertEqual(headers['connection'], 'close')
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
-        
+
     def test_after_start_response_http11(self):
         to_send = "GET /after_start_response HTTP/1.1\n\n"
         to_send = tobytes(to_send)
@@ -1033,10 +1060,31 @@ class InternalServerErrorTests(object):
         cl = int(headers['content-length'])
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b'Internal Server Error'))
+        self.assertEqual(sorted(headers.keys()),
+            [u'content-length', u'content-type', u'date', u'server'])
         # connection has been closed
         self.send_check_error(to_send)
         self.assertRaises(ConnectionClosed, read_http, fp)
 
+    def test_after_start_response_http11_close(self):
+        to_send = tobytes(
+            "GET /after_start_response HTTP/1.1\n"
+            "Connection: close\n\n")
+        self.connect()
+        self.sock.send(to_send)
+        fp = self.sock.makefile('rb', 0)
+        line, headers, response_body = read_http(fp)
+        self.assertline(line, '500', 'Internal Server Error', 'HTTP/1.1')
+        cl = int(headers['content-length'])
+        self.assertEqual(cl, len(response_body))
+        self.assertTrue(response_body.startswith(b'Internal Server Error'))
+        self.assertEqual(sorted(headers.keys()),
+            [u'connection', u'content-length', u'content-type', u'date',
+             u'server'])
+        self.assertEqual(headers['connection'], 'close')
+        # connection has been closed
+        self.send_check_error(to_send)
+        self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_after_write_cb(self):
         to_send = "GET /after_write_cb HTTP/1.1\n\n"

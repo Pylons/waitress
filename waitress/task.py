@@ -317,7 +317,14 @@ class ErrorTask(Task):
         self.content_length = cl
         self.response_headers.append(('Content-Length', str(cl)))
         self.response_headers.append(('Content-Type', 'text/plain'))
-        self.response_headers.append(('Connection', 'close'))
+        if self.version == '1.1':
+            connection = self.request.headers.get('CONNECTION', '').lower()
+            if connection == 'close':
+                self.response_headers.append(('Connection', 'close'))
+            # under HTTP 1.1 keep-alive is default, no need to set the header
+        else:
+            # HTTP 1.0
+            self.response_headers.append(('Connection', 'close'))
         self.close_on_finish = True
         self.write(tobytes(body))
 
