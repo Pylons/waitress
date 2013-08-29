@@ -1,5 +1,5 @@
-Next release
-------------
+0.8.7 (2013-08-29)
+------------------
 
 - The HTTP version of the response returned by waitress when it catches an
   exception will now match the HTTP request version.
