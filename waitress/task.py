@@ -468,6 +468,8 @@ class WSGITask(Task):
 
         headers = dict(request.headers)
         wsgi_url_scheme = headers.pop('X_WSGI_URL_SCHEME', request.url_scheme)
+        if wsgi_url_scheme not in ('http', 'https'):
+            raise ValueError('Invalid X_WSGI_URL_SCHEME value')
         for key, value in headers.items():
             value = value.strip()
             mykey = rename_headers.get(key, None)

@@ -676,6 +676,20 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.input'], 'stream')
         self.assertEqual(inst.environ, environ)
 
+    def test_get_environment_values_w_bogus_scheme_override(self):
+        inst = self._makeOne()
+        request = DummyParser()
+        request.headers = {
+            'CONTENT_TYPE': 'abc',
+            'CONTENT_LENGTH': '10',
+            'X_FOO': 'BAR',
+            'X_WSGI_URL_SCHEME': 'http://p02n3e.com?url=http',
+            'CONNECTION': 'close',
+        }
+        request.query = 'abc'
+        inst.request = request
+        self.assertRaises(ValueError, inst.get_environment)
+
 class TestErrorTask(unittest.TestCase):
 
     def _makeOne(self, channel=None, request=None):
