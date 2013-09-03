@@ -638,7 +638,7 @@ class TestWSGITask(unittest.TestCase):
             'CONTENT_TYPE': 'abc',
             'CONTENT_LENGTH': '10',
             'X_FOO': 'BAR',
-            'X_WSGI_URL_SCHEME': 'https',
+            'X_FORWARDED_PROTO': 'https',
             'CONNECTION': 'close',
         }
         request.query = 'abc'
@@ -683,7 +683,7 @@ class TestWSGITask(unittest.TestCase):
             'CONTENT_TYPE': 'abc',
             'CONTENT_LENGTH': '10',
             'X_FOO': 'BAR',
-            'X_WSGI_URL_SCHEME': 'http://p02n3e.com?url=http',
+            'X_FORWARDED_PROTO': 'http://p02n3e.com?url=http',
             'CONNECTION': 'close',
         }
         request.query = 'abc'

@@ -30,7 +30,7 @@ threads
 
 url_scheme
     default ``wsgi.url_scheme`` value (string), default ``http``;  can be
-    overridden per-request by the value of the ``X_WSGI_URL_SCHEME`` header.
+    overridden per-request by the value of the ``X_FORWARDED_PROTO`` header.
 
 ident
     server identity (string) used in "Server:" header in responses, default

@@ -467,9 +467,9 @@ class WSGITask(Task):
         environ['REMOTE_ADDR'] = channel.addr[0]
 
         headers = dict(request.headers)
-        wsgi_url_scheme = headers.pop('X_WSGI_URL_SCHEME', request.url_scheme)
+        wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO', request.url_scheme)
         if wsgi_url_scheme not in ('http', 'https'):
-            raise ValueError('Invalid X_WSGI_URL_SCHEME value')
+            raise ValueError('Invalid X_FORWARDED_PROTO value')
         for key, value in headers.items():
             value = value.strip()
             mykey = rename_headers.get(key, None)
