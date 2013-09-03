@@ -1,3 +1,10 @@
+Unreleased
+----------
+
+- Allow override of ``wdgi.url_scheme`` via a request header,
+  ``X_WSGI_URL_SCHEME``.  Allows proxies which serve mixed HTTP / HTTPS
+  requests to control signal which are served as HTTPS.
+
 0.8.7 (2013-08-29)
 ------------------
 

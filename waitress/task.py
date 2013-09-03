@@ -466,7 +466,9 @@ class WSGITask(Task):
         environ['QUERY_STRING'] = request.query
         environ['REMOTE_ADDR'] = channel.addr[0]
 
-        for key, value in request.headers.items():
+        headers = dict(request.headers)
+        wsgi_url_scheme = headers.pop('X_WSGI_URL_SCHEME', request.url_scheme)
+        for key, value in headers.items():
             value = value.strip()
             mykey = rename_headers.get(key, None)
             if mykey is None:
@@ -476,7 +478,7 @@ class WSGITask(Task):
 
         # the following environment variables are required by the WSGI spec
         environ['wsgi.version'] = (1, 0)
-        environ['wsgi.url_scheme'] = request.url_scheme
+        environ['wsgi.url_scheme'] = wsgi_url_scheme
         environ['wsgi.errors'] = sys.stderr # apps should use the logging module
         environ['wsgi.multithread'] = True
         environ['wsgi.multiprocess'] = False

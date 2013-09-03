@@ -630,6 +630,52 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.input'], 'stream')
         self.assertEqual(inst.environ, environ)
 
+    def test_get_environment_values_w_scheme_override(self):
+        import sys
+        inst = self._makeOne()
+        request = DummyParser()
+        request.headers = {
+            'CONTENT_TYPE': 'abc',
+            'CONTENT_LENGTH': '10',
+            'X_FOO': 'BAR',
+            'X_WSGI_URL_SCHEME': 'https',
+            'CONNECTION': 'close',
+        }
+        request.query = 'abc'
+        inst.request = request
+        environ = inst.get_environment()
+
+        # nail the keys of environ
+        self.assertEqual(sorted(environ.keys()), [
+            'CONTENT_LENGTH', 'CONTENT_TYPE', 'HTTP_CONNECTION', 'HTTP_X_FOO',
+            'PATH_INFO', 'QUERY_STRING', 'REMOTE_ADDR', 'REQUEST_METHOD',
+            'SCRIPT_NAME', 'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL',
+            'SERVER_SOFTWARE', 'wsgi.errors', 'wsgi.file_wrapper', 'wsgi.input',
+            'wsgi.multiprocess', 'wsgi.multithread', 'wsgi.run_once',
+            'wsgi.url_scheme', 'wsgi.version'])
+
+        self.assertEqual(environ['REQUEST_METHOD'], 'GET')
+        self.assertEqual(environ['SERVER_PORT'], '80')
+        self.assertEqual(environ['SERVER_NAME'], 'localhost')
+        self.assertEqual(environ['SERVER_SOFTWARE'], 'waitress')
+        self.assertEqual(environ['SERVER_PROTOCOL'], 'HTTP/1.0')
+        self.assertEqual(environ['SCRIPT_NAME'], '')
+        self.assertEqual(environ['HTTP_CONNECTION'], 'close')
+        self.assertEqual(environ['PATH_INFO'], '/')
+        self.assertEqual(environ['QUERY_STRING'], 'abc')
+        self.assertEqual(environ['REMOTE_ADDR'], '127.0.0.1')
+        self.assertEqual(environ['CONTENT_TYPE'], 'abc')
+        self.assertEqual(environ['CONTENT_LENGTH'], '10')
+        self.assertEqual(environ['HTTP_X_FOO'], 'BAR')
+        self.assertEqual(environ['wsgi.version'], (1, 0))
+        self.assertEqual(environ['wsgi.url_scheme'], 'https')
+        self.assertEqual(environ['wsgi.errors'], sys.stderr)
+        self.assertEqual(environ['wsgi.multithread'], True)
+        self.assertEqual(environ['wsgi.multiprocess'], False)
+        self.assertEqual(environ['wsgi.run_once'], False)
+        self.assertEqual(environ['wsgi.input'], 'stream')
+        self.assertEqual(inst.environ, environ)
+
 class TestErrorTask(unittest.TestCase):
 
     def _makeOne(self, channel=None, request=None):

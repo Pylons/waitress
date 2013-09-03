@@ -13,6 +13,9 @@ Differences from ``zope.server``
 
 - Calls "close()" on the app_iter object returned by the WSGI application.
 
+- ALlows per-request override of ``wsgi.url_scheme`` by the value of the
+  ``X_WSGI_URL_SCHEME`` header
+
 - Supports an explicit ``wsgi.url_scheme`` parameter for ease of deployment
   behind SSL proxies.
 
