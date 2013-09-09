@@ -474,6 +474,26 @@ class WSGITask(Task):
             if mykey not in environ:
                 environ[mykey] = value
 
+        from waitress.parser import HTTPRequestParser
+        from waitress.receiver import ChunkedReceiver
+
+        # Fix headers for chunked PUT requests
+        #
+        if (isinstance(request, HTTPRequestParser)):
+            if (request.chunked):
+                if (isinstance(request.body_rcv, ChunkedReceiver)):
+                    chunked_content_length = len(request.body_rcv.getbuf())
+                    if (
+                        (environ.has_key('HTTP_TRANSFER_ENCODING'))
+                         and
+                        (environ['HTTP_TRANSFER_ENCODING'].lower() == 'chunked')
+                       ):
+                        environ.pop('HTTP_TRANSFER_ENCODING', None)
+                        environ.pop('HTTP_CONTENT_LENGTH', None)
+                        environ.pop('CONTENT_LENGTH', None)
+                        environ['HTTP_CONTENT_LENGTH'] = '{0}'.format(chunked_content_length)
+                        environ['CONTENT_LENGTH'] = '{0}'.format(chunked_content_length)
+
         # the following environment variables are required by the WSGI spec
         environ['wsgi.version'] = (1, 0)
         environ['wsgi.url_scheme'] = request.url_scheme
