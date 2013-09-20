@@ -394,6 +394,16 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         self.assertRaises(AssertionError, inst.execute)
 
+    def test_preserve_header_value_order(self):
+        def app(environ, start_response):
+            write = start_response('200 OK', [('C', 'b'), ('A', 'b'), ('A', 'a')])
+            write(b'abc')
+            return []
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.execute()
+        self.assertIn(b'A: b\r\nA: a\r\nC: b\r\n', inst.channel.written)
+
     def test_execute_bad_status_value(self):
         def app(environ, start_response):
             start_response(None, [])
