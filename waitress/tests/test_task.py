@@ -402,7 +402,7 @@ class TestWSGITask(unittest.TestCase):
         inst = self._makeOne()
         inst.channel.server.application = app
         inst.execute()
-        self.assertIn(b'A: b\r\nA: a\r\nC: b\r\n', inst.channel.written)
+        self.assertTrue(b'A: b\r\nA: a\r\nC: b\r\n' in inst.channel.written)
 
     def test_execute_bad_status_value(self):
         def app(environ, start_response):

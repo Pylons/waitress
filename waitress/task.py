@@ -255,7 +255,11 @@ class Task(object):
             response_headers.append(('Date', build_http_date(self.start_time)))
 
         first_line = 'HTTP/%s %s' % (self.version, self.status)
-        next_lines = ['%s: %s' % hv for hv in sorted(self.response_headers, key=lambda x: x[0])]
+        # NB: sorting headers needs to preserve same-named-header order
+        # as per RFC 2616 section 4.2; thus the key=lambda x: x[0] here;
+        # rely on stable sort to keep relative position of same-named headers
+        next_lines = ['%s: %s' % hv for hv in sorted(
+                self.response_headers, key=lambda x: x[0])]
         lines = [first_line] + next_lines
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
         return tobytes(res)

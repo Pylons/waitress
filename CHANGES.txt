@@ -26,7 +26,10 @@ Next release
   effect on paths that do not match the ``url_prefix`` exactly (such as
   ``/foo/bar``); these continue to operate as they did.  See
   https://github.com/Pylons/waitress/issues/46
-w
+
+- Preserve header ordering of headers with the same name as per RFC 2616.  See
+  https://github.com/Pylons/waitress/pull/44
+
 0.8.7 (2013-08-29)
 ------------------
 
