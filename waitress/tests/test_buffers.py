@@ -285,10 +285,10 @@ class TestOverflowableBuffer(unittest.TestCase):
         self.assertEqual(inst.strbuf, b'')
 
     def test_append_with_len_more_than_max_int(self):
-        import sys
+        from waitress.compat import MAXINT
         inst = self._makeOne()
         inst.overflowed = True
-        buf = DummyBuffer(length=sys.maxint)
+        buf = DummyBuffer(length=MAXINT)
         inst.buf = buf
         result = inst.append(b'x')
         # we don't want this to throw an OverflowError on Python 2 (see
@@ -385,10 +385,10 @@ class TestOverflowableBuffer(unittest.TestCase):
         self.assertNotEqual(inst.buf, buf)
 
     def test_prune_with_buflen_more_than_max_int(self):
-        import sys
+        from waitress.compat import MAXINT
         inst = self._makeOne()
         inst.overflowed = True
-        buf = DummyBuffer(length=sys.maxint+1)
+        buf = DummyBuffer(length=MAXINT+1)
         inst.buf = buf
         result = inst.prune()
         # we don't want this to throw an OverflowError on Python 2 (see
