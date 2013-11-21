@@ -59,7 +59,7 @@ class TestAdjustments(unittest.TestCase):
             max_request_header_size='1300', max_request_body_size='1400',
             expose_tracebacks='true', ident='abc', asyncore_loop_timeout='5',
             asyncore_use_poll=True, unix_socket='/tmp/waitress.sock',
-            unix_socket_perms='777', url_prefix='/foo')
+            unix_socket_perms='777', url_prefix='///foo/')
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)

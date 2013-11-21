@@ -36,8 +36,13 @@ def asoctal(s):
     """Convert the given octal string to an actual number."""
     return int(s, 8)
 
-def slash_suffix_stripped_str(s):
-    return s.rstrip('/')
+def slash_fixed_str(s):
+    s = s.strip()
+    if s:
+        # always have a leading slash, replace any number of leading slashes
+        # with a single slash, and strip any trailing slashes
+        s = '/' + s.lstrip('/').rstrip('/')
+    return s
 
 class Adjustments(object):
     """This class contains tunable parameters.
@@ -48,7 +53,7 @@ class Adjustments(object):
         ('port', int),
         ('threads', int),
         ('url_scheme', str),
-        ('url_prefix', slash_suffix_stripped_str),
+        ('url_prefix', slash_fixed_str),
         ('backlog', int),
         ('recv_bytes', int),
         ('send_bytes', int),

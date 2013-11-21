@@ -6,6 +6,27 @@ Next release
   cause an OverflowError on Python 2.  See
   https://github.com/Pylons/waitress/issues/47.
 
+- When the ``url_prefix`` adjustment starts with more than one slash, all
+  slashes except one will be stripped from its beginning.  This differs from
+  older behavior where more than one leading slash would be preserved in
+  ``url_prefix``.
+
+- If a client somehow manages to send an empty path, we no longer convert the
+  empty path to a single slash in ``PATH_INFO``.  Instead, the path remains
+  empty.  According to RFC 2616 section "5.1.2 Request-URI", the scenario of a
+  client sending an empty path is actually not possible because the request URI
+  portion cannot be empty.
+
+- If the ``url_prefix`` adjustment matches the request path exactly, we now
+  compute ``SCRIPT_NAME`` and ``PATH_INFO`` properly.  Previously, if the
+  ``url_prefix`` was ``/foo`` and the path received from a client was ``/foo``,
+  we would set *both* ``SCRIPT_NAME`` and ``PATH_INFO`` to ``/foo``.  This was
+  incorrect.  Now in such a case we set ``PATH_INFO`` to the empty string and
+  we set ``SCRIPT_NAME`` to ``/foo``.  Note that the change we made has no
+  effect on paths that do not match the ``url_prefix`` exactly (such as
+  ``/foo/bar``); these continue to operate as they did.  See
+  https://github.com/Pylons/waitress/issues/46
+w
 0.8.7 (2013-08-29)
 ------------------
 

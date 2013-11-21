@@ -548,7 +548,7 @@ class TestWSGITask(unittest.TestCase):
         request.path = ''
         inst.request = request
         environ = inst.get_environment()
-        self.assertEqual(environ['PATH_INFO'], '/')
+        self.assertEqual(environ['PATH_INFO'], '')
 
     def test_get_environment_no_query(self):
         inst = self._makeOne()
@@ -583,6 +583,16 @@ class TestWSGITask(unittest.TestCase):
         inst.request = request
         environ = inst.get_environment()
         self.assertEqual(environ['PATH_INFO'], '/fuz')
+        self.assertEqual(environ['SCRIPT_NAME'], '/foo')
+
+    def test_get_environ_with_url_prefix_empty_path(self):
+        inst = self._makeOne()
+        inst.channel.server.adj.url_prefix = '/foo'
+        request = DummyParser()
+        request.path = '/foo'
+        inst.request = request
+        environ = inst.get_environment()
+        self.assertEqual(environ['PATH_INFO'], '')
         self.assertEqual(environ['SCRIPT_NAME'], '/foo')
 
     def test_get_environment_values(self):
