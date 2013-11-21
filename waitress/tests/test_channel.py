@@ -22,6 +22,18 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.addr, '127.0.0.1')
         self.assertEqual(map[100], inst)
 
+    def test_total_outbufs_len_an_outbuf_size_gt_sys_maxint(self):
+        import sys
+        inst, _, map = self._makeOneWithMap()
+        class DummyHugeBuffer(object):
+            def __len__(self):
+                return sys.maxint + 1
+        inst.outbufs = [DummyHugeBuffer()]
+        result = inst.total_outbufs_len()
+        # we are testing that this method does not raise an OverflowError
+        # (see https://github.com/Pylons/waitress/issues/47)
+        self.assertEqual(result, sys.maxint+1)
+
     def test_writable_something_in_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
         inst.outbufs[0].append(b'abc')
@@ -256,6 +268,27 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.outbufs, [buffer])
         self.assertEqual(len(inst.logger.exceptions), 1)
 
+    def test__flush_some_outbuf_len_gt_sys_maxint(self):
+        import sys
+        inst, sock, map = self._makeOneWithMap()
+        class DummyHugeOutbuffer(object):
+            def __init__(self):
+                self.length = sys.maxint + 1
+            def __len__(self):
+                return self.length
+            def get(self, numbytes):
+                self.length = 0
+                return b'123'
+            def skip(self, *args):
+                pass
+        buf = DummyHugeOutbuffer()
+        inst.outbufs = [buf]
+        inst.send = lambda *arg: 0
+        result = inst._flush_some()
+        # we are testing that _flush_some doesn't raise an OverflowError
+        # when one of its outbufs has a __len__ that returns gt sys.maxint
+        self.assertEqual(result, False)
+        
     def test_handle_close(self):
         inst, sock, map = self._makeOneWithMap()
         inst.handle_close()
