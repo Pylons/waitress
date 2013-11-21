@@ -121,8 +121,8 @@ GET /foobar HTTP/1.1
 Transfer-Encoding: chunked
 X-Foo: 1
 
-20;\r
-This string has 32 characters\r
+20;\r\n
+This string has 32 characters\r\n
 0\r\n\r\n"""
         result = self.parser.received(data)
         self.assertEqual(result, 58)
@@ -149,6 +149,23 @@ garbage
         self.assertTrue(isinstance(self.parser.error,
                                    BadRequest))
 
+    def test_received_chunked_completed_sets_content_length(self):
+        data = b"""\
+GET /foobar HTTP/1.1
+Transfer-Encoding: chunked
+X-Foo: 1
+
+20;\r\n
+This string has 32 characters\r\n
+0\r\n\r\n"""
+        result = self.parser.received(data)
+        self.assertEqual(result, 58)
+        data = data[result:]
+        result = self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertTrue(self.parser.error is None)
+        self.assertEqual(self.parser.headers['CONTENT_LENGTH'], '32')
+        
     def test_parse_header_gardenpath(self):
         data = b"""\
 GET /foobar HTTP/8.4
@@ -168,7 +185,8 @@ foo: bar"""
         self.assertEqual(self.parser.body_rcv, None)
 
     def test_parse_header_11_te_chunked(self):
-        data = b"GET /foobar HTTP/1.1\ntransfer-encoding: chunked"
+        # NB: test that capitalization of header value is unimportant
+        data = b"GET /foobar HTTP/1.1\ntransfer-encoding: ChUnKed"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__,
                          'ChunkedReceiver')

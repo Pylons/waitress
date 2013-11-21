@@ -148,7 +148,16 @@ class HTTPRequestParser(object):
                 self.error = br.error
                 self.completed = True
             elif br.completed:
+                # The request (with the body) is ready to use.
                 self.completed = True
+                if self.chunked:
+                    # We've converted the chunked transfer encoding request
+                    # body into a normal request body, so we know its content
+                    # length; set the header here.  We already popped the
+                    # TRANSFER_ENCODING header in parse_header, so this will
+                    # appear to the client to be an entirely non-chunked HTTP
+                    # request with a valid content-length.
+                    self.headers['CONTENT_LENGTH'] = str(br.__len__())
             return consumed
 
     def parse_header(self, header_plus):
@@ -203,8 +212,12 @@ class HTTPRequestParser(object):
                 self.connection_close = True
 
         if version == '1.1':
-            te = headers.get('TRANSFER_ENCODING', '')
-            if te == 'chunked':
+            # since the server buffers data from chunked transfers and clients
+            # never need to deal with chunked requests, downstream clients
+            # should not see the HTTP_TRANSFER_ENCODING header; we pop it
+            # here
+            te = headers.pop('TRANSFER_ENCODING', '')
+            if te.lower() == 'chunked':
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)

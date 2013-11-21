@@ -30,6 +30,18 @@ Next release
 - Preserve header ordering of headers with the same name as per RFC 2616.  See
   https://github.com/Pylons/waitress/pull/44
 
+- When waitress receives a ``Transfer-Encoding: chunked`` request, we no longer
+  send the ``TRANSFER_ENCODING`` nor the ``HTTP_TRANSFER_ENCODING`` value to
+  the application in the environment.  Instead, we pop this header.  Since we
+  cope with chunked requests by buffering the data in the server, we also know
+  when a chunked request has ended, and therefore we know the content length.
+  We set the content-length header in the environment, such that applications
+  effectively never know the original request was a T-E: chunked request; it
+  will appear to them as if the request is a non-chunked request with an
+  accurate content-length.
+
+- Cope with the fact that the ``Transfer-Encoding`` value is case-insensitive.
+
 0.8.7 (2013-08-29)
 ------------------
 

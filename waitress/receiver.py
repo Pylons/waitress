@@ -28,6 +28,9 @@ class FixedStreamReceiver(object):
         self.remain = cl
         self.buf = buf
 
+    def __len__(self):
+        return self.buf.__len__()
+    
     def received(self, data):
         'See IStreamConsumer'
         rm = self.remain
@@ -65,6 +68,9 @@ class ChunkedReceiver(object):
 
     def __init__(self, buf):
         self.buf = buf
+
+    def __len__(self):
+        return self.buf.__len__()
 
     def received(self, s):
         # Returns the number of bytes consumed.
