@@ -204,7 +204,7 @@ class HTTPRequestParser(object):
 
         if version == '1.1':
             te = headers.get('TRANSFER_ENCODING', '')
-            if te == 'chunked':
+            if te.lower() == 'chunked':
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
