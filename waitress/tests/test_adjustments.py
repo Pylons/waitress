@@ -114,12 +114,12 @@ class TestCLI(unittest.TestCase):
 
     def test_positive_boolean(self):
         opts, args = self.parse(['--expose-tracebacks'])
-        self.assertDictContainsSubset({'expose_tracebacks': True}, opts)
+        self.assertDictContainsSubset({'expose_tracebacks': 'true'}, opts)
         self.assertSequenceEqual(args, [])
 
     def test_negative_boolean(self):
         opts, args = self.parse(['--no-expose-tracebacks'])
-        self.assertDictContainsSubset({'expose_tracebacks': False}, opts)
+        self.assertDictContainsSubset({'expose_tracebacks': 'false'}, opts)
         self.assertSequenceEqual(args, [])
 
     def test_cast_params(self):
@@ -130,8 +130,8 @@ class TestCLI(unittest.TestCase):
         ])
         self.assertDictContainsSubset({
             'host': 'localhost',
-            'port': 80,
-            'unix_socket_perms': 0o777,
+            'port': '80',
+            'unix_socket_perms':'777',
         }, opts)
         self.assertSequenceEqual(args, [])
 

@@ -181,7 +181,10 @@ class Adjustments(object):
 
     @classmethod
     def parse_args(cls, argv):
-        """Parse command line arguments.
+        """Pre-parse command line arguments for input into __init__.  Note that
+        this does not cast values into adjustment types, it just creates a
+        dictionary suitable for passing into __init__, where __init__ does the
+        casting.
         """
         long_opts = ['help', 'call']
         for opt, cast in cls._params:
@@ -201,9 +204,11 @@ class Adjustments(object):
             param = opt.lstrip('-').replace('-', '_')
             if param.startswith('no_'):
                 param = param[3:]
-                kw[param] = False
-            elif param in ('help', 'call') or cls._param_map[param] is asbool:
+                kw[param] = 'false'
+            elif param in ('help', 'call'):
                 kw[param] = True
+            elif cls._param_map[param] is asbool:
+                kw[param] = 'true'
             else:
-                kw[param] = cls._param_map[param](value)
+                kw[param] = value
         return kw, args

@@ -42,6 +42,10 @@ Next release
 
 - Cope with the fact that the ``Transfer-Encoding`` value is case-insensitive.
 
+- When the ``--unix-socket-perms`` option was used as an argument to
+  ``waitress-serve``, a ``TypeError`` would be raised.  See
+  https://github.com/Pylons/waitress/issues/50.
+
 0.8.7 (2013-08-29)
 ------------------
 
