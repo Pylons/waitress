@@ -1,5 +1,5 @@
-Next release
-------------
+0.8.8 (2013-11-30)
+------------------
 
 - Fix some cases where the creation of extremely large output buffers (greater
   than 2GB, suspected to be buffers added via ``wsgi.file_wrapper``) might
