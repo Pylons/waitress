@@ -356,10 +356,14 @@ class TestWSGITask(unittest.TestCase):
     def test_execute_app_calls_start_response_w_exc_info_complete(self):
         def app(environ, start_response):
             start_response('200 OK', [], [ValueError, ValueError(), None])
+            return [b'a']
         inst = self._makeOne()
         inst.complete = True
         inst.channel.server.application = app
-        self.assertRaises(ValueError, inst.execute)
+        inst.execute()
+        self.assertTrue(inst.complete)
+        self.assertEqual(inst.status, '200 OK')
+        self.assertTrue(inst.channel.written)
 
     def test_execute_app_calls_start_response_w_exc_info_incomplete(self):
         def app(environ, start_response):
@@ -372,6 +376,16 @@ class TestWSGITask(unittest.TestCase):
         self.assertTrue(inst.complete)
         self.assertEqual(inst.status, '200 OK')
         self.assertTrue(inst.channel.written)
+
+    def test_execute_app_calls_start_response_w_header_written(self):
+        def app(environ, start_response):
+            start_response('200 OK', [], [ValueError, ValueError(), None])
+            return [b'a']
+        inst = self._makeOne()
+        inst.complete = True
+        inst.wrote_header = True
+        inst.channel.server.application = app
+        self.assertRaises(ValueError, inst.execute)
 
     def test_execute_bad_header_key(self):
         def app(environ, start_response):

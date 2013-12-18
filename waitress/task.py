@@ -346,7 +346,7 @@ class WSGITask(Task):
                                      "without providing exc_info.")
             if exc_info:
                 try:
-                    if self.complete:
+                    if self.wrote_header:
                         # higher levels will catch and handle raised exception:
                         # 1. "service" method in task.py
                         # 2. "service" method in channel.py
