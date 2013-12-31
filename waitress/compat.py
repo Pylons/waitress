@@ -109,3 +109,8 @@ try:
     import httplib
 except ImportError: # pragma: no cover
     from http import client as httplib
+
+try:
+    MAXINT = sys.maxint
+except AttributeError: # pragma: no cover
+    MAXINT = sys.maxsize

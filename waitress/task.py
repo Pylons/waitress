@@ -257,7 +257,11 @@ class Task(object):
             response_headers.append(('Date', build_http_date(self.start_time)))
 
         first_line = 'HTTP/%s %s' % (self.version, self.status)
-        next_lines = ['%s: %s' % hv for hv in sorted(self.response_headers)]
+        # NB: sorting headers needs to preserve same-named-header order
+        # as per RFC 2616 section 4.2; thus the key=lambda x: x[0] here;
+        # rely on stable sort to keep relative position of same-named headers
+        next_lines = ['%s: %s' % hv for hv in sorted(
+                self.response_headers, key=lambda x: x[0])]
         lines = [first_line] + next_lines
         res = '%s\r\n\r\n' % '\r\n'.join(lines)
         return tobytes(res)
@@ -449,13 +453,28 @@ class WSGITask(Task):
         path = request.path
         channel = self.channel
         server = channel.server
+        url_prefix = server.adj.url_prefix
 
-        path = path.lstrip('/')
+        if path.startswith('/'):
+            # strip extra slashes at the beginning of a path that starts
+            # with any number of slashes
+            path = '/' + path.lstrip('/')
 
-        url_prefix_with_slash = server.adj.url_prefix.lstrip('/') + '/'
-
-        if url_prefix_with_slash and path.startswith(url_prefix_with_slash):
-            path = path[len(url_prefix_with_slash):]
+        if url_prefix:
+            # NB: url_prefix is guaranteed by the configuration machinery to
+            # be either the empty string or a string that starts with a single
+            # slash and ends without any slashes
+            if path == url_prefix:
+                # if the path is the same as the url prefix, the SCRIPT_NAME
+                # should be the url_prefix and PATH_INFO should be empty
+                path = ''
+            else:
+                # if the path starts with the url prefix plus a slash,
+                # the SCRIPT_NAME should be the url_prefix and PATH_INFO should
+                # the value of path from the slash until its end
+                url_prefix_with_trailing_slash = url_prefix + '/'
+                if path.startswith(url_prefix_with_trailing_slash):
+                    path = path[len(url_prefix):]
 
         environ = {}
         environ['REQUEST_METHOD'] = request.command.upper()
@@ -463,8 +482,8 @@ class WSGITask(Task):
         environ['SERVER_NAME'] = server.server_name
         environ['SERVER_SOFTWARE'] = server.adj.ident
         environ['SERVER_PROTOCOL'] = 'HTTP/%s' % self.version
-        environ['SCRIPT_NAME'] = server.adj.url_prefix
-        environ['PATH_INFO'] = '/' + path
+        environ['SCRIPT_NAME'] = url_prefix
+        environ['PATH_INFO'] = path
         environ['QUERY_STRING'] = request.query
         environ['REMOTE_ADDR'] = channel.addr[0]
 

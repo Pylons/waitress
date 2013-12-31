@@ -2,9 +2,9 @@ import unittest
 
 class TestFixedStreamReceiver(unittest.TestCase):
 
-    def _makeOne(self, buf, cl):
+    def _makeOne(self, cl, buf):
         from waitress.receiver import FixedStreamReceiver
-        return FixedStreamReceiver(buf, cl)
+        return FixedStreamReceiver(cl, buf)
 
     def test_received_remain_lt_1(self):
         buf = DummyBuffer()
@@ -41,6 +41,11 @@ class TestFixedStreamReceiver(unittest.TestCase):
         buf = DummyBuffer()
         inst = self._makeOne(10, buf)
         self.assertEqual(inst.getbuf(), buf)
+
+    def test___len__(self):
+        buf = DummyBuffer(['1', '2'])
+        inst = self._makeOne(10, buf)
+        self.assertEqual(inst.__len__(), 2)
 
 class TestChunkedReceiver(unittest.TestCase):
 
@@ -142,13 +147,23 @@ class TestChunkedReceiver(unittest.TestCase):
         inst = self._makeOne(buf)
         self.assertEqual(inst.getbuf(), buf)
 
+    def test___len__(self):
+        buf = DummyBuffer(['1', '2'])
+        inst = self._makeOne(buf)
+        self.assertEqual(inst.__len__(), 2)
+        
 class DummyBuffer(object):
 
-    def __init__(self):
-        self.data = []
+    def __init__(self, data=None):
+        if data is None:
+            data = []
+        self.data = data
 
     def append(self, s):
         self.data.append(s)
 
     def getfile(self):
         return self
+
+    def __len__(self):
+        return len(self.data)

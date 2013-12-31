@@ -288,6 +288,8 @@ class EchoTests(object):
         line, headers, response_body = read_http(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
         self.assertEqual(response_body, b'')
+        self.assertEqual(headers['content-length'], '0')
+        self.assertFalse('transfer-encoding' in headers)
 
     def test_chunking_request_with_content(self):
         control_line = b"20;\r\n" # 20 hex = 32 dec
@@ -307,6 +309,8 @@ class EchoTests(object):
         line, headers, response_body = read_http(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
         self.assertEqual(response_body, expected)
+        self.assertEqual(headers['content-length'], str(len(expected)))
+        self.assertFalse('transfer-encoding' in headers)
 
     def test_broken_chunked_encoding(self):
         control_line = "20;\r\n" # 20 hex = 32 dec

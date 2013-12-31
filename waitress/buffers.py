@@ -186,8 +186,8 @@ class OverflowableBuffer(object):
     """
     This buffer implementation has four stages:
     - No data
-    - String-based buffer
-    - StringIO-based buffer
+    - Bytes-based buffer
+    - BytesIO-based buffer
     - Temporary file storage
     The first two stages are fastest for simple transfers.
     """
@@ -203,11 +203,15 @@ class OverflowableBuffer(object):
     def __len__(self):
         buf = self.buf
         if buf is not None:
+            # use buf.__len__ rather than len(buf) FBO of not getting
+            # OverflowError on Python 2
             return buf.__len__()
         else:
             return self.strbuf.__len__()
 
     def __nonzero__(self):
+        # use self.__len__ rather than len(self) FBO of not getting
+        # OverflowError on Python 2
         return self.__len__() > 0
 
     __bool__ = __nonzero__ # py3
@@ -241,7 +245,9 @@ class OverflowableBuffer(object):
                 return
             buf = self._create_buffer()
         buf.append(s)
-        sz = len(buf)
+        # use buf.__len__ rather than len(buf) FBO of not getting
+        # OverflowError on Python 2
+        sz = buf.__len__()
         if not self.overflowed:
             if sz >= self.overflow:
                 self._set_large_buffer()
@@ -278,7 +284,9 @@ class OverflowableBuffer(object):
             return
         buf.prune()
         if self.overflowed:
-            sz = len(buf)
+            # use buf.__len__ rather than len(buf) FBO of not getting
+            # OverflowError on Python 2
+            sz = buf.__len__()
             if sz < self.overflow:
                 # Revert to a faster buffer.
                 self._set_small_buffer()

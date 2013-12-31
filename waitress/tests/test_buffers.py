@@ -284,6 +284,17 @@ class TestOverflowableBuffer(unittest.TestCase):
         self.assertEqual(inst.buf.get(100), b'x' * 5)
         self.assertEqual(inst.strbuf, b'')
 
+    def test_append_with_len_more_than_max_int(self):
+        from waitress.compat import MAXINT
+        inst = self._makeOne()
+        inst.overflowed = True
+        buf = DummyBuffer(length=MAXINT)
+        inst.buf = buf
+        result = inst.append(b'x')
+        # we don't want this to throw an OverflowError on Python 2 (see
+        # https://github.com/Pylons/waitress/issues/47)
+        self.assertEqual(result, None)
+        
     def test_append_buf_None_not_longer_than_srtbuf_limit(self):
         inst = self._makeOne()
         inst.strbuf = b'x' * 5
@@ -373,6 +384,17 @@ class TestOverflowableBuffer(unittest.TestCase):
         inst.prune()
         self.assertNotEqual(inst.buf, buf)
 
+    def test_prune_with_buflen_more_than_max_int(self):
+        from waitress.compat import MAXINT
+        inst = self._makeOne()
+        inst.overflowed = True
+        buf = DummyBuffer(length=MAXINT+1)
+        inst.buf = buf
+        result = inst.prune()
+        # we don't want this to throw an OverflowError on Python 2 (see
+        # https://github.com/Pylons/waitress/issues/47)
+        self.assertEqual(result, None)
+        
     def test_getfile_buf_None(self):
         inst = self._makeOne()
         f = inst.getfile()
@@ -417,3 +439,16 @@ class Filelike(KindaFilelike):
     def tell(self):
         v = self.tellresults.pop(0)
         return v
+
+class DummyBuffer(object):
+    def __init__(self, length=0):
+        self.length = length
+
+    def __len__(self):
+        return self.length
+
+    def append(self, s):
+        self.length = self.length + len(s)
+
+    def prune(self):
+        pass

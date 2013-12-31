@@ -59,7 +59,7 @@ class TestAdjustments(unittest.TestCase):
             max_request_header_size='1300', max_request_body_size='1400',
             expose_tracebacks='true', ident='abc', asyncore_loop_timeout='5',
             asyncore_use_poll=True, unix_socket='/tmp/waitress.sock',
-            unix_socket_perms='777', url_prefix='/foo')
+            unix_socket_perms='777', url_prefix='///foo/')
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
@@ -114,12 +114,12 @@ class TestCLI(unittest.TestCase):
 
     def test_positive_boolean(self):
         opts, args = self.parse(['--expose-tracebacks'])
-        self.assertDictContainsSubset({'expose_tracebacks': True}, opts)
+        self.assertDictContainsSubset({'expose_tracebacks': 'true'}, opts)
         self.assertSequenceEqual(args, [])
 
     def test_negative_boolean(self):
         opts, args = self.parse(['--no-expose-tracebacks'])
-        self.assertDictContainsSubset({'expose_tracebacks': False}, opts)
+        self.assertDictContainsSubset({'expose_tracebacks': 'false'}, opts)
         self.assertSequenceEqual(args, [])
 
     def test_cast_params(self):
@@ -130,8 +130,8 @@ class TestCLI(unittest.TestCase):
         ])
         self.assertDictContainsSubset({
             'host': 'localhost',
-            'port': 80,
-            'unix_socket_perms': 0o777,
+            'port': '80',
+            'unix_socket_perms':'777',
         }, opts)
         self.assertSequenceEqual(args, [])
 
