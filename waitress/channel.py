@@ -82,6 +82,20 @@ class HTTPChannel(logging_dispatcher, object):
         # Don't let asyncore.dispatcher throttle self.addr on us.
         self.addr = addr
 
+        # Keep track of request keep-alive if exists
+        self.is_keepalive = False
+        self.serving = False
+
+    def __repr__(self):
+        repr = ""
+        repr += "k" if self.is_keepalive else "-"
+        repr += "r" if self.request else "-"
+        repr += "R" if self.requests else "-"
+        repr += "o" if self.any_outbuf_has_data() else "-"
+        repr += "c" if self.will_close else "-"
+        repr += "s" if self.serving else "-"
+        return repr
+
     def any_outbuf_has_data(self):
         for outbuf in self.outbufs:
             if bool(outbuf):
@@ -147,6 +161,7 @@ class HTTPChannel(logging_dispatcher, object):
             self.close_when_flushed = False
             self.will_close = True
 
+        self.check_shutdown_gracefully()
         if self.will_close:
             self.handle_close()
 
@@ -267,6 +282,11 @@ class HTTPChannel(logging_dispatcher, object):
 
         return False
 
+    def check_shutdown_gracefully(self):
+        if self.server.shutdown_gracefully and self.is_keepalive and \
+            not self.request and not self.requests and not self.any_outbuf_has_data():
+            self.will_close = True
+
     def handle_close(self):
         for outbuf in self.outbufs:
             try:
@@ -276,6 +296,7 @@ class HTTPChannel(logging_dispatcher, object):
                     'Unknown exception while trying to close outbuf')
         self.connected = False
         asyncore.dispatcher.close(self)
+        self.server.on_channel_close(self)
 
     def add_channel(self, map=None):
         """See asyncore.dispatcher
@@ -321,6 +342,7 @@ class HTTPChannel(logging_dispatcher, object):
 
     def service(self):
         """Execute all pending requests """
+        self.serving = True
         with self.task_lock:
             while self.requests:
                 request = self.requests[0]
@@ -365,7 +387,7 @@ class HTTPChannel(logging_dispatcher, object):
                 else:
                     request = self.requests.pop(0)
                     request._close()
-
+        self.serving = False
         self.force_flush = True
         self.server.pull_trigger()
         self.last_activity = time.time()

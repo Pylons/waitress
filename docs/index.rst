@@ -22,7 +22,9 @@ WSGI app as a single argument::
    from waitress import serve
    serve(wsgiapp)
    
-Press Ctrl-C (or Ctrl-Break on Windows) to exit the server.
+Press Ctrl-C (or Ctrl-Break on Windows) to exit the server. You can also send a
+SIGHUP signal to gracefully exit (it will continue to serve to connected
+clients, stop accepting new ones and shutdown when all clients disconnected).
 
 If you want to serve your application through a UNIX domain socket (to serve
 a downstream HTTP server/proxy, e.g. nginx, lighttpd, etc.), call ``serve``
