@@ -18,6 +18,8 @@ import os.path
 import socket
 import time
 import signal
+import sys
+import traceback
 
 from waitress import trigger
 from waitress.adjustments import Adjustments
@@ -80,7 +82,6 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.active_channels = {}
         self.shutdown_gracefully = False
         signal.signal(signal.SIGHUP, self.on_sighup)
-        signal.signal(signal.SIGUSR1, self.on_sigusr1)
         if _start:
             self.accept_connections()
 
@@ -187,9 +188,6 @@ class BaseWSGIServer(logging_dispatcher, object):
             c.check_shutdown_gracefully()
         self.logger.info("Gracefully shutting down...")
         self.check_shutdown_gracefully()
-
-    def on_sigusr1(self, signal, frame):
-        self.logger.debug(self.active_channels)
 
     def on_channel_close(self, channel):
         self.check_shutdown_gracefully()
