@@ -12,7 +12,7 @@
 #
 ##############################################################################
 
-import asyncore
+import waitress.asyncore_epoll as asyncore
 import os
 import socket
 import errno

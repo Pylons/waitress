@@ -16,6 +16,7 @@
 import getopt
 import socket
 import sys
+import waitress.asyncore_epoll as asyncore
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
 
@@ -44,6 +45,7 @@ def slash_fixed_str(s):
         s = '/' + s.lstrip('/').rstrip('/')
     return s
 
+
 class Adjustments(object):
     """This class contains tunable parameters.
     """
@@ -69,6 +71,7 @@ class Adjustments(object):
         ('ident', str),
         ('asyncore_loop_timeout', int),
         ('asyncore_use_poll', asbool),
+        ('asyncore_poller', str),
         ('unix_socket', str),
         ('unix_socket_perms', asoctal),
     )
@@ -169,6 +172,7 @@ class Adjustments(object):
 
     # The asyncore.loop flag to use poll() instead of the default select().
     asyncore_use_poll = False
+    asyncore_poller = 'select'
 
     def __init__(self, **kw):
         for k, v in kw.items():
@@ -178,6 +182,12 @@ class Adjustments(object):
         if (sys.platform[:3] == "win" and
                 self.host == 'localhost'): # pragma: no cover
             self.host = ''
+
+        # Backwards compatibility, if use_poll is set we'll override
+        # the asyncore_poller setting
+
+        if self.asyncore_use_poll is True:
+            self.asyncore_poller = 'poll'
 
     @classmethod
     def parse_args(cls, argv):

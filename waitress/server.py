@@ -12,7 +12,7 @@
 #
 ##############################################################################
 
-import asyncore
+import waitress.asyncore_epoll as asyncore
 import os
 import os.path
 import socket
@@ -147,11 +147,19 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.channel_class(self, conn, addr, self.adj, map=self._map)
 
     def run(self):
+        mapping = {
+            'select': asyncore.select_poller,
+            'kqueue': asyncore.kqueue_poller,
+            'poll': asyncore.poll_poller,
+            'epoll': asyncore.epoll_poller,
+        }
+        poller = mapping[self.adj.asyncore_poller]
+
         try:
             self.asyncore.loop(
                 timeout=self.adj.asyncore_loop_timeout,
                 map=self._map,
-                use_poll=self.adj.asyncore_use_poll,
+                poller=poller
             )
         except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()

@@ -14,7 +14,7 @@
 """Utility functions
 """
 
-import asyncore
+import waitress.asyncore_epoll as asyncore
 import errno
 import logging
 import os
