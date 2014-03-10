@@ -650,9 +650,26 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.input'], 'stream')
         self.assertEqual(inst.environ, environ)
 
-    def test_get_environment_values_w_scheme_override(self):
+    def test_get_environment_values_w_scheme_override_untrusted(self):
+        inst = self._makeOne()
+        request = DummyParser()
+        request.headers = {
+            'CONTENT_TYPE': 'abc',
+            'CONTENT_LENGTH': '10',
+            'X_FOO': 'BAR',
+            'X_FORWARDED_PROTO': 'https',
+            'CONNECTION': 'close',
+        }
+        request.query = 'abc'
+        inst.request = request
+        environ = inst.get_environment()
+        self.assertEqual(environ['wsgi.url_scheme'], 'http')
+
+    def test_get_environment_values_w_scheme_override_trusted(self):
         import sys
         inst = self._makeOne()
+        inst.channel.addr = ['192.168.1.1']
+        inst.channel.server.adj.trusted_proxy = '192.168.1.1'
         request = DummyParser()
         request.headers = {
             'CONTENT_TYPE': 'abc',
@@ -683,7 +700,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['HTTP_CONNECTION'], 'close')
         self.assertEqual(environ['PATH_INFO'], '/')
         self.assertEqual(environ['QUERY_STRING'], 'abc')
-        self.assertEqual(environ['REMOTE_ADDR'], '127.0.0.1')
+        self.assertEqual(environ['REMOTE_ADDR'], '192.168.1.1')
         self.assertEqual(environ['CONTENT_TYPE'], 'abc')
         self.assertEqual(environ['CONTENT_LENGTH'], '10')
         self.assertEqual(environ['HTTP_X_FOO'], 'BAR')
@@ -698,6 +715,8 @@ class TestWSGITask(unittest.TestCase):
 
     def test_get_environment_values_w_bogus_scheme_override(self):
         inst = self._makeOne()
+        inst.channel.addr = ['192.168.1.1']
+        inst.channel.server.adj.trusted_proxy = '192.168.1.1'
         request = DummyParser()
         request.headers = {
             'CONTENT_TYPE': 'abc',
@@ -817,6 +836,7 @@ class DummyAdj(object):
     host = '127.0.0.1'
     port = 80
     url_prefix = ''
+    trusted_proxy = None
 
 class DummyServer(object):
     server_name = 'localhost'

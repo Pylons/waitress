@@ -483,10 +483,14 @@ class WSGITask(Task):
         environ['SCRIPT_NAME'] = url_prefix
         environ['PATH_INFO'] = path
         environ['QUERY_STRING'] = request.query
-        environ['REMOTE_ADDR'] = channel.addr[0]
+        host = environ['REMOTE_ADDR'] = channel.addr[0]
 
         headers = dict(request.headers)
-        wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO', request.url_scheme)
+        if host == server.adj.trusted_proxy:
+            wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO',
+                                          request.url_scheme)
+        else:
+            wsgi_url_scheme = request.url_scheme
         if wsgi_url_scheme not in ('http', 'https'):
             raise ValueError('Invalid X_FORWARDED_PROTO value')
         for key, value in headers.items():
