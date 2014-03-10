@@ -51,15 +51,29 @@ class TestAdjustments(unittest.TestCase):
 
     def test_goodvars(self):
         inst = self._makeOne(
-            host='host', port='8080', threads='5',
-            url_scheme='https', backlog='20', recv_bytes='200',
-            send_bytes='300', outbuf_overflow='400', inbuf_overflow='500',
-            connection_limit='1000', cleanup_interval='1100',
-            channel_timeout='1200', log_socket_errors='true',
-            max_request_header_size='1300', max_request_body_size='1400',
-            expose_tracebacks='true', ident='abc', asyncore_loop_timeout='5',
-            asyncore_use_poll=True, unix_socket='/tmp/waitress.sock',
-            unix_socket_perms='777', url_prefix='///foo/')
+            host='host',
+            port='8080',
+            threads='5',
+            url_scheme='https',
+            backlog='20',
+            recv_bytes='200',
+            send_bytes='300',
+            outbuf_overflow='400',
+            inbuf_overflow='500',
+            connection_limit='1000',
+            cleanup_interval='1100',
+            channel_timeout='1200',
+            log_socket_errors='true',
+            max_request_header_size='1300',
+            max_request_body_size='1400',
+            expose_tracebacks='true',
+            ident='abc',
+            asyncore_loop_timeout='5',
+            asyncore_use_poll=True,
+            unix_socket='/tmp/waitress.sock',
+            unix_socket_perms='777',
+            url_prefix='///foo/',
+        )
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
