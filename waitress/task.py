@@ -483,9 +483,17 @@ class WSGITask(Task):
         environ['SCRIPT_NAME'] = url_prefix
         environ['PATH_INFO'] = path
         environ['QUERY_STRING'] = request.query
-        environ['REMOTE_ADDR'] = channel.addr[0]
+        host = environ['REMOTE_ADDR'] = channel.addr[0]
 
-        for key, value in request.headers.items():
+        headers = dict(request.headers)
+        if host == server.adj.trusted_proxy:
+            wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO',
+                                          request.url_scheme)
+        else:
+            wsgi_url_scheme = request.url_scheme
+        if wsgi_url_scheme not in ('http', 'https'):
+            raise ValueError('Invalid X_FORWARDED_PROTO value')
+        for key, value in headers.items():
             value = value.strip()
             mykey = rename_headers.get(key, None)
             if mykey is None:
@@ -495,7 +503,7 @@ class WSGITask(Task):
 
         # the following environment variables are required by the WSGI spec
         environ['wsgi.version'] = (1, 0)
-        environ['wsgi.url_scheme'] = request.url_scheme
+        environ['wsgi.url_scheme'] = wsgi_url_scheme
         environ['wsgi.errors'] = sys.stderr # apps should use the logging module
         environ['wsgi.multithread'] = True
         environ['wsgi.multiprocess'] = False

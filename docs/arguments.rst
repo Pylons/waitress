@@ -28,8 +28,14 @@ threads
     number of threads used to process application logic (integer), default
     ``4``
 
+trusted_proxy
+    IP addreess of a client allowed to override ``url_scheme`` via the
+    ``X_FORWARDED_PROTO`` header.
+
 url_scheme
-    default ``wsgi.url_scheme`` value (string), default ``http``
+    default ``wsgi.url_scheme`` value (string), default ``http``;  can be
+    overridden per-request by the value of the ``X_FORWARDED_PROTO`` header,
+    but only if the client address matches ``trusted_proxy``.
 
 ident
     server identity (string) used in "Server:" header in responses, default

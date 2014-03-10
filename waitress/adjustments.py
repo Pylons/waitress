@@ -52,6 +52,7 @@ class Adjustments(object):
         ('host', str),
         ('port', int),
         ('threads', int),
+        ('trusted_proxy', str),
         ('url_scheme', str),
         ('url_prefix', slash_fixed_str),
         ('backlog', int),
@@ -83,6 +84,9 @@ class Adjustments(object):
 
     # mumber of threads available for tasks
     threads = 4
+
+    # Host allowed to overrid ``wsgi.url_scheme`` via header
+    trusted_proxy = None
 
     # default ``wsgi.url_scheme`` value
     url_scheme = 'http'
