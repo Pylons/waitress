@@ -1,9 +1,9 @@
 Unreleased
 ----------
 
-- Allow override of ``wsgi.url_scheme`` via a request header,
+- Allow trusted proxies to override ``wsgi.url_scheme`` via a request header,
   ``X_FORWARDED_PROTO``.  Allows proxies which serve mixed HTTP / HTTPS
-  requests to control signal which are served as HTTPS.See
+  requests to control signal which are served as HTTPS.  See
   https://github.com/Pylons/waitress/pull/42.
 
 0.8.8 (2013-11-30)

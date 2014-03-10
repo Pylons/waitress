@@ -126,7 +126,9 @@ application.  You can do this in one of three ways:
 
 2.  You can configure the proxy reverse server to pass a header,
     ``X_FORWARDED_PROTO``, whose value will be set for that request as
-    the ``wsgi.url_scheme`` environment value.
+    the ``wsgi.url_scheme`` environment value.  Note that you must also
+    conigure ``waitress.serve`` by passing the IP address of that proxy
+    as its ``trusted_proxy``.
 
 3.  You can use Paste's ``PrefixMiddleware`` in conjunction with
     configuration settings on the reverse proxy server.
@@ -147,7 +149,7 @@ Passing the ``X_FORWARDED_PROTO`` header to set ``wsgi.url_scheme``
 
 If your proxy accepts both HTTP and HTTPS URLs, and you want your application
 to generate the appropriate url based on the incoming scheme, also set up
-your proxy to send a ``X-WSGI-Scheme`` with the original URL scheme along
+your proxy to send a ``X-Forwarded-Proto`` with the original URL scheme along
 with each proxied request.  For example, when using Nginx::
 
     proxy_set_header        X-Forwarded-Proto $scheme;
@@ -155,6 +157,12 @@ with each proxied request.  For example, when using Nginx::
 or via Apache::
 
    RequestHeader set X-Forwarded-Proto https
+
+.. note::
+
+   You must also configure the Waitress server's ``trusted_proxy`` to
+   contain the IP address of the proxy in order for this header to override
+   the default URL scheme.
 
 Using ``url_prefix`` to influence ``SCRIPT_NAME`` and ``PATH_INFO``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
