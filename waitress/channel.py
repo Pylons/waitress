@@ -89,7 +89,10 @@ class HTTPChannel(logging_dispatcher, object):
         return False
 
     def total_outbufs_len(self):
-        return sum([len(b) for b in self.outbufs]) # genexpr == more funccalls
+        # genexpr == more funccalls
+        # use b.__len__ rather than len(b) FBO of not getting OverflowError
+        # on Python 2
+        return sum([b.__len__() for b in self.outbufs]) 
 
     def writable(self):
         # if there's data in the out buffer or we've been instructed to close
@@ -233,7 +236,9 @@ class HTTPChannel(logging_dispatcher, object):
 
         while True:
             outbuf = self.outbufs[0]
-            outbuflen = len(outbuf)
+            # use outbuf.__len__ rather than len(outbuf) FBO of not getting
+            # OverflowError on Python 2
+            outbuflen = outbuf.__len__()
             if outbuflen <= 0:
                 # self.outbufs[-1] must always be a writable outbuf
                 if len(self.outbufs) > 1:

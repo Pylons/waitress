@@ -121,7 +121,7 @@ Tuning options:
     Number of bytes to request when calling ``socket.recv()``. Default is
     8192.
 
-``--send-bytes=INT```
+``--send-bytes=INT``
     Number of bytes to send to socket.send(). Default is 18000.
     Multiples of 9000 should avoid partly-filled TCP packets.
 

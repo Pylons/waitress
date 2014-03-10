@@ -3,7 +3,56 @@ Unreleased
 
 - Allow override of ``wsgi.url_scheme`` via a request header,
   ``X_FORWARDED_PROTO``.  Allows proxies which serve mixed HTTP / HTTPS
-  requests to control signal which are served as HTTPS.
+  requests to control signal which are served as HTTPS.See
+  https://github.com/Pylons/waitress/pull/42.
+
+0.8.8 (2013-11-30)
+------------------
+
+- Fix some cases where the creation of extremely large output buffers (greater
+  than 2GB, suspected to be buffers added via ``wsgi.file_wrapper``) might
+  cause an OverflowError on Python 2.  See
+  https://github.com/Pylons/waitress/issues/47.
+
+- When the ``url_prefix`` adjustment starts with more than one slash, all
+  slashes except one will be stripped from its beginning.  This differs from
+  older behavior where more than one leading slash would be preserved in
+  ``url_prefix``.
+
+- If a client somehow manages to send an empty path, we no longer convert the
+  empty path to a single slash in ``PATH_INFO``.  Instead, the path remains
+  empty.  According to RFC 2616 section "5.1.2 Request-URI", the scenario of a
+  client sending an empty path is actually not possible because the request URI
+  portion cannot be empty.
+
+- If the ``url_prefix`` adjustment matches the request path exactly, we now
+  compute ``SCRIPT_NAME`` and ``PATH_INFO`` properly.  Previously, if the
+  ``url_prefix`` was ``/foo`` and the path received from a client was ``/foo``,
+  we would set *both* ``SCRIPT_NAME`` and ``PATH_INFO`` to ``/foo``.  This was
+  incorrect.  Now in such a case we set ``PATH_INFO`` to the empty string and
+  we set ``SCRIPT_NAME`` to ``/foo``.  Note that the change we made has no
+  effect on paths that do not match the ``url_prefix`` exactly (such as
+  ``/foo/bar``); these continue to operate as they did.  See
+  https://github.com/Pylons/waitress/issues/46
+
+- Preserve header ordering of headers with the same name as per RFC 2616.  See
+  https://github.com/Pylons/waitress/pull/44
+
+- When waitress receives a ``Transfer-Encoding: chunked`` request, we no longer
+  send the ``TRANSFER_ENCODING`` nor the ``HTTP_TRANSFER_ENCODING`` value to
+  the application in the environment.  Instead, we pop this header.  Since we
+  cope with chunked requests by buffering the data in the server, we also know
+  when a chunked request has ended, and therefore we know the content length.
+  We set the content-length header in the environment, such that applications
+  effectively never know the original request was a T-E: chunked request; it
+  will appear to them as if the request is a non-chunked request with an
+  accurate content-length.
+
+- Cope with the fact that the ``Transfer-Encoding`` value is case-insensitive.
+
+- When the ``--unix-socket-perms`` option was used as an argument to
+  ``waitress-serve``, a ``TypeError`` would be raised.  See
+  https://github.com/Pylons/waitress/issues/50.
 
 0.8.7 (2013-08-29)
 ------------------

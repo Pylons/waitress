@@ -126,7 +126,7 @@ class Test_run(unittest.TestCase):
         import waitress.tests.fixtureapps.runner as _apps
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)
-            self.assertDictEqual(kw, {'port': 80})
+            self.assertDictEqual(kw, {'port': '80'})
         argv = [
             'waitress-serve',
             '--port=80',
@@ -138,7 +138,7 @@ class Test_run(unittest.TestCase):
         import waitress.tests.fixtureapps.runner as _apps
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)
-            self.assertDictEqual(kw, {'port': 80})
+            self.assertDictEqual(kw, {'port': '80'})
         argv = [
             'waitress-serve',
             '--port=80',
