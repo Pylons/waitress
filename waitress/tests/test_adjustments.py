@@ -54,6 +54,7 @@ class TestAdjustments(unittest.TestCase):
             host='host',
             port='8080',
             threads='5',
+            trusted_proxy='192.168.1.1',
             url_scheme='https',
             backlog='20',
             recv_bytes='200',
@@ -77,6 +78,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
+        self.assertEqual(inst.trusted_proxy, '192.168.1.1')
         self.assertEqual(inst.url_scheme, 'https')
         self.assertEqual(inst.backlog, 20)
         self.assertEqual(inst.recv_bytes, 200)
