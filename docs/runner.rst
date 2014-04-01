@@ -166,3 +166,7 @@ Tuning options:
 ``--asyncore-use-poll``
     The use_poll argument passed to ``asyncore.loop()``. Helps overcome open
     file descriptors limit. Default is False.
+
+``--shutdown-timeout``
+    Maximum seconds to wait for request threads to complete during shutdown.
+    Default is 5 seconds.

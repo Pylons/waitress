@@ -72,6 +72,7 @@ class Adjustments(object):
         ('asyncore_use_poll', asbool),
         ('unix_socket', str),
         ('unix_socket_perms', asoctal),
+        ('shutdown_timeout', int)
     )
 
     _param_map = dict(_params)
@@ -173,6 +174,9 @@ class Adjustments(object):
 
     # The asyncore.loop flag to use poll() instead of the default select().
     asyncore_use_poll = False
+
+    # Maximum seconds to wait for request threads to complete during shutdown
+    shutdown_timeout = 5
 
     def __init__(self, **kw):
         for k, v in kw.items():

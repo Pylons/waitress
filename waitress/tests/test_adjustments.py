@@ -74,6 +74,7 @@ class TestAdjustments(unittest.TestCase):
             unix_socket='/tmp/waitress.sock',
             unix_socket_perms='777',
             url_prefix='///foo/',
+            shutdown_timeout=6
         )
         self.assertEqual(inst.host, 'host')
         self.assertEqual(inst.port, 8080)
@@ -98,6 +99,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
+        self.assertEqual(inst.shutdown_timeout, 6)
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)

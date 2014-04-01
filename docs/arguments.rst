@@ -125,3 +125,8 @@ url_prefix
     to be the value passed minus any trailing slashes you add, and it will
     cause the ``PATH_INFO`` of any request which is prefixed with this value to
     be stripped of the prefix.  Default: the empty string.
+
+shutdown_timeout
+    Maximum seconds to wait for request threads to complete during shutdown
+    (integer), default ``5``.  Any requests that do not complete within the
+    timeout are forcibly terminated.

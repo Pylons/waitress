@@ -285,7 +285,7 @@ class DummyTaskDispatcher(object):
     def add_task(self, task):
         self.tasks.append(task)
 
-    def shutdown(self):
+    def shutdown(self, timeout=5):
         self.was_shutdown = True
 
 class DummyTask(object):
