@@ -57,7 +57,7 @@ Additionally, there is a command line runner called ``waitress-serve``, which
 can be used in development and in situations where the likes of
 :term:`PasteDeploy` is not necessary::
 
-    waitress-serve --port-8041 myapp:wsgifunc
+    waitress-serve --port=8041 myapp:wsgifunc
 
 For more information on this, see :ref:`runner`.
 
