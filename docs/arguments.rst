@@ -29,7 +29,7 @@ threads
     ``4``
 
 trusted_proxy
-    IP addreess of a client allowed to override ``url_scheme`` via the
+    IP address of a client allowed to override ``url_scheme`` via the
     ``X_FORWARDED_PROTO`` header.
 
 url_scheme
