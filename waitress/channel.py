@@ -82,6 +82,9 @@ class HTTPChannel(logging_dispatcher, object):
         # Don't let asyncore.dispatcher throttle self.addr on us.
         self.addr = addr
 
+        # Keep track of request keep-alive if exists
+        self.is_keepalive = False
+
     def any_outbuf_has_data(self):
         for outbuf in self.outbufs:
             if bool(outbuf):
@@ -150,6 +153,7 @@ class HTTPChannel(logging_dispatcher, object):
             self.close_when_flushed = False
             self.will_close = True
 
+        self.check_shutdown_gracefully()
         if self.will_close:
             self.handle_close()
 
@@ -272,6 +276,11 @@ class HTTPChannel(logging_dispatcher, object):
 
         return False
 
+    def check_shutdown_gracefully(self):
+        if self.server.shutdown_gracefully and self.is_keepalive and \
+            not self.request and not self.requests and not self.any_outbuf_has_data():
+            self.will_close = True
+
     def handle_close(self):
         for outbuf in self.outbufs:
             try:
@@ -281,6 +290,7 @@ class HTTPChannel(logging_dispatcher, object):
                     'Unknown exception while trying to close outbuf')
         self.connected = False
         asyncore.dispatcher.close(self)
+        self.server.on_channel_close(self)
 
     def add_channel(self, map=None):
         """See asyncore.dispatcher
@@ -370,7 +380,6 @@ class HTTPChannel(logging_dispatcher, object):
                 else:
                     request = self.requests.pop(0)
                     request._close()
-
         self.force_flush = True
         self.server.pull_trigger()
         self.last_activity = time.time()

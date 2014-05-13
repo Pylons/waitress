@@ -229,10 +229,12 @@ class Task(object):
                     response_headers.append(('Connection', 'Keep-Alive'))
             else:
                 close_on_finish()
+            self.channel.is_keepalive = True
 
         elif version == '1.1':
             if connection == 'close':
                 close_on_finish()
+            self.channel.is_keepalive = True
 
             if not content_length_header:
                 response_headers.append(('Transfer-Encoding', 'chunked'))

@@ -1,6 +1,9 @@
 import errno
 import socket
 import unittest
+import os
+import signal
+import asyncore
 
 class TestWSGIServer(unittest.TestCase):
 
@@ -189,6 +192,13 @@ class TestWSGIServer(unittest.TestCase):
         # Ensure the adjustment was actually applied.
         self.assertNotEqual(Adjustments.port, 1234)
         self.assertEqual(inst.adj.port, 1234)
+
+    def test_exits_on_sighup(self):
+        from waitress.server import WSGIServer, TcpWSGIServer
+        inst = WSGIServer(None)
+        import os, signal, asyncore
+        with self.assertRaises(asyncore.ExitNow):
+            os.kill(os.getpid(),signal.SIGHUP)
 
 if hasattr(socket, 'AF_UNIX'):
 

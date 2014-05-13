@@ -17,6 +17,9 @@ import os
 import os.path
 import socket
 import time
+import signal
+import sys
+import traceback
 
 from waitress import trigger
 from waitress.adjustments import Adjustments
@@ -77,6 +80,8 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.adj.host)
         self.active_channels = {}
+        self.shutdown_gracefully = False
+        signal.signal(signal.SIGHUP, self.on_sighup)
         if _start:
             self.accept_connections()
 
@@ -116,7 +121,7 @@ class BaseWSGIServer(logging_dispatcher, object):
         if now >= self.next_channel_cleanup:
             self.next_channel_cleanup = now + self.adj.cleanup_interval
             self.maintenance(now)
-        return (self.accepting and len(self._map) < self.adj.connection_limit)
+        return (self.accepting and not self.shutdown_gracefully and len(self._map) < self.adj.connection_limit)
 
     def writable(self):
         return False
@@ -153,7 +158,8 @@ class BaseWSGIServer(logging_dispatcher, object):
                 map=self._map,
                 use_poll=self.adj.asyncore_use_poll,
             )
-        except (SystemExit, KeyboardInterrupt):
+        except (SystemExit, KeyboardInterrupt, asyncore.ExitNow):
+            self.logger.info("Shutdown")
             self.task_dispatcher.shutdown()
 
     def pull_trigger(self):
@@ -175,6 +181,20 @@ class BaseWSGIServer(logging_dispatcher, object):
         for channel in self.active_channels.values():
             if (not channel.requests) and channel.last_activity < cutoff:
                 channel.will_close = True
+
+    def on_sighup(self, signal, frame):
+        self.shutdown_gracefully = True
+        for c in self.active_channels.values():
+            c.check_shutdown_gracefully()
+        self.logger.info("Gracefully shutting down...")
+        self.check_shutdown_gracefully()
+
+    def on_channel_close(self, channel):
+        self.check_shutdown_gracefully()
+    
+    def check_shutdown_gracefully(self):
+        if self.shutdown_gracefully and not self.active_channels:
+            raise asyncore.ExitNow()
 
 class TcpWSGIServer(BaseWSGIServer):
 

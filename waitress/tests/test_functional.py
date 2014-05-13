@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 import unittest
+import signal
 from waitress import server
 from waitress.compat import (
     httplib,
@@ -125,6 +126,35 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
         os.close(r)
         os.close(w)
         self.assertEqual(result, b'notsleepy returnedsleepy returned')
+
+class GracefulShutdownThreadTests(TcpTests, unittest.TestCase):
+    # test that servers shuts down on sighup after pending requests
+    def setUp(self):
+        from waitress.tests.fixtureapps import sleepy
+        self.start_subprocess(sleepy.app)
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def test_it(self):
+        # Launch a sleepy request
+        getline = os.path.join(here, 'fixtureapps', 'getline.py')
+        cmd = [self.exe, getline, 'http://%s:%d/sleepy' % self.bound_to]
+        r, w = os.pipe()
+        process = subprocess.Popen(cmd, stdout=w)
+        # Wait for the request to be lauched
+        time.sleep(1)
+        # Send sighup
+        os.kill(self.proc.pid, signal.SIGHUP)
+        # Wait for the server to shutdown
+        time.sleep(2)
+        # Check that request was processed correctly
+        result = os.read(r, 10000)
+        os.close(r)
+        os.close(w)
+        self.assertEqual(result, b'sleepy returned')
+        # Check that the server is shut down
+        self.assertIsNotNone(self.proc.exitcode)
 
 class EchoTests(object):
 
