@@ -1473,7 +1473,8 @@ def read_http(fp): # pragma: no cover
     try:
         response_line = fp.readline()
     except socket.error as exc:
-        if get_errno(exc) in (10053, 10054, 104):
+        # errno 104 is ENOTRECOVERABLE, In WinSock 10054 is ECONNRESET
+        if get_errno(exc) in (errno.ECONNABORTED, errno.ECONNRESET, 104, 10054):
             raise ConnectionClosed
         raise
     if not response_line:
