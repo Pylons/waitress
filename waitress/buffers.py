@@ -103,12 +103,14 @@ class FileBasedBuffer(object):
     def getfile(self):
         return self.file
 
-    def _close(self):
+    def close(self):
         # named _close because ReadOnlyFileBasedBuffer is used as
         # wsgi file.wrapper, and its protocol reserves "close"
         if hasattr(self.file, 'close'):
             self.file.close()
         self.remain = 0
+
+    _close = close
 
 class TempfileBasedBuffer(FileBasedBuffer):
 
@@ -137,9 +139,6 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
     def __init__(self, file, block_size=32768):
         self.file = file
         self.block_size = block_size # for __iter__
-
-    def close(self):
-        self._close()
 
     def prepare(self, size=None):
         if hasattr(self.file, 'seek') and hasattr(self.file, 'tell'):
