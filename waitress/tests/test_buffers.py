@@ -108,7 +108,7 @@ class TestFileBasedBuffer(unittest.TestCase):
     def test__close(self):
         f = io.BytesIO()
         inst = self._makeOne(f)
-        inst._close()
+        inst.close()
         self.assertTrue(f.closed)
 
 class TestTempfileBasedBuffer(unittest.TestCase):
@@ -149,13 +149,12 @@ class TestReadOnlyFileBasedBuffer(unittest.TestCase):
         from waitress.buffers import ReadOnlyFileBasedBuffer
         return ReadOnlyFileBasedBuffer(file, block_size)
 
-    def test_prepare_not_seekable_not_closeable(self):
+    def test_prepare_not_seekable(self):
         f = KindaFilelike(b'abc')
         inst = self._makeOne(f)
         result = inst.prepare()
         self.assertEqual(result, False)
         self.assertEqual(inst.remain, 0)
-        self.assertFalse(hasattr(inst, 'close'))
 
     def test_prepare_not_seekable_closeable(self):
         f = KindaFilelike(b'abc', close=1)
@@ -163,7 +162,7 @@ class TestReadOnlyFileBasedBuffer(unittest.TestCase):
         result = inst.prepare()
         self.assertEqual(result, False)
         self.assertEqual(inst.remain, 0)
-        self.assertEqual(inst.close, f.close)
+        self.assertTrue(hasattr(inst, 'close'))
 
     def test_prepare_seekable_closeable(self):
         f = Filelike(b'abc', close=1, tellresults=[0, 10])
@@ -172,7 +171,7 @@ class TestReadOnlyFileBasedBuffer(unittest.TestCase):
         self.assertEqual(result, 10)
         self.assertEqual(inst.remain, 10)
         self.assertEqual(inst.file.seeked, 0)
-        self.assertFalse(hasattr(inst, 'close'))
+        self.assertTrue(hasattr(inst, 'close'))
 
     def test_get_numbytes_neg_one(self):
         f = io.BytesIO(b'abcdef')
