@@ -51,23 +51,25 @@ class SubprocessTests(object):
 
     def start_subprocess(self, target, **kw):
         # Spawn a server process.
-        queue = multiprocessing.Queue()
+        self.queue = multiprocessing.Queue()
         self.proc = multiprocessing.Process(
             target=start_server,
-            args=(target, self.server, queue),
+            args=(target, self.server, self.queue),
             kwargs=kw,
         )
         self.proc.start()
         if self.proc.exitcode is not None: # pragma: no cover
             raise RuntimeError("%s didn't start" % str(target))
         # Get the socket the server is listening on.
-        self.bound_to = queue.get(timeout=5)
+        self.bound_to = self.queue.get(timeout=5)
         self.sock = self.create_socket()
 
     def stop_subprocess(self):
         if self.proc.exitcode is None:
             self.proc.terminate()
         self.sock.close()
+        # This give us one FD back ...
+        self.queue.close()
 
     def assertline(self, line, status, reason, version):
         v, s, r = (x.strip() for x in line.split(None, 2))
