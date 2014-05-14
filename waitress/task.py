@@ -391,19 +391,21 @@ class WSGITask(Task):
         # Call the application to handle the request and write a response
         app_iter = self.channel.server.application(env, start_response)
 
-        try:
-            if app_iter.__class__ is ReadOnlyFileBasedBuffer:
-                cl = self.content_length
-                size = app_iter.prepare(cl)
-                if size:
-                    if cl != size:
-                        if cl is not None:
-                            self.remove_content_length_header()
-                        self.content_length = size
-                    self.write(b'') # generate headers
-                    self.channel.write_soon(app_iter)
-                    return
+        if app_iter.__class__ is ReadOnlyFileBasedBuffer:
+            # NB: do not put this inside the below try: finally: which closes
+            # the app_iter; we need to defer closing the underlying file
+            cl = self.content_length
+            size = app_iter.prepare(cl)
+            if size:
+                if cl != size:
+                    if cl is not None:
+                        self.remove_content_length_header()
+                    self.content_length = size
+                self.write(b'') # generate headers
+                self.channel.write_soon(app_iter)
+                return
 
+        try:
             first_chunk_len = None
             for chunk in app_iter:
                 if first_chunk_len is None:
