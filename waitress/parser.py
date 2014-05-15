@@ -243,10 +243,10 @@ class HTTPRequestParser(object):
         else:
             return BytesIO()
 
-    def _close(self):
+    def close(self):
         body_rcv = self.body_rcv
         if body_rcv is not None:
-            body_rcv.getbuf()._close()
+            body_rcv.getbuf().close()
 
 def split_uri(uri):
     # urlsplit handles byte input by returning bytes on py3, so

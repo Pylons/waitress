@@ -105,7 +105,7 @@ class TestFileBasedBuffer(unittest.TestCase):
         inst.prune()
         self.assertTrue(inst.file is f)
 
-    def test__close(self):
+    def test_close(self):
         f = io.BytesIO()
         inst = self._makeOne(f)
         inst.close()
@@ -407,19 +407,19 @@ class TestOverflowableBuffer(unittest.TestCase):
         f = inst.getfile()
         self.assertEqual(f, buf)
 
-    def test__close_nobuf(self):
+    def test_close_nobuf(self):
         inst = self._makeOne()
         inst.buf = None
-        self.assertEqual(inst._close(), None) # doesnt raise
+        self.assertEqual(inst.close(), None) # doesnt raise
 
-    def test__close_withbuf(self):
+    def test_close_withbuf(self):
         class Buffer(object):
-            def _close(self):
+            def close(self):
                 self.closed = True
         buf = Buffer()
         inst = self._makeOne()
         inst.buf = buf
-        inst._close()
+        inst.close()
         self.assertTrue(buf.closed)
 
 class KindaFilelike(object):

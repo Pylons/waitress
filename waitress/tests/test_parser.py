@@ -201,15 +201,15 @@ foo: bar"""
         self.parser.parse_header(data)
         self.assertEqual(self.parser.connection_close, True)
 
-    def test__close_with_body_rcv(self):
+    def test_close_with_body_rcv(self):
         body_rcv = DummyBodyStream()
         self.parser.body_rcv = body_rcv
-        self.parser._close()
+        self.parser.close()
         self.assertTrue(body_rcv.closed)
 
-    def test__close_with_no_body_rcv(self):
+    def test_close_with_no_body_rcv(self):
         self.parser.body_rcv = None
-        self.parser._close() # doesn't raise
+        self.parser.close() # doesn't raise
 
 class Test_split_uri(unittest.TestCase):
 
@@ -407,5 +407,5 @@ class DummyBodyStream(object):
     def getbuf(self):
         return self
 
-    def _close(self):
+    def close(self):
         self.closed = True

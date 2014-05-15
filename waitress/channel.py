@@ -244,7 +244,7 @@ class HTTPChannel(logging_dispatcher, object):
                 if len(self.outbufs) > 1:
                     toclose = self.outbufs.pop(0)
                     try:
-                        toclose._close()
+                        toclose.close()
                     except:
                         self.logger.exception(
                             'Unexpected error when closing an outbuf')
@@ -275,7 +275,7 @@ class HTTPChannel(logging_dispatcher, object):
     def handle_close(self):
         for outbuf in self.outbufs:
             try:
-                outbuf._close()
+                outbuf.close()
             except:
                 self.logger.exception(
                     'Unknown exception while trying to close outbuf')
@@ -365,11 +365,11 @@ class HTTPChannel(logging_dispatcher, object):
                 if task.close_on_finish:
                     self.close_when_flushed = True
                     for request in self.requests:
-                        request._close()
+                        request.close()
                     self.requests = []
                 else:
                     request = self.requests.pop(0)
-                    request._close()
+                    request.close()
 
         self.force_flush = True
         self.server.pull_trigger()

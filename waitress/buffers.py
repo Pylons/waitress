@@ -104,13 +104,9 @@ class FileBasedBuffer(object):
         return self.file
 
     def close(self):
-        # named _close because ReadOnlyFileBasedBuffer is used as
-        # wsgi file.wrapper, and its protocol reserves "close"
         if hasattr(self.file, 'close'):
             self.file.close()
         self.remain = 0
-
-    _close = close
 
 class TempfileBasedBuffer(FileBasedBuffer):
 
@@ -296,7 +292,7 @@ class OverflowableBuffer(object):
             buf = self._create_buffer()
         return buf.getfile()
 
-    def _close(self):
+    def close(self):
         buf = self.buf
         if buf is not None:
-            buf._close()
+            buf.close()

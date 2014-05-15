@@ -261,7 +261,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.logger = DummyLogger()
         def doraise():
             raise NotImplementedError
-        inst.outbufs[0]._close = doraise
+        inst.outbufs[0].close = doraise
         result = inst._flush_some()
         self.assertEqual(result, True)
         self.assertEqual(buffer.skipped, 3)
@@ -298,7 +298,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         def doraise():
             raise NotImplementedError
-        inst.outbufs[0]._close = doraise
+        inst.outbufs[0].close = doraise
         inst.logger = DummyLogger()
         inst.handle_close()
         self.assertEqual(inst.connected, False)
@@ -636,7 +636,7 @@ class DummyBuffer(object):
     def __len__(self):
         return len(self.data)
 
-    def _close(self):
+    def close(self):
         self.closed = True
 
 class DummyAdjustments(object):
@@ -692,7 +692,7 @@ class DummyRequest(object):
     def __init__(self):
         self.headers = {}
 
-    def _close(self):
+    def close(self):
         self.closed = True
 
 class DummyLogger(object):
