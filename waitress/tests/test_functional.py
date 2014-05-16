@@ -38,7 +38,10 @@ class FixtureTcpWSGIServer(server.TcpWSGIServer):
         # Coverage doesn't see this as it's ran in a separate process.
         kw['port'] = 0 # Bind to any available port.
         super(FixtureTcpWSGIServer, self).__init__(application, **kw)
-        queue.put(self.socket.getsockname())
+        host, port = self.socket.getsockname()
+        if os.name == 'nt':
+            host = '127.0.0.1'
+        queue.put((host, port))
 
 class SubprocessTests(object):
 
