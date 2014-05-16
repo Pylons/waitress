@@ -393,7 +393,11 @@ class WSGITask(Task):
 
         if app_iter.__class__ is ReadOnlyFileBasedBuffer:
             # NB: do not put this inside the below try: finally: which closes
-            # the app_iter; we need to defer closing the underlying file
+            # the app_iter; we need to defer closing the underlying file.  It's
+            # intention that we don't want to call ``close`` here if the
+            # app_iter is a ROFBB; the buffer (and therefore the file) will
+            # eventually be closed within channel.py's _flush_some or
+            # handle_close instead.
             cl = self.content_length
             size = app_iter.prepare(cl)
             if size:

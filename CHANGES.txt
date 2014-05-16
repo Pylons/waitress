@@ -1,6 +1,13 @@
 Unreleased
 ----------
 
+- Give the WSGI app_iter generated when ``wsgi.file_wrapper`` is used
+  (ReadOnlyFileBasedBuffer) a ``close`` method.  Do not call ``close`` on an
+  instance of such a class when it's used as a WSGI app_iter, however.  This is
+  part of a fix which prevents a leakage of file descriptors; the other part of
+  the fix was in WebOb
+  (https://github.com/Pylons/webob/commit/951a41ce57bd853947f842028bccb500bd5237da).
+
 - Allow trusted proxies to override ``wsgi.url_scheme`` via a request header,
   ``X_FORWARDED_PROTO``.  Allows proxies which serve mixed HTTP / HTTPS
   requests to control signal which are served as HTTPS.  See
