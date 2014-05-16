@@ -188,7 +188,11 @@ def cleanup_unix_socket(path):
             raise # pragma: no cover
     else:
         if stat.S_ISSOCK(st.st_mode):
-            os.remove(path)
+            try:
+                os.remove(path)
+            except OSError: # pragma: no cover
+                # avoid race condition error during tests
+                pass
 
 class Error(object):
 
