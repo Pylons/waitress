@@ -4,7 +4,9 @@ Unreleased
 - Fix tests under Windows.  NB: to run tests under Windows, you cannot run
   "setup.py test" or "setup.py nosetests".  Instead you must run ``python.exe
   -c "import nose; nose.main()"``.  If you try to run the tests using the
-  normal method, each subprocess will attempt to run the test suite again.
+  normal method under Windows, each subprocess created by the test suite will
+  attempt to run the test suite again.  See
+  https://github.com/nose-devs/nose/issues/407 for more information.
 
 - Give the WSGI app_iter generated when ``wsgi.file_wrapper`` is used
   (ReadOnlyFileBasedBuffer) a ``close`` method.  Do not call ``close`` on an
