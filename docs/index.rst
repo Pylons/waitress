@@ -235,10 +235,10 @@ PasteDeploy-style configuration::
        paste_prefix
        myapp
 
-  [server:main]
-  use = egg:waitress#main
-  host = 127.0.0.1
-  port = 8080
+   [server:main]
+   use = egg:waitress#main
+   host = 127.0.0.1
+   port = 8080
 
 Note that you can also set ``PATH_INFO`` and ``SCRIPT_NAME`` using
 PrefixMiddleware too (its original purpose, really) instead of using Waitress'
