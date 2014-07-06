@@ -72,6 +72,7 @@ class Adjustments(object):
         ('asyncore_use_poll', asbool),
         ('unix_socket', str),
         ('unix_socket_perms', asoctal),
+        ('ipv6', asbool),
     )
 
     _param_map = dict(_params)
@@ -173,6 +174,9 @@ class Adjustments(object):
 
     # The asyncore.loop flag to use poll() instead of the default select().
     asyncore_use_poll = False
+
+    # Allow IPv6 addresses? If true, use host :: to bind to all addresses (similar to 0.0.0.0)
+    ipv6 = False
 
     def __init__(self, **kw):
         for k, v in kw.items():

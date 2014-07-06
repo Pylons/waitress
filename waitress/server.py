@@ -64,6 +64,9 @@ class BaseWSGIServer(logging_dispatcher, object):
             adj = Adjustments(**kw)
         self.application = application
         self.adj = adj
+        if self.adj.ipv6:
+            # If host is "0.0.0.0", maybe we should set it to "::" instead?
+            self.family = socket.AF_INET6
         self.trigger = trigger.trigger(map)
         if _dispatcher is None:
             _dispatcher = ThreadedTaskDispatcher()
@@ -74,7 +77,9 @@ class BaseWSGIServer(logging_dispatcher, object):
             self.create_socket(self.family, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind_server_socket()
-        self.effective_host, self.effective_port = self.getsockname()
+
+        # IPv6 additional parameters ignored: flowinfo, scopeid
+        self.effective_host, self.effective_port = self.getsockname()[:2]
         self.server_name = self.get_server_name(self.adj.host)
         self.active_channels = {}
         if _start:

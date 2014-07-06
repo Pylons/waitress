@@ -125,3 +125,8 @@ url_prefix
     to be the value passed minus any trailing slashes you add, and it will
     cause the ``PATH_INFO`` of any request which is prefixed with this value to
     be stripped of the prefix.  Default: the empty string.
+
+ipv6
+    Boolean: allow IPv6 network connections (address family AF_INET6). To bind
+    to all IPv6 and IPv4 addresses on this host, set ``host`` to ``::``.
+    Default: ``False``.
