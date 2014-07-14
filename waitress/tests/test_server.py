@@ -2,9 +2,11 @@ import errno
 import socket
 import unittest
 
+dummy_app = object()
+
 class TestWSGIServer(unittest.TestCase):
 
-    def _makeOne(self, application, host='127.0.0.1', port=0,
+    def _makeOne(self, application=dummy_app, host='127.0.0.1', port=0,
                  _dispatcher=None, adj=None, map=None, _start=True,
                  _sock=None, _server=None):
         from waitress.server import create_server
@@ -18,7 +20,7 @@ class TestWSGIServer(unittest.TestCase):
             _sock=_sock)
 
     def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
-                        port=0, app=None):
+                        port=0, app=dummy_app):
         sock = DummySock()
         task_dispatcher = DummyTaskDispatcher()
         map = {}
@@ -32,13 +34,17 @@ class TestWSGIServer(unittest.TestCase):
             _start=_start,
         )
 
+    def test_ctor_app_is_None(self):
+        self.assertRaises(ValueError, self._makeOneWithMap, app=None)
+
+
     def test_ctor_start_true(self):
         inst = self._makeOneWithMap(_start=True)
         self.assertEqual(inst.accepting, True)
         self.assertEqual(inst.socket.listened, 1024)
 
     def test_ctor_makes_dispatcher(self):
-        inst = self._makeOne(None, _start=False, map={})
+        inst = self._makeOne(_start=False, map={})
         self.assertEqual(inst.task_dispatcher.__class__.__name__,
                          'ThreadedTaskDispatcher')
 
@@ -198,7 +204,7 @@ if hasattr(socket, 'AF_UNIX'):
         def _makeOne(self, _start=True, _sock=None):
             from waitress.server import create_server
             return create_server(
-                None,
+                dummy_app,
                 map={},
                 _start=_start,
                 _sock=_sock,

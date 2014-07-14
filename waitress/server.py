@@ -36,6 +36,11 @@ def create_server(application,
         server = create_server(app)
         server.run()
     """
+    if application is None:
+        raise ValueError(
+            'The "app" passed to ``create_server`` was ``None``.  You forgot '
+            'to return a WSGI app within your application.'
+            )
     adj = Adjustments(**kw)
     if adj.unix_socket and hasattr(socket, 'AF_UNIX'):
         cls = UnixWSGIServer
