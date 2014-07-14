@@ -365,22 +365,23 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(inst.status, '200 OK')
         self.assertTrue(inst.channel.written)
 
-    def test_execute_app_calls_start_response_w_exc_info_incomplete(self):
+    def test_execute_app_calls_start_response_w_excinf_headers_unwritten(self):
         def app(environ, start_response):
             start_response('200 OK', [], [ValueError, None, None])
             return [b'a']
         inst = self._makeOne()
-        inst.complete = False
+        inst.wrote_header = False
         inst.channel.server.application = app
+        inst.response_headers = [('a', 'b')]
         inst.execute()
         self.assertTrue(inst.complete)
         self.assertEqual(inst.status, '200 OK')
         self.assertTrue(inst.channel.written)
+        self.assertFalse(('a','b') in inst.response_headers)
 
-    def test_execute_app_calls_start_response_w_header_written(self):
+    def test_execute_app_calls_start_response_w_excinf_headers_written(self):
         def app(environ, start_response):
             start_response('200 OK', [], [ValueError, ValueError(), None])
-            return [b'a']
         inst = self._makeOne()
         inst.complete = True
         inst.wrote_header = True

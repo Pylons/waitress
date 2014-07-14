@@ -7,6 +7,13 @@ Next release
   use-global-socket-map behavior back by passing ``asyncore.socket_map`` to the
   ``create_server`` function as the ``map`` argument.
 
+- Waitress violated PEP 3333 with respect to reraising an exception when
+  start_response was called with an ``exc_info`` argument.  It would reraise
+  the exception even if no data had been sent to the client.  It now only
+  reraises the exception if data has actually been sent to the client.  See
+  https://github.com/Pylons/waitress/pull/52 and
+  https://github.com/Pylons/waitress/issues/51
+
 0.8.9 (2014-05-16)
 ------------------
 
