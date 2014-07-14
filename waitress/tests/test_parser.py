@@ -249,6 +249,11 @@ class Test_split_uri(unittest.TestCase):
         self.assertEqual(self.proxy_scheme, 'https')
         self.assertEqual(self.proxy_netloc, 'localhost:8080')
 
+    def test_split_uri_unicode_error_raises_parsing_error(self):
+        # See https://github.com/Pylons/waitress/issues/64
+        from waitress.parser import ParsingError
+        self.assertRaises(ParsingError, self._callFUT, b'/\xd0')
+
 class Test_get_header_lines(unittest.TestCase):
 
     def _callFUT(self, data):
