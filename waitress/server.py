@@ -159,7 +159,7 @@ class BaseWSGIServer(logging_dispatcher, object):
                 use_poll=self.adj.asyncore_use_poll,
             )
         except (SystemExit, KeyboardInterrupt):
-            self.task_dispatcher.shutdown()
+            self.task_dispatcher.shutdown(timeout=self.adj.shutdown_timeout)
 
     def pull_trigger(self):
         self.trigger.pull_trigger()

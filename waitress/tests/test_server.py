@@ -5,7 +5,7 @@ import unittest
 class TestWSGIServer(unittest.TestCase):
 
     def _makeOne(self, application, host='127.0.0.1', port=0,
-                 _dispatcher=None, adj=None, map=None, _start=True,
+                 _dispatcher=None, adj={}, map=None, _start=True,
                  _sock=None, _server=None):
         from waitress.server import create_server
         return create_server(
@@ -15,9 +15,10 @@ class TestWSGIServer(unittest.TestCase):
             map=map,
             _dispatcher=_dispatcher,
             _start=_start,
-            _sock=_sock)
+            _sock=_sock,
+            **adj)
 
-    def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
+    def _makeOneWithMap(self, adj={}, _start=True, host='127.0.0.1',
                         port=0, app=None):
         sock = DummySock()
         task_dispatcher = DummyTaskDispatcher()
@@ -30,6 +31,7 @@ class TestWSGIServer(unittest.TestCase):
             _sock=sock,
             _dispatcher=task_dispatcher,
             _start=_start,
+            adj=adj
         )
 
     def test_ctor_start_true(self):
@@ -67,11 +69,12 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(result, 'localhost')
 
     def test_run(self):
-        inst = self._makeOneWithMap(_start=False)
+        inst = self._makeOneWithMap(_start=False, adj={"shutdown_timeout": 12})
         inst.asyncore = DummyAsyncore()
         inst.task_dispatcher = DummyTaskDispatcher()
         inst.run()
         self.assertTrue(inst.task_dispatcher.was_shutdown)
+        self.assertEqual(inst.task_dispatcher.was_shutdown_with_timeout, 12)
 
     def test_pull_trigger(self):
         inst = self._makeOneWithMap(_start=False)
@@ -285,8 +288,9 @@ class DummyTaskDispatcher(object):
     def add_task(self, task):
         self.tasks.append(task)
 
-    def shutdown(self):
+    def shutdown(self, timeout=5):
         self.was_shutdown = True
+        self.was_shutdown_with_timeout = timeout
 
 class DummyTask(object):
     serviced = False
