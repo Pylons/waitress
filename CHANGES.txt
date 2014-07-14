@@ -14,6 +14,8 @@ Next release
   https://github.com/Pylons/waitress/pull/52 and
   https://github.com/Pylons/waitress/issues/51
 
+- Add a ``docs`` section to tox.ini that, when run, ensures docs can be built.
+
 0.8.9 (2014-05-16)
 ------------------
 
