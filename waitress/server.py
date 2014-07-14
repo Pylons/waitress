@@ -62,6 +62,11 @@ class BaseWSGIServer(logging_dispatcher, object):
                  ):
         if adj is None:
             adj = Adjustments(**kw)
+        if map is None:
+            # use a nonglobal socket map by default to hopefully prevent
+            # conflicts with apps and libs that use the asyncore global socket
+            # map ala https://github.com/Pylons/waitress/issues/63
+            map = {}
         self.application = application
         self.adj = adj
         self.trigger = trigger.trigger(map)

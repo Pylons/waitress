@@ -1,3 +1,12 @@
+Next release
+------------
+
+- Use a nonglobal asyncore socket map by default to hopefully prevent conflicts
+  with apps and libs that use the asyncore global socket map ala
+  https://github.com/Pylons/waitress/issues/63.  You can get the old
+  use-global-socket-map behavior back by passing ``asyncore.socket_map`` to the
+  ``create_server`` function as the ``map`` argument.
+
 0.8.9 (2014-05-16)
 ------------------
 
