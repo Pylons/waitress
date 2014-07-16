@@ -18,8 +18,6 @@ import os.path
 import socket
 import time
 import signal
-import sys
-import traceback
 
 from waitress import trigger
 from waitress.adjustments import Adjustments
@@ -121,7 +119,8 @@ class BaseWSGIServer(logging_dispatcher, object):
         if now >= self.next_channel_cleanup:
             self.next_channel_cleanup = now + self.adj.cleanup_interval
             self.maintenance(now)
-        return (self.accepting and not self.shutdown_gracefully and len(self._map) < self.adj.connection_limit)
+        return (self.accepting and not self.shutdown_gracefully
+            and len(self._map) < self.adj.connection_limit)
 
     def writable(self):
         return False

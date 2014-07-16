@@ -83,6 +83,7 @@ class HTTPChannel(logging_dispatcher, object):
         self.addr = addr
 
         # Keep track of request keep-alive if exists
+        # This attribute can be modified within task.py
         self.is_keepalive = False
 
     def any_outbuf_has_data(self):
@@ -277,8 +278,9 @@ class HTTPChannel(logging_dispatcher, object):
         return False
 
     def check_shutdown_gracefully(self):
-        if self.server.shutdown_gracefully and self.is_keepalive and \
-            not self.request and not self.requests and not self.any_outbuf_has_data():
+        if (self.server.shutdown_gracefully and self.is_keepalive
+            and not self.request and not self.requests
+            and not self.any_outbuf_has_data()):
             self.will_close = True
 
     def handle_close(self):
@@ -290,7 +292,7 @@ class HTTPChannel(logging_dispatcher, object):
                     'Unknown exception while trying to close outbuf')
         self.connected = False
         asyncore.dispatcher.close(self)
-        self.server.on_channel_close(self)
+        self.server.check_shutdown_gracefully(self)
 
     def add_channel(self, map=None):
         """See asyncore.dispatcher

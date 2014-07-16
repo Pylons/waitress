@@ -196,7 +196,6 @@ class TestWSGIServer(unittest.TestCase):
     def test_exits_on_sighup(self):
         from waitress.server import WSGIServer, TcpWSGIServer
         inst = WSGIServer(None)
-        import os, signal, asyncore
         with self.assertRaises(asyncore.ExitNow):
             os.kill(os.getpid(),signal.SIGHUP)
 

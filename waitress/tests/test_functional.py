@@ -141,7 +141,7 @@ class GracefulShutdownThreadTests(TcpTests, unittest.TestCase):
         getline = os.path.join(here, 'fixtureapps', 'getline.py')
         cmd = [self.exe, getline, 'http://%s:%d/sleepy' % self.bound_to]
         r, w = os.pipe()
-        process = subprocess.Popen(cmd, stdout=w)
+        subprocess.Popen(cmd, stdout=w)
         # Wait for the request to be lauched
         time.sleep(1)
         # Send sighup
