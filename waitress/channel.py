@@ -292,7 +292,7 @@ class HTTPChannel(logging_dispatcher, object):
                     'Unknown exception while trying to close outbuf')
         self.connected = False
         asyncore.dispatcher.close(self)
-        self.server.check_shutdown_gracefully(self)
+        self.server.on_channel_close(self)
 
     def add_channel(self, map=None):
         """See asyncore.dispatcher
