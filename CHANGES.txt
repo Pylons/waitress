@@ -1,6 +1,8 @@
 Next release
 ------------
 
+- Add support for Python 3.4 and PyPy3.
+
 - Use a nonglobal asyncore socket map by default to hopefully prevent conflicts
   with apps and libs that use the asyncore global socket map ala
   https://github.com/Pylons/waitress/issues/63.  You can get the old
