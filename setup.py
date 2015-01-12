@@ -66,9 +66,6 @@ setup(
     ],
     url='https://github.com/Pylons/waitress',
     packages=find_packages(),
-    install_requires=[
-        'setuptools',
-    ],
     extras_require={
         'testing': testing_extras,
         'docs': docs_extras,
