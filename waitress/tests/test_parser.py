@@ -396,8 +396,23 @@ Hello.
         self.assertEqual(self.parser.headers, {
             'CONTENT_LENGTH': '7',
             'X_FORWARDED_FOR':
-                '10.11.12.13, unknown,127.0.0.1, 255.255.255.255',
+                '10.11.12.13, unknown,127.0.0.1',
         })
+
+    def testSpoofedHeadersDropped(self):
+        data = b"""\
+GET /foobar HTTP/8.4
+x-auth_user: bob
+content-length: 7
+
+Hello.
+"""
+        self.feed(data)
+        self.assertTrue(self.parser.completed)
+        self.assertEqual(self.parser.headers, {
+            'CONTENT_LENGTH': '7',
+        })
+
 
 class DummyBodyStream(object):
 
