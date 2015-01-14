@@ -182,7 +182,7 @@ class HTTPRequestParser(object):
             index = line.find(b':')
             if index > 0:
                 key = line[:index]
-                if '_' in key:
+                if b'_' in key:
                     continue
                 value = line[index + 1:].strip()
                 key1 = tostr(key.upper().replace(b'-', b'_'))
