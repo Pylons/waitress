@@ -1,6 +1,12 @@
 Next release
 ------------
 
+- FileBasedBuffer and more important ReadOnlyFileBasedBuffer no longer report
+  False when tested with bool(), instead always returning True, and becoming
+  more iterator like.
+  See: https://github.com/Pylons/waitress/pull/82 and
+  https://github.com/Pylons/waitress/issues/76
+
 - Call prune() on the output buffer at the end of a request so that it doesn't
   continue to grow without bounds. See
   https://github.com/Pylons/waitress/issues/111 for more information.
