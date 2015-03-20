@@ -95,12 +95,12 @@ influence the logger level and output stream using the normal Python
 
 Within a PasteDeploy configuration file, you can use the normal Python
 ``logging`` module ``.ini`` file format to change similar Waitress logging
-options.  For example::
+options.  For example:
 
 .. code-block:: ini
 
-  [logger_waitress]
-  level = INFO
+   [logger_waitress]
+   level = INFO
 
 Using Behind a Reverse Proxy
 ----------------------------
