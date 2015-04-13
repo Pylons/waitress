@@ -23,7 +23,8 @@ Next release
   occuring during runtime.  See https://github.com/Pylons/waitress/pull/60
 
 - Fix parsing of multi-line (folded) headers.
-  See https://github.com/Pylons/waitress/issues/53
+  See https://github.com/Pylons/waitress/issues/53 and
+  https://github.com/Pylons/waitress/pull/90
 
 0.8.9 (2014-05-16)
 ------------------
