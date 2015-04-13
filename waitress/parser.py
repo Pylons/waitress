@@ -271,7 +271,7 @@ def get_header_lines(header):
             if not r:
                 # http://corte.si/posts/code/pathod/pythonservers/index.html
                 raise ParsingError('Malformed header line "%s"' % tostr(line))
-            r[-1] = r[-1] + line[1:]
+            r[-1] += line
         else:
             r.append(line)
     return r
