@@ -259,9 +259,21 @@ class Test_get_header_lines(unittest.TestCase):
         result = self._callFUT(b'slam\nslim')
         self.assertEqual(result, [b'slam', b'slim'])
 
+    def test_get_header_lines_folded(self):
+        # From RFC2616:
+        # HTTP/1.1 header field values can be folded onto multiple lines if the
+        # continuation line begins with a space or horizontal tab. All linear
+        # white space, including folding, has the same semantics as SP. A
+        # recipient MAY replace any linear white space with a single SP before
+        # interpreting the field value or forwarding the message downstream.
+
+        # We are just preserving the whitespace that indicates folding.
+        result = self._callFUT(b'slim\n slam')
+        self.assertEqual(result, [b'slim slam'])
+
     def test_get_header_lines_tabbed(self):
         result = self._callFUT(b'slam\n\tslim')
-        self.assertEqual(result, [b'slamslim'])
+        self.assertEqual(result, [b'slam\tslim'])
 
     def test_get_header_lines_malformed(self):
         # http://corte.si/posts/code/pathod/pythonservers/index.html
