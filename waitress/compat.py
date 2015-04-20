@@ -65,11 +65,6 @@ except ImportError: # pragma: no cover
         Empty,
     )
 
-try:
-    import thread
-except ImportError: # pragma: no cover
-    import _thread as thread
-
 if PY3: # pragma: no cover
     import builtins
     exec_ = getattr(builtins, "exec")
