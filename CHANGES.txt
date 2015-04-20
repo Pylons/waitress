@@ -26,6 +26,9 @@ Next release
   See https://github.com/Pylons/waitress/issues/53 and
   https://github.com/Pylons/waitress/pull/90
 
+- Switch from the low level Python thread/_thread module to the threading
+  module.
+
 0.8.9 (2014-05-16)
 ------------------
 

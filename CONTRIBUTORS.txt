@@ -122,3 +122,5 @@ Contributors
 - Adam Groszer, 2013/08/15
 
 - David Glick, 2015/04/13
+
+- Shane Hathaway, 2015-04-20
