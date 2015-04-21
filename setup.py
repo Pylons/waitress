@@ -25,6 +25,7 @@ except IOError:
 docs_extras = [
     'Sphinx',
     'docutils',
+    'pylons-sphinx-themes >= 0.3',
 ]
 
 testing_extras = [
