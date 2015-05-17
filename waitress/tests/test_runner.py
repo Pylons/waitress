@@ -106,7 +106,7 @@ class Test_run(unittest.TestCase):
             (
                 r"There was an exception \(ImportError\) importing your "
                 "module.\n\nIt had these arguments: \n"
-                "1. No module named 'nonexistent'"
+                "1. No module named '?nonexistent'?"
             )
         )
 
