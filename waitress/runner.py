@@ -171,17 +171,23 @@ def show_help(stream, name, error=None): # pragma: no cover
         print('Error: {0}\n'.format(error), file=stream)
     print(HELP.format(name), file=stream)
 
-
-def show_exception(stream): # pragma: no cover
-    exc_type, exc_value, exc_traceback = sys.exc_info()
+def show_exception(stream):
+    exc_type, exc_value = sys.exc_info()[:2]
+    args = getattr(exc_value, 'args', None)
     print(
-        'There was an exception ({0}) getting your module: "{1}" \n'.format(
-            exc_type,
-            exc_value
+        (
+            'There was an exception ({0}) importing your module.\n'
+        ).format(
+            exc_type.__name__,
         ),
         file=stream
     )
-
+    if args:
+        print('It had these arguments: ', file=stream)
+        for idx, arg in enumerate(args, start=1):
+            print('{0}. {1}\n'.format(idx, arg), file=stream)
+    else:
+        print('It had no arguments.', file=stream)
 
 def run(argv=sys.argv, _serve=serve):
     """Command line runner."""
