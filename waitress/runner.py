@@ -171,6 +171,18 @@ def show_help(stream, name, error=None): # pragma: no cover
         print('Error: {0}\n'.format(error), file=stream)
     print(HELP.format(name), file=stream)
 
+
+def show_exception(stream): # pragma: no cover
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    print(
+        'There was an exception ({0}) getting your module: "{1}" \n'.format(
+            exc_type,
+            exc_value
+        ),
+        file=stream
+    )
+
+
 def run(argv=sys.argv, _serve=serve):
     """Command line runner."""
     name = os.path.basename(argv[0])
@@ -193,6 +205,7 @@ def run(argv=sys.argv, _serve=serve):
         module, obj_name = match(args[0])
     except ValueError as exc:
         show_help(sys.stderr, name, str(exc))
+        show_exception(sys.stderr)
         return 1
 
     # Add the current directory onto sys.path
@@ -203,9 +216,11 @@ def run(argv=sys.argv, _serve=serve):
         app = resolve(module, obj_name)
     except ImportError:
         show_help(sys.stderr, name, "Bad module '{0}'".format(module))
+        show_exception(sys.stderr)
         return 1
     except AttributeError:
         show_help(sys.stderr, name, "Bad object name '{0}'".format(obj_name))
+        show_exception(sys.stderr)
         return 1
     if kw['call']:
         app = app()
