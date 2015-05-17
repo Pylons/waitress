@@ -100,6 +100,16 @@ class Test_run(unittest.TestCase):
             1,
             "^Error: Bad module 'nonexistent'")
 
+        self.match_output(
+            ['nonexistent:a'],
+            1,
+            (
+                r"There was an exception \(ImportError\) importing your "
+                "module.\n\nIt had these arguments: \n"
+                "1. No module named 'nonexistent'"
+            )
+        )
+
     def test_cwd_added_to_path(self):
         def null_serve(app, **kw):
             pass
@@ -146,6 +156,43 @@ class Test_run(unittest.TestCase):
             'waitress.tests.fixtureapps.runner:returns_app',
         ]
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
+
+class Test_helper(unittest.TestCase):
+
+    def test_exception_logging(self):
+        from waitress.runner import show_exception
+
+        regex = (
+            r"There was an exception \(ImportError\) importing your module."
+            r"\n\nIt had these arguments: \n1. My reason"
+        )
+
+        with capture() as captured:
+            try:
+                raise ImportError("My reason")
+            except ImportError:
+                self.assertEqual(show_exception(sys.stderr), None)
+            self.assertRegexpMatches(
+                captured.getvalue(),
+                regex
+            )
+        captured.close()
+
+        regex = (
+            r"There was an exception \(ImportError\) importing your module."
+            r"\n\nIt had no arguments."
+        )
+
+        with capture() as captured:
+            try:
+                raise ImportError
+            except ImportError:
+                self.assertEqual(show_exception(sys.stderr), None)
+            self.assertRegexpMatches(
+                captured.getvalue(),
+                regex
+            )
+        captured.close()
 
 @contextlib.contextmanager
 def capture():
