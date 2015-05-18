@@ -29,6 +29,8 @@ Next release
 - Switch from the low level Python thread/_thread module to the threading
   module.
 
+- Improved exception information should module import go awry.
+
 0.8.9 (2014-05-16)
 ------------------
 
