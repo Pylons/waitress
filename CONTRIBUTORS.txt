@@ -126,3 +126,5 @@ Contributors
 - Shane Hathaway, 2015-04-20
 
 - Steve Piercy, 2015-04-21
+
+- Ben Warren, 2015-05-17
