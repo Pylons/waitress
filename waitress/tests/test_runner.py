@@ -42,7 +42,7 @@ class Test_resolve(unittest.TestCase):
     def test_nonexistent_function(self):
         self.assertRaisesRegexp(
             AttributeError,
-            r"^'module' object has no attribute 'nonexistent_function'$",
+            r"has no attribute 'nonexistent_function'",
             runner.resolve, 'os.path', 'nonexistent_function')
 
     def test_simple_happy_path(self):

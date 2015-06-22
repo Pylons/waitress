@@ -1,7 +1,7 @@
 Next release
 ------------
 
-- Add support for Python 3.4 and PyPy3.
+- Add support for Python 3.4, 3.5b2, and PyPy3.
 
 - Use a nonglobal asyncore socket map by default, trying to prevent conflicts
   with apps and libs that use the asyncore global socket map ala

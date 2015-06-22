@@ -33,7 +33,7 @@ def profile(cmd, globals, locals, sort_order, callers): # pragma: no cover
         stats = pstats.Stats(fn)
         stats.strip_dirs()
         # calls,time,cumulative and cumulative,calls,time are useful
-        stats.sort_stats(*sort_order or ('cumulative', 'calls', 'time'))
+        stats.sort_stats(*(sort_order or ('cumulative', 'calls', 'time')))
         if callers:
             stats.print_callers(.3)
         else:
