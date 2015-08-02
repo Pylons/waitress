@@ -13,6 +13,11 @@ host
 port
     TCP port (integer) on which to listen, default ``8080``
 
+sock
+    a pre-created socket object to accept connections on. If passed, ``host``,
+    ``port`` or ``unix_socket`` arguments are ignored. Useful for socket
+    activated applications.
+
 unix_socket
     Path of Unix socket (string), default is ``None``. If a socket path is
     specified, a Unix domain socket is made instead of the usual inet domain
