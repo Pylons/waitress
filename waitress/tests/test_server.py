@@ -243,7 +243,7 @@ if hasattr(socket, 'AF_UNIX'):
                 [(inst, client, ('localhost', None), inst.adj)]
             )
 
-class DummySock(object):
+class DummySock(socket.socket):
     accepted = False
     blocking = False
     family = socket.AF_INET
