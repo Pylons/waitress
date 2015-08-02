@@ -22,6 +22,7 @@ class TestWSGIServer(unittest.TestCase):
     def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
                         port=0, app=dummy_app):
         sock = DummySock()
+        sock.bind((host, port))
         task_dispatcher = DummyTaskDispatcher()
         map = {}
         return self._makeOne(

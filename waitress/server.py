@@ -82,8 +82,8 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.asyncore.dispatcher.__init__(self, _sock, map=map)
         if _sock is None:
             self.create_socket(self.family, socket.SOCK_STREAM)
-        self.set_reuse_addr()
-        self.bind_server_socket()
+            self.set_reuse_addr()
+            self.bind_server_socket()
         self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.adj.host)
         self.active_channels = {}
