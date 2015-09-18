@@ -249,6 +249,8 @@ class HTTPChannel(logging_dispatcher, object):
                             'Unexpected error when closing an outbuf')
                     continue # pragma: no cover (coverage bug, it is hit)
                 else:
+                    if hasattr(outbuf, 'prune'):
+                        outbuf.prune()
                     dobreak = True
 
             while outbuflen > 0:
