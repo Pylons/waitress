@@ -488,7 +488,7 @@ class WSGITask(Task):
         host = environ['REMOTE_ADDR'] = channel.addr[0]
 
         headers = dict(request.headers)
-        if host == server.adj.trusted_proxy:
+        if server.adj.trusted_proxy == '*' or host == server.adj.trusted_proxy:
             wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO',
                                           request.url_scheme)
         else:
