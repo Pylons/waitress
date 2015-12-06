@@ -17,6 +17,8 @@ import sys
 import threading
 import time
 
+from ipaddress import ip_address, ip_network
+
 from waitress.buffers import ReadOnlyFileBasedBuffer
 
 from waitress.compat import (
@@ -488,11 +490,14 @@ class WSGITask(Task):
         host = environ['REMOTE_ADDR'] = channel.addr[0]
 
         headers = dict(request.headers)
-        if server.adj.trusted_proxy == '*' or host == server.adj.trusted_proxy:
-            wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO',
-                                          request.url_scheme)
-        else:
-            wsgi_url_scheme = request.url_scheme
+        wsgi_url_scheme = request.url_scheme
+        if server.adj.trusted_proxy:
+            net_mask = ip_network(u'%s' % server.adj.trusted_proxy)
+            ip_host = ip_address(u'%s' % host)
+            if ip_host in net_mask:
+                wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO',
+                                              request.url_scheme)
+
         if wsgi_url_scheme not in ('http', 'https'):
             raise ValueError('Invalid X_FORWARDED_PROTO value')
         for key, value in headers.items():
