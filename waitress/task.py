@@ -12,6 +12,8 @@
 #
 ##############################################################################
 
+from __future__ import unicode_literals
+
 import socket
 import sys
 import threading
@@ -492,8 +494,8 @@ class WSGITask(Task):
         headers = dict(request.headers)
         wsgi_url_scheme = request.url_scheme
         if server.adj.trusted_proxy:
-            net_mask = ip_network(u'{0}'.format(server.adj.trusted_proxy))
-            ip_host = ip_address(u'{0}'.format(host))
+            net_mask = ip_network('{0}'.format(server.adj.trusted_proxy))
+            ip_host = ip_address('{0}'.format(host))
             if ip_host in net_mask:
                 wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO',
                                               request.url_scheme)
