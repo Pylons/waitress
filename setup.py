@@ -74,7 +74,7 @@ setup(
         'docs': docs_extras,
     },
     install_requires=[
-        'ipaddress>=1.0,<1.1',
+        'ipaddress',
     ],
     include_package_data=True,
     test_suite='waitress',
