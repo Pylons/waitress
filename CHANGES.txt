@@ -1,6 +1,8 @@
 Next release
 ------------
 
+- Python 3.2 is no longer supported by Waitress.
+
 - FileBasedBuffer and more important ReadOnlyFileBasedBuffer no longer report
   False when tested with bool(), instead always returning True, and becoming
   more iterator like.
