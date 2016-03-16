@@ -371,6 +371,10 @@ class WSGITask(Task):
                     raise AssertionError(
                         'Header value %r is not a string in %r' % (v, (k, v))
                     )
+
+                if '\n' in v or '\r' in v:
+                    raise ValueError("carriage return/line "
+                                     "feed character present in header value")
                 kl = k.lower()
                 if kl == 'content-length':
                     self.content_length = int(v)

@@ -409,6 +409,13 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         self.assertRaises(AssertionError, inst.execute)
 
+    def test_execute_bad_header_value_control_characters(self):
+        def app(environ, start_response):
+            start_response('200 OK', [('a', '\n')])
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        self.assertRaises(ValueError, inst.execute)
+
     def test_preserve_header_value_order(self):
         def app(environ, start_response):
             write = start_response('200 OK', [('C', 'b'), ('A', 'b'), ('A', 'a')])
