@@ -9,3 +9,5 @@ waitress/coverage.xml
 dist/
 keep/
 coverage.xml
+nosetests*.xml
+py*-cover.xml
