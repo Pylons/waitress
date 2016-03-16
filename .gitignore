@@ -8,6 +8,7 @@ nosetests.xml
 waitress/coverage.xml
 dist/
 keep/
+build/
 coverage.xml
 nosetests*.xml
 py*-cover.xml
