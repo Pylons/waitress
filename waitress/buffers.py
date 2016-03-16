@@ -44,7 +44,7 @@ class FileBasedBuffer(object):
         return self.remain
 
     def __nonzero__(self):
-        return self.remain > 0
+        return True
 
     __bool__ = __nonzero__ # py3
 

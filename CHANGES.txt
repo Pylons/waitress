@@ -1,6 +1,12 @@
 Next release
 ------------
 
+- FileBasedBuffer and more important ReadOnlyFileBasedBuffer no longer report
+  False when tested with bool(), instead always returning True, and becoming
+  more iterator like.
+  See: https://github.com/Pylons/waitress/pull/82 and
+  https://github.com/Pylons/waitress/issues/76
+
 - Waitress will no longer accept headers with newline/carriage returns in them,
   thereby disallowing HTTP Response Splitting. See
   https://github.com/Pylons/waitress/issues/117 for more information, as well

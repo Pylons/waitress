@@ -31,7 +31,7 @@ class TestFileBasedBuffer(unittest.TestCase):
         inst.remain = 10
         self.assertEqual(bool(inst), True)
         inst.remain = 0
-        self.assertEqual(bool(inst), False)
+        self.assertEqual(bool(inst), True)
 
     def test_append(self):
         f = io.BytesIO(b'data')
