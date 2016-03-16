@@ -1,5 +1,5 @@
-Next release
-------------
+0.8.11b0 (2016-03-15)
+---------------------
 
 - Python 3.2 is no longer supported by Waitress.
 
