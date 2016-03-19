@@ -9,10 +9,11 @@
   See: https://github.com/Pylons/waitress/pull/82 and
   https://github.com/Pylons/waitress/issues/76
 
-- Waitress will no longer accept headers with newline/carriage returns in them,
-  thereby disallowing HTTP Response Splitting. See
-  https://github.com/Pylons/waitress/issues/117 for more information, as well
-  as https://www.owasp.org/index.php/HTTP_Response_Splitting.
+- Waitress will no longer accept headers or status lines with
+  newline/carriage returns in them, thereby disallowing HTTP Response
+  Splitting. See https://github.com/Pylons/waitress/issues/117 for
+  more information, as well as
+  https://www.owasp.org/index.php/HTTP_Response_Splitting.
 
 - Call prune() on the output buffer at the end of a request so that it doesn't
   continue to grow without bounds. See
