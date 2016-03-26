@@ -358,6 +358,9 @@ class WSGITask(Task):
 
             if not status.__class__ is str:
                 raise AssertionError('status %s is not a string' % status)
+            if '\n' in status or '\r' in status:
+                raise ValueError("carriage return/line "
+                                 "feed character present in status")
 
             self.status = status
 
@@ -375,6 +378,10 @@ class WSGITask(Task):
                 if '\n' in v or '\r' in v:
                     raise ValueError("carriage return/line "
                                      "feed character present in header value")
+                if '\n' in k or '\r' in k:
+                    raise ValueError("carriage return/line "
+                                     "feed character present in header name")
+
                 kl = k.lower()
                 if kl == 'content-length':
                     self.content_length = int(v)
