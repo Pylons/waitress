@@ -1,3 +1,11 @@
+0.9.0b1 (2016-04-09)
+--------------------
+
+- Building on the changes made in pull request 117, add in checking for line
+  feed/carriage return HTTP Response Splitting in the status line, as well as
+  the key of a header. See https://github.com/Pylons/waitress/pull/124 and
+  https://github.com/Pylons/waitress/issues/122.
+
 0.9.0b0 (2016-03-15)
 --------------------
 
