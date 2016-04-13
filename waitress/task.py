@@ -31,6 +31,12 @@ from waitress.utilities import (
     logger,
 )
 
+try:
+      basestring
+except NameError:
+      basestring = (str, bytes)
+
+
 rename_headers = {  # or keep them without the HTTP_ prefix added
     'CONTENT_LENGTH': 'CONTENT_LENGTH',
     'CONTENT_TYPE': 'CONTENT_TYPE',
@@ -366,11 +372,11 @@ class WSGITask(Task):
 
             # Prepare the headers for output
             for k, v in headers:
-                if not k.__class__ is str:
+                if not isinstance(k, basestring):
                     raise AssertionError(
                         'Header name %r is not a string in %r' % (k, (k, v))
                     )
-                if not v.__class__ is str:
+                if not isinstance(v, basestring):
                     raise AssertionError(
                         'Header value %r is not a string in %r' % (v, (k, v))
                     )
