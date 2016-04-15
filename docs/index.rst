@@ -282,6 +282,7 @@ Change History
 --------------
 
 .. include:: ../CHANGES.txt
+.. include:: ../HISTORY.txt
 
 Known Issues
 ------------
