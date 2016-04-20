@@ -99,6 +99,21 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
 
+    def test_asyncore_poller_vars(self):
+        inst = self._makeOne(
+            host='host', port='8080', threads='5',
+            url_scheme='https', backlog='20', recv_bytes='200',
+            asyncore_poller='select')
+
+        self.assertEqual(inst.asyncore_poller, 'select')
+
+        inst2 = self._makeOne(
+            host='host', port='8080', threads='5',
+            url_scheme='https', backlog='20', recv_bytes='200',
+            asyncore_poller='epoll')
+
+        self.assertEqual(inst2.asyncore_poller, 'epoll')
+
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
 

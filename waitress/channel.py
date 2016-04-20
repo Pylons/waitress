@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import asyncore
+import waitress.asyncore_epoll as asyncore
 import socket
 import threading
 import time
