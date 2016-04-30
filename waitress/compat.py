@@ -41,6 +41,11 @@ def text_(s, encoding='latin-1', errors='strict'):
     return s # pragma: no cover
 
 if PY3: # pragma: no cover
+    def tounicode(s):
+        if isinstance(s, binary_type):
+            return s.decode('latin-1')
+        return s
+
     def tostr(s):
         if isinstance(s, text_type):
             s = s.encode('latin-1')
@@ -49,6 +54,7 @@ if PY3: # pragma: no cover
     def tobytes(s):
         return bytes(s, 'latin-1')
 else:
+    tounicode = unicode
     tostr = str
 
     def tobytes(s):

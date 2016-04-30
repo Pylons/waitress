@@ -33,8 +33,14 @@ testing_extras = [
     'coverage',
 ]
 
+install_requires = []
+
 if sys.version_info[:2] == (2, 6):
     testing_extras.append('unittest2')
+
+if sys.version_info[:2] < (3, 3):
+    # the ipaddress package is part of Python 3.3+ standard librairies
+    install_requires.append('ipaddress')
 
 setup(
     name='waitress',
@@ -72,6 +78,7 @@ setup(
         'testing': testing_extras,
         'docs': docs_extras,
     },
+    install_requires=install_requires,
     include_package_data=True,
     test_suite='waitress',
     zip_safe=False,
