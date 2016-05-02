@@ -7,21 +7,23 @@ dummy_app = object()
 class TestWSGIServer(unittest.TestCase):
 
     def _makeOne(self, application=dummy_app, host='127.0.0.1', port=0,
-                 _dispatcher=None, adj=None, map=None, _start=True,
-                 _sock=None, _server=None):
+                 sock=None, _dispatcher=None, adj=None, map=None, _start=True,
+                 _server=None):
         from waitress.server import create_server
         return create_server(
             application,
             host=host,
             port=port,
+            sock=sock,
             map=map,
             _dispatcher=_dispatcher,
             _start=_start,
-            _sock=_sock)
+        )
 
     def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
                         port=0, app=dummy_app):
         sock = DummySock()
+        sock.bind((host, port))
         task_dispatcher = DummyTaskDispatcher()
         map = {}
         return self._makeOne(
@@ -29,7 +31,7 @@ class TestWSGIServer(unittest.TestCase):
             host=host,
             port=port,
             map=map,
-            _sock=sock,
+            sock=sock,
             _dispatcher=task_dispatcher,
             _start=_start,
         )
@@ -201,13 +203,13 @@ if hasattr(socket, 'AF_UNIX'):
     class TestUnixWSGIServer(unittest.TestCase):
         unix_socket = '/tmp/waitress.test.sock'
 
-        def _makeOne(self, _start=True, _sock=None):
+        def _makeOne(self, _start=True, sock=None):
             from waitress.server import create_server
             return create_server(
                 dummy_app,
                 map={},
                 _start=_start,
-                _sock=_sock,
+                sock=sock,
                 _dispatcher=DummyTaskDispatcher(),
                 unix_socket=self.unix_socket,
                 unix_socket_perms='600'
@@ -229,7 +231,7 @@ if hasattr(socket, 'AF_UNIX'):
             # by inet sockets.
             client = self._makeDummy()
             listen = self._makeDummy(acceptresult=(client, None))
-            inst = self._makeOne(_sock=listen)
+            inst = self._makeOne(sock=listen)
             self.assertEqual(inst.accepting, True)
             self.assertEqual(inst.socket.listened, 1024)
             L = []
@@ -242,7 +244,7 @@ if hasattr(socket, 'AF_UNIX'):
                 [(inst, client, ('localhost', None), inst.adj)]
             )
 
-class DummySock(object):
+class DummySock(socket.socket):
     accepted = False
     blocking = False
     family = socket.AF_INET

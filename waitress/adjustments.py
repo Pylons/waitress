@@ -36,6 +36,15 @@ def asoctal(s):
     """Convert the given octal string to an actual number."""
     return int(s, 8)
 
+def assocket(s):
+    """Ensure a valid socket object was passed and return it as is."""
+
+    if s and not isinstance(s, socket.socket):
+        name = type(s).__name__
+        raise TypeError('a %s was passed, but a socket is expected' % name)
+
+    return s
+
 def slash_fixed_str(s):
     s = s.strip()
     if s:
@@ -51,6 +60,7 @@ class Adjustments(object):
     _params = (
         ('host', str),
         ('port', int),
+        ('sock', assocket),
         ('threads', int),
         ('trusted_proxy', str),
         ('url_scheme', str),
@@ -81,6 +91,9 @@ class Adjustments(object):
 
     # TCP port to listen on
     port = 8080
+
+    # a pre-created socket to accept on
+    sock = None
 
     # mumber of threads available for tasks
     threads = 4

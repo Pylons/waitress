@@ -27,7 +27,6 @@ from waitress.utilities import cleanup_unix_socket, logging_dispatcher
 def create_server(application,
                   map=None,
                   _start=True,      # test shim
-                  _sock=None,       # test shim
                   _dispatcher=None, # test shim
                   **kw              # adjustments
                   ):
@@ -46,7 +45,7 @@ def create_server(application,
         cls = UnixWSGIServer
     else:
         cls = TcpWSGIServer
-    return cls(application, map, _start, _sock, _dispatcher, adj)
+    return cls(application, map, _start, _dispatcher, adj)
 
 class BaseWSGIServer(logging_dispatcher, object):
 
@@ -60,7 +59,6 @@ class BaseWSGIServer(logging_dispatcher, object):
                  application,
                  map=None,
                  _start=True,      # test shim
-                 _sock=None,       # test shim
                  _dispatcher=None, # test shim
                  adj=None,         # adjustments
                  **kw
@@ -79,11 +77,15 @@ class BaseWSGIServer(logging_dispatcher, object):
             _dispatcher = ThreadedTaskDispatcher()
             _dispatcher.set_thread_count(self.adj.threads)
         self.task_dispatcher = _dispatcher
-        self.asyncore.dispatcher.__init__(self, _sock, map=map)
-        if _sock is None:
+        self.asyncore.dispatcher.__init__(self, self.adj.sock, map=map)
+
+        # only create and bound a socket, if it hasn't been pre-created in
+        # advance (e.g. in a socket activated application)
+        if self.adj.sock is None:
             self.create_socket(self.family, socket.SOCK_STREAM)
-        self.set_reuse_addr()
-        self.bind_server_socket()
+            self.set_reuse_addr()
+            self.bind_server_socket()
+
         self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.adj.host)
         self.active_channels = {}
