@@ -17,6 +17,8 @@ import getopt
 import socket
 import sys
 
+from waitress.compat import string_types
+
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
 
 def asbool(s):
@@ -35,6 +37,22 @@ def asbool(s):
 def asoctal(s):
     """Convert the given octal string to an actual number."""
     return int(s, 8)
+
+def aslist_cronly(value):
+    if isinstance(value, string_types):
+        value = filter(None, [x.strip() for x in value.splitlines()])
+    return list(value)
+
+def aslist(value):
+    """ Return a list of strings, separating the input based on newlines
+    and, if flatten=True (the default), also split on spaces within
+    each line."""
+    values = aslist_cronly(value)
+    result = []
+    for value in values:
+        subvalues = value.split()
+        result.extend(subvalues)
+    return result
 
 def slash_fixed_str(s):
     s = s.strip()
