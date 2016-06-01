@@ -202,6 +202,10 @@ class Adjustments(object):
     asyncore_use_poll = False
 
     def __init__(self, **kw):
+
+        if 'listen' in kw and ('host' in kw or 'port' in kw):
+            raise ValueError('host and or port may not be set if listen is set.')
+
         for k, v in kw.items():
             if k not in self._param_map:
                 raise ValueError('Unknown adjustment %r' % k)
