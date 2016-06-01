@@ -98,6 +98,41 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
+        self.assertEqual(inst.listen, [('host', 8080)])
+
+    def test_goodvar_listen(self):
+        inst = self._makeOne(listen='127.0.0.1')
+
+        self.assertEqual(inst.listen, [('127.0.0.1', 8080)])
+
+    def test_default_listen(self):
+        inst = self._makeOne()
+
+        self.assertEqual(inst.listen, [('0.0.0.0', 8080)])
+
+    def test_multiple_listen(self):
+        inst = self._makeOne(listen='[::]:8080 127.0.0.1:8080')
+
+        self.assertEqual(inst.listen,
+                         [('[::]', 8080),
+                          ('127.0.0.1', 8080)])
+
+    def test_ipv6_no_port(self):
+        inst = self._makeOne(listen='[::]')
+
+        self.assertEqual(inst.listen, [('[::]', 8080)])
+
+    def test_bad_port(self):
+        self.assertRaises(ValueError, self._makeOne, listen='[::]:test')
+
+    def test_dont_mix_host_port_listen(self):
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            host='localhost',
+            port='8080',
+            listen='127.0.0.1:8080',
+        )
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
