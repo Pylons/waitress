@@ -62,6 +62,12 @@ def slash_fixed_str(s):
         s = '/' + s.lstrip('/').rstrip('/')
     return s
 
+class _str_marker(str):
+    pass
+
+class _int_marker(int):
+    pass
+
 class Adjustments(object):
     """This class contains tunable parameters.
     """
@@ -69,6 +75,7 @@ class Adjustments(object):
     _params = (
         ('host', str),
         ('port', int),
+        ('listen', aslist),
         ('threads', int),
         ('trusted_proxy', str),
         ('url_scheme', str),
@@ -95,10 +102,12 @@ class Adjustments(object):
     _param_map = dict(_params)
 
     # hostname or IP address to listen on
-    host = '0.0.0.0'
+    host = _str_marker('0.0.0.0')
 
     # TCP port to listen on
-    port = 8080
+    port = _int_marker(8080)
+
+    listen = ['{}:{}'.format(host, port)]
 
     # mumber of threads available for tasks
     threads = 4
@@ -197,9 +206,33 @@ class Adjustments(object):
             if k not in self._param_map:
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, self._param_map[k](v))
-        if (sys.platform[:3] == "win" and
-                self.host == 'localhost'): # pragma: no cover
+
+        if (sys.platform[:3] == "win" and self.host == 'localhost'): # pragma: no cover
             self.host = ''
+
+        if (not isinstance(self.host, _str_marker) or
+           not isinstance(self.port, _int_marker)):
+            self.listen = ['{}:{}'.format(self.host, self.port)]
+
+        wanted_sockets = []
+        for i in self.listen:
+            if ':' in i:
+                (host, port) = i.rsplit(":", 1)
+
+                # IPv6 we need to make sure that we didn't split on the address
+                if ']' in port:
+                    (host, port) = (i, self.port)
+            else:
+                (host, port) = (i, self.port)
+
+            try:
+                (host, port) = (host, int(port))
+            except:
+                raise ValueError('Invalid host/port specified.')
+
+            wanted_sockets.append((host, port))
+
+        self.listen = wanted_sockets
 
     @classmethod
     def parse_args(cls, argv):
