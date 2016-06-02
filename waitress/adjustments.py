@@ -219,9 +219,6 @@ class Adjustments(object):
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, self._param_map[k](v))
 
-        if (sys.platform[:3] == "win" and self.host == 'localhost'): # pragma: no cover
-            self.host = ''
-
         if (not isinstance(self.host, _str_marker) or
            not isinstance(self.port, _int_marker)):
             self.listen = ['{}:{}'.format(self.host, self.port)]

@@ -78,6 +78,7 @@ class TestAdjustments(unittest.TestCase):
             ipv4=True,
             ipv6=True,
         )
+
         self.assertEqual(inst.host, 'localhost')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
