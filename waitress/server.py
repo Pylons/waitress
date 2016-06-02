@@ -91,6 +91,10 @@ class BaseServer(object):
         self.map = map
         self.effective_listen = None
 
+    def print(self, format_str):
+        for l in self.effective_listen:
+            print(format_str.format(*l))
+
     def run(self):
         try:
             self.asyncore.loop(
@@ -246,6 +250,9 @@ class BaseWSGIServer(logging_dispatcher, object):
         for channel in self.active_channels.values():
             if (not channel.requests) and channel.last_activity < cutoff:
                 channel.will_close = True
+
+    def print(self, format_str):
+        print(format_str.format(self.effective_host, self.effective_port))
 
 
 class TcpWSGIServer(BaseWSGIServer):
