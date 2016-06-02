@@ -230,11 +230,21 @@ class Adjustments(object):
                 (host, port) = (i, self.port)
 
             try:
-                (host, port) = (host, int(port))
+                if '[' in host and ']' in host:
+                    host = host.strip('[').rstrip(']')
+
+                for s in socket.getaddrinfo(
+                    host,
+                    port,
+                    0,
+                    0,
+                    socket.IPPROTO_TCP,
+                    socket.AI_PASSIVE | socket.AI_ADDRCONFIG
+                ):
+                    (family, socktype, proto, _, sockaddr) = s
+                    wanted_sockets.append((family, socktype, proto, sockaddr))
             except:
                 raise ValueError('Invalid host/port specified.')
-
-            wanted_sockets.append((host, port))
 
         self.listen = wanted_sockets
 
