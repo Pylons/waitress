@@ -51,7 +51,7 @@ class TestAdjustments(unittest.TestCase):
 
     def test_goodvars(self):
         inst = self._makeOne(
-            host='host',
+            host='localhost',
             port='8080',
             threads='5',
             trusted_proxy='192.168.1.1',
@@ -75,7 +75,7 @@ class TestAdjustments(unittest.TestCase):
             unix_socket_perms='777',
             url_prefix='///foo/',
         )
-        self.assertEqual(inst.host, 'host')
+        self.assertEqual(inst.host, 'localhost')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
         self.assertEqual(inst.trusted_proxy, '192.168.1.1')
