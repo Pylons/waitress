@@ -100,7 +100,11 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
 
-        bind_pairs = [sockaddr[:2] for (family, _, _, sockaddr) in inst.listen if family == socket.AF_INET]
+        bind_pairs = [
+            sockaddr[:2]
+            for (family, _, _, sockaddr) in inst.listen
+            if family == socket.AF_INET
+        ]
 
         self.assertEqual(bind_pairs, [('127.0.0.1', 8080)])
 
