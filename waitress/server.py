@@ -214,6 +214,27 @@ if hasattr(socket, 'AF_UNIX'):
 
     class UnixWSGIServer(BaseWSGIServer):
 
+        def __init__(self,
+                     application,
+                     map=None,
+                     _start=True,      # test shim
+                     _sock=None,       # test shim
+                     dispatcher=None,  # dispatcher
+                     adj=None,         # adjustments
+                     sockinfo=None,    # opaque object
+                     **kw):
+            if sockinfo is None:
+                sockinfo = (socket.AF_UNIX, socket.SOCK_STREAM, None, None)
+
+            super(UnixWSGIServer, self).__init__(
+                application,
+                map=map,
+                _start=_start,
+                _sock=_sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                sockinfo=sockinfo,
+                **kw)
 
         def bind_server_socket(self):
             cleanup_unix_socket(self.adj.unix_socket)
