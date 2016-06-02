@@ -75,6 +75,8 @@ class Adjustments(object):
     _params = (
         ('host', str),
         ('port', int),
+        ('ipv4', asbool),
+        ('ipv6', asbool),
         ('listen', aslist),
         ('threads', int),
         ('trusted_proxy', str),
@@ -201,6 +203,12 @@ class Adjustments(object):
     # The asyncore.loop flag to use poll() instead of the default select().
     asyncore_use_poll = False
 
+    # Enable IPv4 by default
+    ipv4 = True
+
+    # Enable IPv6 by default
+    ipv6 = True
+
     def __init__(self, **kw):
 
         if 'listen' in kw and ('host' in kw or 'port' in kw):
@@ -217,6 +225,14 @@ class Adjustments(object):
         if (not isinstance(self.host, _str_marker) or
            not isinstance(self.port, _int_marker)):
             self.listen = ['{}:{}'.format(self.host, self.port)]
+
+        enabled_families = socket.AF_UNSPEC
+
+        if self.ipv4 and not self.ipv6:
+            enabled_families = socket.AF_INET
+
+        if not self.ipv4 and self.ipv6:
+            enabled_families = socket.AF_INET6
 
         wanted_sockets = []
         for i in self.listen:
@@ -236,8 +252,8 @@ class Adjustments(object):
                 for s in socket.getaddrinfo(
                     host,
                     port,
-                    0,
-                    0,
+                    enabled_families,
+                    socket.SOCK_STREAM,
                     socket.IPPROTO_TCP,
                     socket.AI_PASSIVE | socket.AI_ADDRCONFIG
                 ):
