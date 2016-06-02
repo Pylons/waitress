@@ -34,9 +34,22 @@ class TestWSGIServer(unittest.TestCase):
             _start=_start,
         )
 
+    def _makeOneWithMulti(self, adj=None, _start=True,
+                          app=dummy_app, listen="127.0.0.1:0 127.0.0.1:0"):
+        sock = DummySock()
+        task_dispatcher = DummyTaskDispatcher()
+        map = {}
+        from waitress.server import create_server
+        return create_server(
+            app,
+            listen=listen,
+            map=map,
+            _dispatcher=task_dispatcher,
+            _start=_start,
+            _sock=sock)
+
     def test_ctor_app_is_None(self):
         self.assertRaises(ValueError, self._makeOneWithMap, app=None)
-
 
     def test_ctor_start_true(self):
         inst = self._makeOneWithMap(_start=True)
@@ -71,6 +84,10 @@ class TestWSGIServer(unittest.TestCase):
         inst = self._makeOneWithMap(_start=False)
         result = inst.get_server_name('0.0.0.0')
         self.assertEqual(result, 'localhost')
+
+    def test_get_server_multi(self):
+        inst = self._makeOneWithMulti()
+        self.assertEqual(inst.__class__.__name__, 'BaseServer')
 
     def test_run(self):
         inst = self._makeOneWithMap(_start=False)
