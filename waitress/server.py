@@ -228,19 +228,22 @@ class BaseWSGIServer(logging_dispatcher, object):
             if (not channel.requests) and channel.last_activity < cutoff:
                 channel.will_close = True
 
-class TcpWSGIServer(BaseWSGIServer):
 
+class TcpWSGIServer(BaseWSGIServer):
 
     def bind_server_socket(self):
         (_, _, _, sockaddr) = self.sockinfo
         self.bind(sockaddr)
 
     def getsockname(self):
-        return self.socket.getsockname()
+        return self.socketmod.getnameinfo(
+            self.socket.getsockname(),
+            self.socketmod.NI_NUMERICSERV)
 
     def set_socket_options(self, conn):
         for (level, optname, value) in self.adj.socket_options:
             conn.setsockopt(level, optname, value)
+
 
 if hasattr(socket, 'AF_UNIX'):
 
