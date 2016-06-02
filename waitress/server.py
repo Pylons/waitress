@@ -59,6 +59,29 @@ def create_server(application,
             adj=adj,
             sockinfo=sockinfo)
 
+class BaseServer(object):
+
+    asyncore = asyncore # test shim
+
+    def __init__(self,
+                 map=None,
+                 adj=None,
+                 effective_listen=None,
+                 ):
+        self.adj = adj
+        self.map = map
+        self.effective_listen = None
+
+    def run(self):
+        try:
+            self.asyncore.loop(
+                timeout=self.adj.asyncore_loop_timeout,
+                map=self.map,
+                use_poll=self.adj.asyncore_use_poll,
+            )
+        except (SystemExit, KeyboardInterrupt):
+            self.task_dispatcher.shutdown()
+
 
 class BaseWSGIServer(logging_dispatcher, object):
 
