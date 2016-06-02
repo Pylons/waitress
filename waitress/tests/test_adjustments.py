@@ -1,4 +1,5 @@
 import sys
+import socket
 
 if sys.version_info[:2] == (2, 6): # pragma: no cover
     import unittest2 as unittest
@@ -98,29 +99,40 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
-        self.assertEqual(inst.listen, [('host', 8080)])
+
+        bind_pairs = [sockaddr[:2] for (family, _, _, sockaddr) in inst.listen if family == socket.AF_INET]
+
+        self.assertEqual(bind_pairs, [('127.0.0.1', 8080)])
 
     def test_goodvar_listen(self):
         inst = self._makeOne(listen='127.0.0.1')
 
-        self.assertEqual(inst.listen, [('127.0.0.1', 8080)])
+        bind_pairs = [(host, port) for (_, _, _, (host, port)) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('127.0.0.1', 8080)])
 
     def test_default_listen(self):
         inst = self._makeOne()
 
-        self.assertEqual(inst.listen, [('0.0.0.0', 8080)])
+        bind_pairs = [(host, port) for (_, _, _, (host, port)) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('0.0.0.0', 8080)])
 
     def test_multiple_listen(self):
         inst = self._makeOne(listen='[::]:8080 127.0.0.1:8080')
 
-        self.assertEqual(inst.listen,
-                         [('[::]', 8080),
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertEqual(bind_pairs,
+                         [('::', 8080),
                           ('127.0.0.1', 8080)])
 
     def test_ipv6_no_port(self):
         inst = self._makeOne(listen='[::]')
 
-        self.assertEqual(inst.listen, [('[::]', 8080)])
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('::', 8080)])
 
     def test_bad_port(self):
         self.assertRaises(ValueError, self._makeOne, listen='[::]:test')
