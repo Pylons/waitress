@@ -97,6 +97,7 @@ class BaseWSGIServer(logging_dispatcher, object):
                  _sock=None,       # test shim
                  dispatcher=None,  # dispatcher
                  adj=None,         # adjustments
+                 sockinfo=None,    # opaque object
                  **kw
                  ):
         if adj is None:
@@ -106,6 +107,12 @@ class BaseWSGIServer(logging_dispatcher, object):
             # conflicts with apps and libs that use the asyncore global socket
             # map ala https://github.com/Pylons/waitress/issues/63
             map = {}
+        if sockinfo is None:
+            sockinfo = adj.listen[0]
+
+        self.sockinfo = sockinfo
+        self.family = sockinfo[0]
+        self.socktype = sockinfo[1]
         self.application = application
         self.adj = adj
         self.trigger = trigger.trigger(map)
@@ -116,7 +123,7 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.task_dispatcher = dispatcher
         self.asyncore.dispatcher.__init__(self, _sock, map=map)
         if _sock is None:
-            self.create_socket(self.family, socket.SOCK_STREAM)
+            self.create_socket(self.family, self.socktype)
         self.set_reuse_addr()
         self.bind_server_socket()
         self.effective_host, self.effective_port = self.getsockname()
@@ -225,7 +232,8 @@ class TcpWSGIServer(BaseWSGIServer):
 
 
     def bind_server_socket(self):
-        self.bind((self.adj.host, self.adj.port))
+        (_, _, _, sockaddr) = self.sockinfo
+        self.bind(sockaddr)
 
     def getsockname(self):
         return self.socket.getsockname()
