@@ -59,6 +59,25 @@ def create_server(application,
             adj=adj,
             sockinfo=sockinfo)
 
+    effective_listen = []
+    last_serv = None
+    for sockinfo in adj.listen:
+        last_serv = TcpWSGIServer(
+            application,
+            map,
+            _start,
+            _sock,
+            dispatcher=dispatcher,
+            adj=adj,
+            sockinfo=sockinfo)
+        effective_listen.append((last_serv.effective_host, last_serv.effective_port))
+
+    # We are running a single server, so we can just return it...
+    if len(adj.listen) == 1:
+        return last_serv
+
+    return BaseServer(map, adj, effective_listen)
+
 class BaseServer(object):
 
     asyncore = asyncore # test shim
