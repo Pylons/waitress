@@ -137,6 +137,13 @@ class TestAdjustments(unittest.TestCase):
     def test_bad_port(self):
         self.assertRaises(ValueError, self._makeOne, listen='[::]:test')
 
+    def test_service_port(self):
+        inst = self._makeOne(listen='[::]:http 0.0.0.0:https')
+
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('::', 80), ('0.0.0.0', 443)])
+
     def test_dont_mix_host_port_listen(self):
         self.assertRaises(
             ValueError,
