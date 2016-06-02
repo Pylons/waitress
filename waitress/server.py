@@ -72,7 +72,7 @@ class BaseWSGIServer(logging_dispatcher, object):
                  map=None,
                  _start=True,      # test shim
                  _sock=None,       # test shim
-                 _dispatcher=None, # test shim
+                 dispatcher=None,  # dispatcher
                  adj=None,         # adjustments
                  **kw
                  ):
@@ -86,10 +86,11 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.application = application
         self.adj = adj
         self.trigger = trigger.trigger(map)
-        if _dispatcher is None:
-            _dispatcher = ThreadedTaskDispatcher()
-            _dispatcher.set_thread_count(self.adj.threads)
-        self.task_dispatcher = _dispatcher
+        if dispatcher is None:
+            dispatcher = ThreadedTaskDispatcher()
+            dispatcher.set_thread_count(self.adj.threads)
+
+        self.task_dispatcher = dispatcher
         self.asyncore.dispatcher.__init__(self, _sock, map=map)
         if _sock is None:
             self.create_socket(self.family, socket.SOCK_STREAM)
