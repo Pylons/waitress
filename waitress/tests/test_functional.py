@@ -34,6 +34,8 @@ class FixtureTcpWSGIServer(server.TcpWSGIServer):
     """A version of TcpWSGIServer that relays back what it's bound to.
     """
 
+    family = socket.AF_INET # Testing
+
     def __init__(self, application, queue, **kw): # pragma: no cover
         # Coverage doesn't see this as it's ran in a separate process.
         kw['port'] = 0 # Bind to any available port.
@@ -1385,6 +1387,8 @@ if hasattr(socket, 'AF_UNIX'):
     class FixtureUnixWSGIServer(server.UnixWSGIServer):
         """A version of UnixWSGIServer that relays back what it's bound to.
         """
+
+        family = socket.AF_UNIX # Testing
 
         def __init__(self, application, queue, **kw): # pragma: no cover
             # Coverage doesn't see this as it's ran in a separate process.
