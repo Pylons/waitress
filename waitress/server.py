@@ -54,7 +54,6 @@ class BaseWSGIServer(logging_dispatcher, object):
     next_channel_cleanup = 0
     socketmod = socket # test shim
     asyncore = asyncore # test shim
-    family = None
 
     def __init__(self,
                  application,
@@ -188,7 +187,6 @@ class BaseWSGIServer(logging_dispatcher, object):
 
 class TcpWSGIServer(BaseWSGIServer):
 
-    family = socket.AF_INET
 
     def bind_server_socket(self):
         self.bind((self.adj.host, self.adj.port))
@@ -204,7 +202,6 @@ if hasattr(socket, 'AF_UNIX'):
 
     class UnixWSGIServer(BaseWSGIServer):
 
-        family = socket.AF_UNIX
 
         def bind_server_socket(self):
             cleanup_unix_socket(self.adj.unix_socket)
