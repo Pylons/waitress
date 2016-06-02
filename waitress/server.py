@@ -49,10 +49,16 @@ def create_server(application,
         dispatcher.set_thread_count(adj.threads)
 
     if adj.unix_socket and hasattr(socket, 'AF_UNIX'):
-        cls = UnixWSGIServer
-    else:
-        cls = TcpWSGIServer
-    return cls(application, map, _start, _sock, _dispatcher, adj)
+        sockinfo = (socket.AF_UNIX, socket.SOCK_STREAM, None, None)
+        return UnixWSGIServer(
+            application,
+            map,
+            _start,
+            _sock,
+            dispatcher=dispatcher,
+            adj=adj,
+            sockinfo=sockinfo)
+
 
 class BaseWSGIServer(logging_dispatcher, object):
 
