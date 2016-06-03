@@ -96,6 +96,13 @@ class TestWSGIServer(unittest.TestCase):
         inst.run()
         self.assertTrue(inst.task_dispatcher.was_shutdown)
 
+    def test_run_base_server(self):
+        inst = self._makeOneWithMulti(_start=False)
+        inst.asyncore = DummyAsyncore()
+        inst.task_dispatcher = DummyTaskDispatcher()
+        inst.run()
+        self.assertTrue(inst.task_dispatcher.was_shutdown)
+
     def test_pull_trigger(self):
         inst = self._makeOneWithMap(_start=False)
         inst.trigger = DummyTrigger()
@@ -258,6 +265,16 @@ if hasattr(socket, 'AF_UNIX'):
                 L,
                 [(inst, client, ('localhost', None), inst.adj)]
             )
+
+        def test_creates_new_sockinfo(self):
+            from waitress.server import UnixWSGIServer
+            inst = UnixWSGIServer(
+                dummy_app,
+                unix_socket=self.unix_socket,
+                unix_socket_perms='600'
+            )
+
+            self.assertEqual(inst.sockinfo[0], socket.AF_UNIX)
 
 class DummySock(object):
     accepted = False
