@@ -75,6 +75,8 @@ class TestAdjustments(unittest.TestCase):
             unix_socket='/tmp/waitress.sock',
             unix_socket_perms='777',
             url_prefix='///foo/',
+            ipv4=True,
+            ipv6=True,
         )
         self.assertEqual(inst.host, 'localhost')
         self.assertEqual(inst.port, 8080)
@@ -99,6 +101,8 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
+        self.assertEqual(inst.ipv4, True)
+        self.assertEqual(inst.ipv6, True)
 
         bind_pairs = [
             sockaddr[:2]
@@ -159,6 +163,12 @@ class TestAdjustments(unittest.TestCase):
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
+
+    def test_ipv4_disabled(self):
+        self.assertRaises(ValueError, self._makeOne, ipv4=False, listen="127.0.0.1:8080")
+
+    def test_ipv6_disabled(self):
+        self.assertRaises(ValueError, self._makeOne, ipv6=False, listen="[::]:8080")
 
 class TestCLI(unittest.TestCase):
 
