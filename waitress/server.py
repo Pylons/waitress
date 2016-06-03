@@ -93,7 +93,7 @@ class BaseServer(object):
         self.effective_listen = None
         self.task_dispatcher = dispatcher
 
-    def print_listen(self, format_str):
+    def print_listen(self, format_str): # pragma: nocover
         for l in self.effective_listen:
             print(format_str.format(*l))
 
@@ -253,7 +253,7 @@ class BaseWSGIServer(logging_dispatcher, object):
             if (not channel.requests) and channel.last_activity < cutoff:
                 channel.will_close = True
 
-    def print_listen(self, format_str):
+    def print_listen(self, format_str): # pragma: nocover
         print(format_str.format(self.effective_host, self.effective_port))
 
 
