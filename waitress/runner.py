@@ -45,6 +45,22 @@ Standard options:
     --port=PORT
         TCP port on which to listen, default is '8080'
 
+    --listen=ip:port
+        Tell waitress to listen on an ip port combination.
+
+        Example:
+
+            --listen=127.0.0.1:8080
+            --listen=[::1]:8080
+
+        This option may be used multiple times to listen on multipe sockets.
+
+    --ipv4
+        Enable or disable IPv4 (boolean)
+
+    --ipv6
+        Enable or disable IPv6 (boolean)
+
     --unix-socket=PATH
         Path of Unix socket. If a socket path is specified, a Unix domain
         socket is made instead of the usual inet domain socket.
