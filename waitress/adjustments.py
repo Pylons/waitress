@@ -237,13 +237,13 @@ class Adjustments(object):
                 (host, port) = i.rsplit(":", 1)
 
                 # IPv6 we need to make sure that we didn't split on the address
-                if ']' in port:
+                if ']' in port: # pragma: nocover
                     (host, port) = (i, str(self.port))
             else:
                 (host, port) = (i, str(self.port))
 
             try:
-                if '[' in host and ']' in host:
+                if '[' in host and ']' in host: # pragma: nocover
                     host = host.strip('[').rstrip(']')
 
                 for s in socket.getaddrinfo(
