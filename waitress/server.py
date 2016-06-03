@@ -152,7 +152,7 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.set_reuse_addr()
         self.bind_server_socket()
         self.effective_host, self.effective_port = self.getsockname()
-        self.server_name = self.get_server_name(self.adj.host)
+        self.server_name = self.get_server_name(self.effective_host)
         self.active_channels = {}
         if _start:
             self.accept_connections()
@@ -166,12 +166,13 @@ class BaseWSGIServer(logging_dispatcher, object):
             server_name = str(ip)
         else:
             server_name = str(self.socketmod.gethostname())
+
         # Convert to a host name if necessary.
         for c in server_name:
             if c != '.' and not c.isdigit():
                 return server_name
         try:
-            if server_name == '0.0.0.0':
+            if server_name == '0.0.0.0' or server_name == '::':
                 return 'localhost'
             server_name = self.socketmod.gethostbyaddr(server_name)[0]
         except socket.error: # pragma: no cover
