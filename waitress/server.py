@@ -76,7 +76,7 @@ def create_server(application,
     if len(adj.listen) == 1:
         return last_serv
 
-    return BaseServer(map, adj, effective_listen)
+    return BaseServer(map, adj, effective_listen, dispatcher)
 
 class BaseServer(object):
 
@@ -86,10 +86,12 @@ class BaseServer(object):
                  map=None,
                  adj=None,
                  effective_listen=None,
+                 dispatcher=None,
                  ):
         self.adj = adj
         self.map = map
         self.effective_listen = None
+        self.task_dispatcher = dispatcher
 
     def print_listen(self, format_str):
         for l in self.effective_listen:
