@@ -243,8 +243,29 @@ class TestCLI(unittest.TestCase):
         self.assertDictContainsSubset({
             'host': 'localhost',
             'port': '80',
-            'unix_socket_perms':'777',
+            'unix_socket_perms': '777',
         }, opts)
+        self.assertSequenceEqual(args, [])
+
+    def test_listen_params(self):
+        opts, args = self.parse([
+            '--listen=test:80',
+            ])
+
+        self.assertDictContainsSubset({
+            'listen': ' test:80'
+            }, opts)
+        self.assertSequenceEqual(args, [])
+
+    def test_multiple_listen_params(self):
+        opts, args = self.parse([
+            '--listen=test:80',
+            '--listen=test:8080',
+            ])
+
+        self.assertDictContainsSubset({
+            'listen': ' test:80 test:8080'
+            }, opts)
         self.assertSequenceEqual(args, [])
 
     def test_bad_param(self):
