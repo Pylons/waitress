@@ -15,7 +15,6 @@
 """
 import getopt
 import socket
-import sys
 
 from waitress.compat import string_types
 
