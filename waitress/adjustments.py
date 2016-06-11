@@ -280,9 +280,15 @@ class Adjustments(object):
             'help': False,
             'call': False,
         }
+
         opts, args = getopt.getopt(argv, '', long_opts)
         for opt, value in opts:
             param = opt.lstrip('-').replace('-', '_')
+
+            if param == 'listen':
+                kw['listen'] = '{} {}'.format(kw.get('listen', ''), value)
+                continue
+
             if param.startswith('no_'):
                 param = param[3:]
                 kw[param] = 'false'
@@ -292,4 +298,5 @@ class Adjustments(object):
                 kw[param] = 'true'
             else:
                 kw[param] = value
+
         return kw, args
