@@ -90,7 +90,7 @@ class BaseServer(object):
                  ):
         self.adj = adj
         self.map = map
-        self.effective_listen = None
+        self.effective_listen = effective_listen
         self.task_dispatcher = dispatcher
 
     def print_listen(self, format_str): # pragma: nocover
