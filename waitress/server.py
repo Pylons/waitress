@@ -95,6 +95,11 @@ class BaseServer(object):
 
     def print_listen(self, format_str): # pragma: nocover
         for l in self.effective_listen:
+            l = list(l)
+
+            if ':' in l[0]:
+                l[0] = '[{}]'.format(l[0])
+
             print(format_str.format(*l))
 
     def run(self):
