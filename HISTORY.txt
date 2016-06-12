@@ -1,3 +1,40 @@
+0.9.0 (2016-04-15)
+------------------
+
+Deprecations
+~~~~~~~~~~~~
+
+- Python 3.2 is no longer supported by Waitress.
+
+- Python 2.6 will no longer be supported by Waitress in future releases.
+
+Security/Protections
+~~~~~~~~~~~~~~~~~~~~
+
+- Building on the changes made in pull request 117, add in checking for line
+  feed/carriage return HTTP Response Splitting in the status line, as well as
+  the key of a header. See https://github.com/Pylons/waitress/pull/124 and
+  https://github.com/Pylons/waitress/issues/122.
+
+- Waitress will no longer accept headers or status lines with
+  newline/carriage returns in them, thereby disallowing HTTP Response
+  Splitting. See https://github.com/Pylons/waitress/issues/117 for
+  more information, as well as
+  https://www.owasp.org/index.php/HTTP_Response_Splitting.
+
+Bugfixes
+~~~~~~~~
+
+- FileBasedBuffer and more important ReadOnlyFileBasedBuffer no longer report
+  False when tested with bool(), instead always returning True, and becoming
+  more iterator like.
+  See: https://github.com/Pylons/waitress/pull/82 and
+  https://github.com/Pylons/waitress/issues/76
+
+- Call prune() on the output buffer at the end of a request so that it doesn't
+  continue to grow without bounds. See
+  https://github.com/Pylons/waitress/issues/111 for more information.
+
 0.8.10 (2015-09-02)
 -------------------
 
