@@ -52,8 +52,11 @@ Standard options:
 
             --listen=127.0.0.1:8080
             --listen=[::1]:8080
+            --listen=*:8080
 
         This option may be used multiple times to listen on multipe sockets.
+        A wildcard for the hostname is also supported and will bind to both
+        IPv4/IPv6 depending on whether they are enabled or disabled.
 
     --ipv4
         Enable or disable IPv4 (boolean)
