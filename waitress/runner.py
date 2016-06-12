@@ -42,8 +42,12 @@ Standard options:
         Hostname or IP address on which to listen, default is '0.0.0.0',
         which means "all IP addresses on this host".
 
+        Note: May not be used together with --listen
+
     --port=PORT
         TCP port on which to listen, default is '8080'
+
+        Note: May not be used together with --listen
 
     --listen=ip:port
         Tell waitress to listen on an ip port combination.
