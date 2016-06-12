@@ -160,6 +160,13 @@ class TestAdjustments(unittest.TestCase):
                          [('127.0.0.1', 9090),
                           ('127.0.0.1', 8080)])
 
+    def test_wildcard_listen(self):
+        inst = self._makeOne(listen='*:8080')
+
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertTrue(len(bind_pairs) >= 1)
+
     def test_ipv6_no_port(self): # pragma: nocover
         if not self._hasIPv6():
             return

@@ -246,6 +246,9 @@ class Adjustments(object):
                 if '[' in host and ']' in host: # pragma: nocover
                     host = host.strip('[').rstrip(']')
 
+                if host == '*':
+                    host = None
+
                 for s in socket.getaddrinfo(
                     host,
                     port,
