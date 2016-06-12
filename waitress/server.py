@@ -43,6 +43,9 @@ def create_server(application,
             )
     adj = Adjustments(**kw)
 
+    if map is None: # pragma: nocover
+        map = {}
+
     dispatcher = _dispatcher
     if dispatcher is None:
         dispatcher = ThreadedTaskDispatcher()
