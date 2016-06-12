@@ -231,6 +231,7 @@ class Adjustments(object):
             enabled_families = socket.AF_INET6
 
         wanted_sockets = []
+        hp_pairs = []
         for i in self.listen:
             if ':' in i:
                 (host, port) = i.rsplit(":", 1)
@@ -254,7 +255,22 @@ class Adjustments(object):
                     socket.AI_PASSIVE | socket.AI_ADDRCONFIG
                 ):
                     (family, socktype, proto, _, sockaddr) = s
-                    wanted_sockets.append((family, socktype, proto, sockaddr))
+
+                    # It seems that getaddrinfo() may sometimes happily return
+                    # the same result multiple times, this of course makes
+                    # bind() very unhappy...
+                    #
+                    # Split on %, and drop the zone-index from the host in the
+                    # sockaddr. Works around a bug in OS X whereby
+                    # getaddrinfo() returns the same link-local interface with
+                    # two different zone-indices (which makes no sense what so
+                    # ever...) yet treats them equally when we attempt to bind().
+                    if (
+                        sockaddr[1] == 0 or
+                        (sockaddr[0].split('%', 1)[0], sockaddr[1]) not in hp_pairs
+                    ):
+                        wanted_sockets.append((family, socktype, proto, sockaddr))
+                        hp_pairs.append((sockaddr[0].split('%', 1)[0], sockaddr[1]))
             except:
                 raise ValueError('Invalid host/port specified.')
 
