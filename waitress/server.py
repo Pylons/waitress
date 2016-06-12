@@ -157,6 +157,9 @@ class BaseWSGIServer(logging_dispatcher, object):
         self.asyncore.dispatcher.__init__(self, _sock, map=map)
         if _sock is None:
             self.create_socket(self.family, self.socktype)
+            if self.family == socket.AF_INET6: # pragma: nocover
+                self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+
         self.set_reuse_addr()
         self.bind_server_socket()
         self.effective_host, self.effective_port = self.getsockname()
