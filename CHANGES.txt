@@ -11,7 +11,9 @@ Features
 
 - Waitress is now able to listen on multiple sockets, including IPv4 and IPv6.
   Instead of passing in a host/port combination you now provide waitress with a
-  space delineated list, and it will create as many sockets as required.
+  space delineated list, and it will create as many sockets as required. Using
+  the host/port combination is deprecated but will be supported for at least
+  the next 5 minor releases.
 
   .. code-block:: python
 
