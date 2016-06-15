@@ -87,7 +87,7 @@ class TestWSGIServer(unittest.TestCase):
 
     def test_get_server_multi(self):
         inst = self._makeOneWithMulti()
-        self.assertEqual(inst.__class__.__name__, 'BaseServer')
+        self.assertEqual(inst.__class__.__name__, 'MultiSocketServer')
 
     def test_run(self):
         inst = self._makeOneWithMap(_start=False)

@@ -79,10 +79,10 @@ def create_server(application,
     if len(adj.listen) == 1:
         return last_serv
 
-    return BaseServer(map, adj, effective_listen, dispatcher)
+    return MultiSocketServer(map, adj, effective_listen, dispatcher)
 
-class BaseServer(object):
 
+class MultiSocketServer(object):
     asyncore = asyncore # test shim
 
     def __init__(self,
