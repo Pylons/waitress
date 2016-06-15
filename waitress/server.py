@@ -65,6 +65,9 @@ def create_server(application,
     effective_listen = []
     last_serv = None
     for sockinfo in adj.listen:
+        # When TcpWSGIServer is called, it registers itself in the map. This
+        # side-effect is all we need it for, so we don't store a reference to
+        # or return it to the user.
         last_serv = TcpWSGIServer(
             application,
             map,
@@ -75,13 +78,21 @@ def create_server(application,
             sockinfo=sockinfo)
         effective_listen.append((last_serv.effective_host, last_serv.effective_port))
 
-    # We are running a single server, so we can just return it...
+    # We are running a single server, so we can just return the last server,
+    # saves us from having to create one more object
     if len(adj.listen) == 1:
+        # In this case we have no need to use a MultiSocketServer
         return last_serv
 
+    # Return a class that has a utility function to print out the sockets it's
+    # listening on, and has a .run() function. All of the TcpWSGIServers
+    # registered themselves in the map above.
     return MultiSocketServer(map, adj, effective_listen, dispatcher)
 
 
+# This class is only ever used if we have multiple listen sockets. It allows
+# the serve() API to call .run() which starts the asyncore loop, and catches
+# SystemExit/KeyboardInterrupt so that it can atempt to cleanly shut down.
 class MultiSocketServer(object):
     asyncore = asyncore # test shim
 
