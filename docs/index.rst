@@ -22,6 +22,13 @@ and IPv6.
 
 Press Ctrl-C (or Ctrl-Break on Windows) to exit the server.
 
+The default is to bind to any IPv4 address on port 8080:
+
+.. code-block:: python
+
+   from waitress import serve
+   serve(wsgiapp)
+
 If you want to serve your application through a UNIX domain socket (to serve
 a downstream HTTP server/proxy, e.g. nginx, lighttpd, etc.), call ``serve``
 with the ``unix_socket`` argument:
