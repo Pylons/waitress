@@ -24,18 +24,10 @@ port
     .. deprecated:: 1.0
 
 listen
-    Tell waitress to listen on an host/port combination. When provided on the
-    command line, one can pass the argument multiple times:
+    Tell waitress to listen on an host/port combination. It is to be provided
+    as a space delineated list of host/port:
 
-    Example:
-
-        - ``--listen=127.0.0.1:8080``
-        - ``--listen=[::1]:8080``
-        - ``--listen=*:8080``
-
-    When used from an application, it has to be provided as a space delineated list of host/port:
-
-    Example:
+    Examples:
 
         - ``listen="127.0.0.1:8080 [::1]:8080"``
         - ``listen="*:8080 *:6543"``

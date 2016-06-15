@@ -85,6 +85,31 @@ Common options:
 ``--port=PORT``
     TCP port on which to listen, default is '8080'
 
+``--listen=host:port``
+    Tell waitress to listen on an ip port combination.
+
+    Example:
+
+        --listen=127.0.0.1:8080
+        --listen=[::1]:8080
+        --listen=*:8080
+
+    This option may be used multiple times to listen on multipe sockets.
+    A wildcard for the hostname is also supported and will bind to both
+    IPv4/IPv6 depending on whether they are enabled or disabled.
+
+``--[no-]ipv4``
+    Toggle on/off IPv4 support.
+
+    This affects wildcard matching when listening on a wildcard address/port
+    combination.
+
+``--[no-]ipv6``
+    Toggle on/off IPv6 support.
+
+    This affects wildcard matching when listening on a wildcard address/port
+    combination.
+
 ``--unix-socket=PATH``
     Path of Unix socket. If a socket path is specified, a Unix domain
     socket is made instead of the usual inet domain socket.
