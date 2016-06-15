@@ -62,11 +62,25 @@ Standard options:
         A wildcard for the hostname is also supported and will bind to both
         IPv4/IPv6 depending on whether they are enabled or disabled.
 
-    --ipv4
-        Enable or disable IPv4 (boolean)
+    --[no-]ipv4
+        Toggle on/off IPv4 support.
 
-    --ipv6
-        Enable or disable IPv6 (boolean)
+        Example:
+
+            --no-ipv4
+
+        This will disable IPv4 socket support. This affects wildcard matching
+        when generating the list of sockets.
+
+    --[no-]ipv6
+        Toggle on/off IPv6 support.
+
+        Example:
+
+            --no-ipv6
+
+        This will turn on IPv6 socket support. This affects wildcard matching
+        when generating a list of sockets.
 
     --unix-socket=PATH
         Path of Unix socket. If a socket path is specified, a Unix domain
