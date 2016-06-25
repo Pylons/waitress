@@ -121,6 +121,8 @@ Contributors
 
 - Adam Groszer, 2013/08/15
 
+- Matt Russell, 2015/01/14
+
 - David Glick, 2015/04/13
 
 - Shane Hathaway, 2015-04-20
@@ -134,3 +136,4 @@ Contributors
 - Yu Zhou, 2015-09-24
 
 - Jason Madden, 2016-03-19
+
