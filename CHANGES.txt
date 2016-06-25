@@ -19,3 +19,12 @@ Features
 
 	from waitress import serve
 	serve(wsgiapp, listen='0.0.0.0:8080 [::]:9090 *:6543')
+
+Security
+~~~~~~~~
+
+- Waitress will now drop HTTP headers that contain an underscore in the key
+  when received from a client. This is to stop any possible underscore/dash
+  conflation that may lead to security issues. See
+  https://github.com/Pylons/waitress/pull/80 and
+  https://www.djangoproject.com/weblog/2015/jan/13/security/
