@@ -15,7 +15,8 @@
 """
 import getopt
 import socket
-import sys
+
+from waitress.compat import string_types
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
 
@@ -36,6 +37,22 @@ def asoctal(s):
     """Convert the given octal string to an actual number."""
     return int(s, 8)
 
+def aslist_cronly(value):
+    if isinstance(value, string_types):
+        value = filter(None, [x.strip() for x in value.splitlines()])
+    return list(value)
+
+def aslist(value):
+    """ Return a list of strings, separating the input based on newlines
+    and, if flatten=True (the default), also split on spaces within
+    each line."""
+    values = aslist_cronly(value)
+    result = []
+    for value in values:
+        subvalues = value.split()
+        result.extend(subvalues)
+    return result
+
 def slash_fixed_str(s):
     s = s.strip()
     if s:
@@ -44,6 +61,12 @@ def slash_fixed_str(s):
         s = '/' + s.lstrip('/').rstrip('/')
     return s
 
+class _str_marker(str):
+    pass
+
+class _int_marker(int):
+    pass
+
 class Adjustments(object):
     """This class contains tunable parameters.
     """
@@ -51,6 +74,9 @@ class Adjustments(object):
     _params = (
         ('host', str),
         ('port', int),
+        ('ipv4', asbool),
+        ('ipv6', asbool),
+        ('listen', aslist),
         ('threads', int),
         ('trusted_proxy', str),
         ('url_scheme', str),
@@ -77,10 +103,12 @@ class Adjustments(object):
     _param_map = dict(_params)
 
     # hostname or IP address to listen on
-    host = '0.0.0.0'
+    host = _str_marker('0.0.0.0')
 
     # TCP port to listen on
-    port = 8080
+    port = _int_marker(8080)
+
+    listen = ['{}:{}'.format(host, port)]
 
     # mumber of threads available for tasks
     threads = 4
@@ -174,14 +202,82 @@ class Adjustments(object):
     # The asyncore.loop flag to use poll() instead of the default select().
     asyncore_use_poll = False
 
+    # Enable IPv4 by default
+    ipv4 = True
+
+    # Enable IPv6 by default
+    ipv6 = True
+
     def __init__(self, **kw):
+
+        if 'listen' in kw and ('host' in kw or 'port' in kw):
+            raise ValueError('host and or port may not be set if listen is set.')
+
         for k, v in kw.items():
             if k not in self._param_map:
                 raise ValueError('Unknown adjustment %r' % k)
             setattr(self, k, self._param_map[k](v))
-        if (sys.platform[:3] == "win" and
-                self.host == 'localhost'): # pragma: no cover
-            self.host = ''
+
+        if (not isinstance(self.host, _str_marker) or
+           not isinstance(self.port, _int_marker)):
+            self.listen = ['{}:{}'.format(self.host, self.port)]
+
+        enabled_families = socket.AF_UNSPEC
+
+        if self.ipv4 and not self.ipv6:
+            enabled_families = socket.AF_INET
+
+        if not self.ipv4 and self.ipv6:
+            enabled_families = socket.AF_INET6
+
+        wanted_sockets = []
+        hp_pairs = []
+        for i in self.listen:
+            if ':' in i:
+                (host, port) = i.rsplit(":", 1)
+
+                # IPv6 we need to make sure that we didn't split on the address
+                if ']' in port: # pragma: nocover
+                    (host, port) = (i, str(self.port))
+            else:
+                (host, port) = (i, str(self.port))
+
+            try:
+                if '[' in host and ']' in host: # pragma: nocover
+                    host = host.strip('[').rstrip(']')
+
+                if host == '*':
+                    host = None
+
+                for s in socket.getaddrinfo(
+                    host,
+                    port,
+                    enabled_families,
+                    socket.SOCK_STREAM,
+                    socket.IPPROTO_TCP,
+                    socket.AI_PASSIVE | socket.AI_ADDRCONFIG
+                ):
+                    (family, socktype, proto, _, sockaddr) = s
+
+                    # It seems that getaddrinfo() may sometimes happily return
+                    # the same result multiple times, this of course makes
+                    # bind() very unhappy...
+                    #
+                    # Split on %, and drop the zone-index from the host in the
+                    # sockaddr. Works around a bug in OS X whereby
+                    # getaddrinfo() returns the same link-local interface with
+                    # two different zone-indices (which makes no sense what so
+                    # ever...) yet treats them equally when we attempt to bind().
+                    if (
+                        sockaddr[1] == 0 or
+                        (sockaddr[0].split('%', 1)[0], sockaddr[1]) not in hp_pairs
+                    ):
+                        wanted_sockets.append((family, socktype, proto, sockaddr))
+                        hp_pairs.append((sockaddr[0].split('%', 1)[0], sockaddr[1]))
+            except:
+                raise ValueError('Invalid host/port specified.')
+
+        self.listen = wanted_sockets
 
     @classmethod
     def parse_args(cls, argv):
@@ -203,9 +299,15 @@ class Adjustments(object):
             'help': False,
             'call': False,
         }
+
         opts, args = getopt.getopt(argv, '', long_opts)
         for opt, value in opts:
             param = opt.lstrip('-').replace('-', '_')
+
+            if param == 'listen':
+                kw['listen'] = '{} {}'.format(kw.get('listen', ''), value)
+                continue
+
             if param.startswith('no_'):
                 param = param[3:]
                 kw[param] = 'false'
@@ -215,4 +317,5 @@ class Adjustments(object):
                 kw[param] = 'true'
             else:
                 kw[param] = value
+
         return kw, args

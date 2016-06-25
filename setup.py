@@ -12,7 +12,6 @@
 #
 ##############################################################################
 import os
-import sys
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -33,9 +32,6 @@ testing_extras = [
     'coverage',
 ]
 
-if sys.version_info[:2] == (2, 6):
-    testing_extras.append('unittest2')
-
 setup(
     name='waitress',
     version='0.9.1dev0',
@@ -54,7 +50,6 @@ setup(
         'License :: OSI Approved :: Zope Public License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',

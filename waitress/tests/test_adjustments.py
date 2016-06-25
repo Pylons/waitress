@@ -1,4 +1,5 @@
 import sys
+import socket
 
 if sys.version_info[:2] == (2, 6): # pragma: no cover
     import unittest2 as unittest
@@ -45,13 +46,35 @@ class Test_asbool(unittest.TestCase):
 
 class TestAdjustments(unittest.TestCase):
 
+    def _hasIPv6(self): # pragma: nocover
+        if not socket.has_ipv6:
+            return False
+
+        try:
+            socket.getaddrinfo(
+                '::1',
+                0,
+                socket.AF_UNSPEC,
+                socket.SOCK_STREAM,
+                socket.IPPROTO_TCP,
+                socket.AI_PASSIVE | socket.AI_ADDRCONFIG
+            )
+
+            return True
+        except socket.gaierror as e:
+            # Check to see what the error is
+            if e.errno == socket.EAI_ADDRFAMILY:
+                return False
+            else:
+                raise e
+
     def _makeOne(self, **kw):
         from waitress.adjustments import Adjustments
         return Adjustments(**kw)
 
     def test_goodvars(self):
         inst = self._makeOne(
-            host='host',
+            host='localhost',
             port='8080',
             threads='5',
             trusted_proxy='192.168.1.1',
@@ -74,8 +97,11 @@ class TestAdjustments(unittest.TestCase):
             unix_socket='/tmp/waitress.sock',
             unix_socket_perms='777',
             url_prefix='///foo/',
+            ipv4=True,
+            ipv6=False,
         )
-        self.assertEqual(inst.host, 'host')
+
+        self.assertEqual(inst.host, 'localhost')
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
         self.assertEqual(inst.trusted_proxy, '192.168.1.1')
@@ -98,9 +124,86 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
+        self.assertEqual(inst.ipv4, True)
+        self.assertEqual(inst.ipv6, False)
+
+        bind_pairs = [
+            sockaddr[:2]
+            for (family, _, _, sockaddr) in inst.listen
+            if family == socket.AF_INET
+        ]
+
+        # On Travis, somehow we start listening to two sockets when resolving
+        # localhost...
+        self.assertEqual(('127.0.0.1', 8080), bind_pairs[0])
+
+    def test_goodvar_listen(self):
+        inst = self._makeOne(listen='127.0.0.1')
+
+        bind_pairs = [(host, port) for (_, _, _, (host, port)) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('127.0.0.1', 8080)])
+
+    def test_default_listen(self):
+        inst = self._makeOne()
+
+        bind_pairs = [(host, port) for (_, _, _, (host, port)) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('0.0.0.0', 8080)])
+
+    def test_multiple_listen(self):
+        inst = self._makeOne(listen='127.0.0.1:9090 127.0.0.1:8080')
+
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertEqual(bind_pairs,
+                         [('127.0.0.1', 9090),
+                          ('127.0.0.1', 8080)])
+
+    def test_wildcard_listen(self):
+        inst = self._makeOne(listen='*:8080')
+
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertTrue(len(bind_pairs) >= 1)
+
+    def test_ipv6_no_port(self): # pragma: nocover
+        if not self._hasIPv6():
+            return
+
+        inst = self._makeOne(listen='[::1]')
+
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('::1', 8080)])
+
+    def test_bad_port(self):
+        self.assertRaises(ValueError, self._makeOne, listen='127.0.0.1:test')
+
+    def test_service_port(self):
+        inst = self._makeOne(listen='127.0.0.1:http 0.0.0.0:https')
+
+        bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
+
+        self.assertEqual(bind_pairs, [('127.0.0.1', 80), ('0.0.0.0', 443)])
+
+    def test_dont_mix_host_port_listen(self):
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            host='localhost',
+            port='8080',
+            listen='127.0.0.1:8080',
+        )
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
+
+    def test_ipv4_disabled(self):
+        self.assertRaises(ValueError, self._makeOne, ipv4=False, listen="127.0.0.1:8080")
+
+    def test_ipv6_disabled(self):
+        self.assertRaises(ValueError, self._makeOne, ipv6=False, listen="[::]:8080")
 
 class TestCLI(unittest.TestCase):
 
@@ -147,8 +250,29 @@ class TestCLI(unittest.TestCase):
         self.assertDictContainsSubset({
             'host': 'localhost',
             'port': '80',
-            'unix_socket_perms':'777',
+            'unix_socket_perms': '777',
         }, opts)
+        self.assertSequenceEqual(args, [])
+
+    def test_listen_params(self):
+        opts, args = self.parse([
+            '--listen=test:80',
+            ])
+
+        self.assertDictContainsSubset({
+            'listen': ' test:80'
+            }, opts)
+        self.assertSequenceEqual(args, [])
+
+    def test_multiple_listen_params(self):
+        opts, args = self.parse([
+            '--listen=test:80',
+            '--listen=test:8080',
+            ])
+
+        self.assertDictContainsSubset({
+            'listen': ' test:80 test:8080'
+            }, opts)
         self.assertSequenceEqual(args, [])
 
     def test_bad_param(self):

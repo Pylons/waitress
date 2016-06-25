@@ -42,8 +42,45 @@ Standard options:
         Hostname or IP address on which to listen, default is '0.0.0.0',
         which means "all IP addresses on this host".
 
+        Note: May not be used together with --listen
+
     --port=PORT
         TCP port on which to listen, default is '8080'
+
+        Note: May not be used together with --listen
+
+    --listen=ip:port
+        Tell waitress to listen on an ip port combination.
+
+        Example:
+
+            --listen=127.0.0.1:8080
+            --listen=[::1]:8080
+            --listen=*:8080
+
+        This option may be used multiple times to listen on multipe sockets.
+        A wildcard for the hostname is also supported and will bind to both
+        IPv4/IPv6 depending on whether they are enabled or disabled.
+
+    --[no-]ipv4
+        Toggle on/off IPv4 support.
+
+        Example:
+
+            --no-ipv4
+
+        This will disable IPv4 socket support. This affects wildcard matching
+        when generating the list of sockets.
+
+    --[no-]ipv6
+        Toggle on/off IPv6 support.
+
+        Example:
+
+            --no-ipv6
+
+        This will turn on IPv6 socket support. This affects wildcard matching
+        when generating a list of sockets.
 
     --unix-socket=PATH
         Path of Unix socket. If a socket path is specified, a Unix domain

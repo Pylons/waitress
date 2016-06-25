@@ -34,9 +34,22 @@ class TestWSGIServer(unittest.TestCase):
             _start=_start,
         )
 
+    def _makeOneWithMulti(self, adj=None, _start=True,
+                          app=dummy_app, listen="127.0.0.1:0 127.0.0.1:0"):
+        sock = DummySock()
+        task_dispatcher = DummyTaskDispatcher()
+        map = {}
+        from waitress.server import create_server
+        return create_server(
+            app,
+            listen=listen,
+            map=map,
+            _dispatcher=task_dispatcher,
+            _start=_start,
+            _sock=sock)
+
     def test_ctor_app_is_None(self):
         self.assertRaises(ValueError, self._makeOneWithMap, app=None)
-
 
     def test_ctor_start_true(self):
         inst = self._makeOneWithMap(_start=True)
@@ -72,8 +85,19 @@ class TestWSGIServer(unittest.TestCase):
         result = inst.get_server_name('0.0.0.0')
         self.assertEqual(result, 'localhost')
 
+    def test_get_server_multi(self):
+        inst = self._makeOneWithMulti()
+        self.assertEqual(inst.__class__.__name__, 'MultiSocketServer')
+
     def test_run(self):
         inst = self._makeOneWithMap(_start=False)
+        inst.asyncore = DummyAsyncore()
+        inst.task_dispatcher = DummyTaskDispatcher()
+        inst.run()
+        self.assertTrue(inst.task_dispatcher.was_shutdown)
+
+    def test_run_base_server(self):
+        inst = self._makeOneWithMulti(_start=False)
         inst.asyncore = DummyAsyncore()
         inst.task_dispatcher = DummyTaskDispatcher()
         inst.run()
@@ -241,6 +265,16 @@ if hasattr(socket, 'AF_UNIX'):
                 L,
                 [(inst, client, ('localhost', None), inst.adj)]
             )
+
+        def test_creates_new_sockinfo(self):
+            from waitress.server import UnixWSGIServer
+            inst = UnixWSGIServer(
+                dummy_app,
+                unix_socket=self.unix_socket,
+                unix_socket_perms='600'
+            )
+
+            self.assertEqual(inst.sockinfo[0], socket.AF_UNIX)
 
 class DummySock(object):
     accepted = False

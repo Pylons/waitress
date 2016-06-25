@@ -10,8 +10,40 @@ host
     hostname or IP address (string) on which to listen, default ``0.0.0.0``,
     which means "all IP addresses on this host".
 
+    .. warning::
+        May not be used with ``listen``
+
+    .. deprecated:: 1.0
+
 port
     TCP port (integer) on which to listen, default ``8080``
+
+    .. warning::
+        May not be used with ``listen``
+
+    .. deprecated:: 1.0
+
+listen
+    Tell waitress to listen on an host/port combination. It is to be provided
+    as a space delineated list of host/port:
+
+    Examples:
+
+        - ``listen="127.0.0.1:8080 [::1]:8080"``
+        - ``listen="*:8080 *:6543"``
+
+	A wildcard for the hostname is also supported and will bind to both
+	IPv4/IPv6 depending on whether they are enabled or disabled.
+
+	IPv6 IP addresses are supported by surrounding the IP address with brackets.
+
+    .. versionadded:: 1.0
+
+ipv4
+    Enable or disable IPv4 (boolean)
+
+ipv6
+    Enable or disable IPv6 (boolean)
 
 unix_socket
     Path of Unix socket (string), default is ``None``. If a socket path is
