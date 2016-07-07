@@ -255,7 +255,7 @@ class Adjustments(object):
                     enabled_families,
                     socket.SOCK_STREAM,
                     socket.IPPROTO_TCP,
-                    socket.AI_PASSIVE | socket.AI_ADDRCONFIG
+                    socket.AI_PASSIVE
                 ):
                     (family, socktype, proto, _, sockaddr) = s
 
