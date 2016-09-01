@@ -1,4 +1,4 @@
-1.0a2 (2016-07-07)
+1.0.0 (2016-08-31)
 ------------------
 
 Bugfixes
@@ -10,9 +10,6 @@ Bugfixes
   bound to. See https://github.com/Pylons/waitress/issues/131 for more
   information.
 
-1.0a1 (2016-06-24)
-------------------
-
 Deprecations
 ~~~~~~~~~~~~
 
@@ -20,6 +17,8 @@ Deprecations
 
 Features
 ~~~~~~~~
+
+- IPv6 support
 
 - Waitress is now able to listen on multiple sockets, including IPv4 and IPv6.
   Instead of passing in a host/port combination you now provide waitress with a
