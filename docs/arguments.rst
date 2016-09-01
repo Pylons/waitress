@@ -13,15 +13,11 @@ host
     .. warning::
         May not be used with ``listen``
 
-    .. deprecated:: 1.0
-
 port
     TCP port (integer) on which to listen, default ``8080``
 
     .. warning::
         May not be used with ``listen``
-
-    .. deprecated:: 1.0
 
 listen
     Tell waitress to listen on an host/port combination. It is to be provided
