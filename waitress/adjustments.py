@@ -17,8 +17,9 @@ import getopt
 import socket
 
 from waitress.compat import (
-    string_types,
+    PY2,
     WIN,
+    string_types,
     )
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
@@ -245,7 +246,7 @@ class Adjustments(object):
             else:
                 (host, port) = (i, str(self.port))
 
-            if WIN: # pragma: no cover
+            if WIN and PY2: # pragma: no cover
                 try:
                     # Try turning the port into an integer
                     port = int(port)
