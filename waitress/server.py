@@ -22,7 +22,14 @@ from waitress import trigger
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
 from waitress.task import ThreadedTaskDispatcher
-from waitress.utilities import cleanup_unix_socket, logging_dispatcher
+from waitress.utilities import (
+    cleanup_unix_socket,
+    logging_dispatcher,
+    )
+from waitress.compat import (
+    IPPROTO_IPV6,
+    IPV6_V6ONLY,
+    )
 
 def create_server(application,
                   map=None,
@@ -169,7 +176,7 @@ class BaseWSGIServer(logging_dispatcher, object):
         if _sock is None:
             self.create_socket(self.family, self.socktype)
             if self.family == socket.AF_INET6: # pragma: nocover
-                self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                self.socket.setsockopt(IPPROTO_IPV6, IPV6_V6ONLY, 1)
 
         self.set_reuse_addr()
         self.bind_server_socket()
