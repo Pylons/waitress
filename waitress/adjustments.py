@@ -16,7 +16,11 @@
 import getopt
 import socket
 
-from waitress.compat import string_types
+from waitress.compat import (
+    PY2,
+    WIN,
+    string_types,
+    )
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
 
@@ -241,6 +245,15 @@ class Adjustments(object):
                     (host, port) = (i, str(self.port))
             else:
                 (host, port) = (i, str(self.port))
+
+            if WIN and PY2: # pragma: no cover
+                try:
+                    # Try turning the port into an integer
+                    port = int(port)
+                except:
+                    raise ValueError(
+                        'Windows does not support service names instead of port numbers'
+                    )
 
             try:
                 if '[' in host and ']' in host: # pragma: nocover

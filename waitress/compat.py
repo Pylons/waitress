@@ -1,5 +1,6 @@
 import sys
 import types
+import platform
 
 try:
     import urlparse
@@ -7,7 +8,11 @@ except ImportError: # pragma: no cover
     from urllib import parse as urlparse
 
 # True if we are running on Python 3.
+PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
+
+# True if we are running on Windows
+WIN = platform.system() == 'Windows'
 
 if PY3: # pragma: no cover
     string_types = str,

@@ -1,6 +1,11 @@
 import sys
 import socket
 
+from waitress.compat import (
+    PY2,
+    WIN,
+    )
+
 if sys.version_info[:2] == (2, 6): # pragma: no cover
     import unittest2 as unittest
 else: # pragma: no cover
@@ -181,6 +186,15 @@ class TestAdjustments(unittest.TestCase):
         self.assertRaises(ValueError, self._makeOne, listen='127.0.0.1:test')
 
     def test_service_port(self):
+        if WIN and PY2: # pragma: no cover
+            # On Windows and Python 2 this is broken, so we raise a ValueError
+            self.assertRaises(
+                ValueError,
+                self._makeOne,
+                listen='127.0.0.1:http',
+            )
+            return
+
         inst = self._makeOne(listen='127.0.0.1:http 0.0.0.0:https')
 
         bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
