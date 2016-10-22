@@ -1,3 +1,20 @@
+1.0.1 (2016-10-22)
+------------------
+
+Bugfixes
+~~~~~~~~
+
+- IPv6 support on Windows was broken due to missing constants in the socket
+  module. This has been resolved by setting the constants on Windows if they
+  are missing. See https://github.com/Pylons/waitress/issues/138
+
+- A ValueError was raised on Windows when passing a string for the port, on
+  Windows in Python 2 using service names instead of port numbers doesn't work
+  with `getaddrinfo`. This has been resolved by attempting to convert the port
+  number to an integer, if that fails a ValueError will be raised. See
+  https://github.com/Pylons/waitress/issues/139
+
+
 1.0.0 (2016-08-31)
 ------------------
 
