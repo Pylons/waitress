@@ -34,7 +34,7 @@ testing_extras = [
 
 setup(
     name='waitress',
-    version='1.1.0.dev0',
+    version='1.0.1',
     author='Zope Foundation and Contributors',
     author_email='zope-dev@zope.org',
     maintainer="Pylons Project",
