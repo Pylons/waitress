@@ -89,7 +89,6 @@ pygments_style = 'sphinx'
 # -----------------------
 
 # Add and use Pylons theme
-sys.path.append(os.path.abspath('_themes'))
 html_theme = 'pylons'
 html_theme_path = pylons_sphinx_themes.get_html_themes_path()
 html_theme_options = dict(github_url='http://github.com/Pylons/waitress')
