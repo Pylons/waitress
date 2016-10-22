@@ -91,7 +91,10 @@ pygments_style = 'sphinx'
 # Add and use Pylons theme
 html_theme = 'pylons'
 html_theme_path = pylons_sphinx_themes.get_html_themes_path()
-html_theme_options = dict(github_url='http://github.com/Pylons/waitress')
+html_theme_options = dict(
+    github_url='http://github.com/Pylons/waitress',
+    canonical_url='http://docs.pylonsproject.org/projects/waitress/en/latest/'
+)
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
@@ -180,7 +183,7 @@ latex_documents = [
 
 # The name of an image file (relative to this directory) to place at the
 # top of the title page.
-latex_logo = '.static/logo_hi.gif'
+#latex_logo = '.static/logo_hi.gif'
 
 # For "manual" documents, if this is true, then toplevel headings are
 # parts, not chapters.
