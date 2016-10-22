@@ -91,10 +91,7 @@ pygments_style = 'sphinx'
 # Add and use Pylons theme
 html_theme = 'pylons'
 html_theme_path = pylons_sphinx_themes.get_html_themes_path()
-html_theme_options = dict(
-    github_url='http://github.com/Pylons/waitress',
-    canonical_url='http://docs.pylonsproject.org/projects/waitress/en/latest/'
-)
+html_theme_options = dict(github_url='http://github.com/Pylons/waitress')
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
