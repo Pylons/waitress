@@ -23,7 +23,7 @@ and IPv6.
 
 .. code-block:: python
 
-   from waitress impot serve
+   from waitress import serve
    serve(wsgiapp, host='0.0.0.0', port=8080)
 
 This will run waitress on port 8080 on all available IPv4 addresses.
