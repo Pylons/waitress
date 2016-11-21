@@ -4,6 +4,10 @@ environment:
       TOXENV: "py35"
     - PYTHON: "C:\\Python27"
       TOXENV: "py27"
+    - PYTHON: "C:\\Python27-x64"
+      TOXENV: "Py27"
+    - PYTHON: "C:\\Python35-x64"
+      TOXENV: "Py35"
 
 cache:
     - '%LOCALAPPDATA%\pip\Cache'
