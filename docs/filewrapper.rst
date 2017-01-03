@@ -42,8 +42,8 @@ in this degenerate case (as per the WSGI pec), and this block size will be
 used as the iteration chunk size.  The ``block_size`` argument is optional;
 if it is not passed, a default value ``32768`` is used.
 
-Waitress will set a ``Content-Length`` header on the behalf of an application
-when a file wrapper with a sufficient ``filelike_object`` is used if the
+Waitress will set a ``Content-Length`` header on behalf of an application
+when a file wrapper with a sufficiently file-like object is used if the
 application hasn't already set one.
 
 The machinery which handles a file wrapper currently doesn't do anything
@@ -51,4 +51,4 @@ particularly special using fancy system calls (it doesn't use ``sendfile``
 for example); using it currently just prevents the system from needing to
 copy data to a temporary buffer in order to send it to the client.  No
 copying of data is done when a WSGI app returns a file wrapper that wraps a
-sufficient ``filelike_object``.  It may do something fancier in the future.
+sufficiently file-like object.  It may do something fancier in the future.
