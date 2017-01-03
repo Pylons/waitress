@@ -31,19 +31,19 @@ object which supports *at least* the ``read()`` method, and the ``read()``
 method must support an optional size hint argument and the ``read()`` method
 *must* return **bytes** objects (never unicode).  It *should* support the
 ``seek()`` and ``tell()`` methods.  If it does not, normal iteration over the
-filelike object using the provided block_size is used (and copying is done,
-negating any benefit of the file wrapper).  It *should* support a ``close()``
-method.
+``filelike_object`` using the provided ``block_size`` is used (and copying is
+done, negating any benefit of the file wrapper). It *should* support a
+``close()`` method.
 
 The specified ``block_size`` argument to the file wrapper constructor will be
 used only when the ``filelike_object`` doesn't support ``seek`` and/or
 ``tell`` methods.  Waitress needs to use normal iteration to serve the file
 in this degenerate case (as per the WSGI pec), and this block size will be
 used as the iteration chunk size.  The ``block_size`` argument is optional;
-if it is not passed, a default value``32768`` is used.
+if it is not passed, a default value ``32768`` is used.
 
-Waitress will set a ``Content-Length`` header on the behalf of an application
-when a file wrapper with a sufficiently filelike object is used if the
+Waitress will set a ``Content-Length`` header on behalf of an application
+when a file wrapper with a sufficiently file-like object is used if the
 application hasn't already set one.
 
 The machinery which handles a file wrapper currently doesn't do anything
@@ -51,4 +51,4 @@ particularly special using fancy system calls (it doesn't use ``sendfile``
 for example); using it currently just prevents the system from needing to
 copy data to a temporary buffer in order to send it to the client.  No
 copying of data is done when a WSGI app returns a file wrapper that wraps a
-sufficiently filelike object.  It may do something fancier in the future.
+sufficiently file-like object.  It may do something fancier in the future.

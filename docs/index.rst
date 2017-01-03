@@ -4,7 +4,7 @@ Waitress
 Waitress is meant to be a production-quality pure-Python WSGI server with
 very acceptable performance.  It has no dependencies except ones which live
 in the Python standard library.  It runs on CPython on Unix and Windows under
-Python 2.6+ and Python 3.2+.  It is also known to run on PyPy 1.6.0 on UNIX.
+Python 2.7+ and Python 3.3+.  It is also known to run on PyPy 1.6.0 on UNIX.
 It supports HTTP/1.0 and HTTP/1.1.
 
 Usage
@@ -36,7 +36,7 @@ WSGI app as a single argument:
 
    from waitress import serve
    serve(wsgiapp)
-   
+
 Press Ctrl-C (or Ctrl-Break on Windows) to exit the server.
 
 The default is to bind to any IPv4 address on port 8080:
