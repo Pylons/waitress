@@ -1,3 +1,17 @@
+1.0.2 (2017-02-04)
+------------------
+
+Bugfixes
+~~~~~~~~
+
+- Add a work-around for libc issue on Linux not following the documented
+  standards. If getnameinfo() fails because of DNS not being available it
+  should return the IP address instead of the reverse DNS entry, however
+  instead getnameinfo() raises. We catch this, and ask getnameinfo()
+  for the same information again, explicitly asking for IP address instead of
+  reverse DNS hostname. See https://github.com/Pylons/waitress/issues/149 and
+  https://github.com/Pylons/waitress/pull/153
+
 1.0.1 (2016-10-22)
 ------------------
 
