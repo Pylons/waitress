@@ -104,8 +104,8 @@ class Test_run(unittest.TestCase):
             ['nonexistent:a'],
             1,
             (
-                r"There was an exception \(ImportError\) importing your "
-                "module.\n\nIt had these arguments: \n"
+                r"There was an exception \((ImportError|ModuleNotFoundError)\) "
+                "importing your module.\n\nIt had these arguments: \n"
                 "1. No module named '?nonexistent'?"
             )
         )
