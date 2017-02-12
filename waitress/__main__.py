@@ -1,5 +1,2 @@
-from waitress.runner import run
-
-
-if __name__ == '__main__':
-    run()
+from waitress.runner import run  # pragma nocover
+run()  # pragma nocover
