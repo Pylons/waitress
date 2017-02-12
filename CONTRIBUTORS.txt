@@ -137,3 +137,4 @@ Contributors
 
 - Jason Madden, 2016-03-19
 
+- Atsushi Odagiri, 2017-02-12
