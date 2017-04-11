@@ -396,6 +396,10 @@ class WSGITask(Task):
             return self.write
 
         # Call the application to handle the request and write a response
+        if self.channel.server.application is None:
+            raise Exception("Cannot process request (WSGI application missing). "
+                            "Was None pass where WSGI application was expected?")
+
         app_iter = self.channel.server.application(env, start_response)
 
         if app_iter.__class__ is ReadOnlyFileBasedBuffer:
