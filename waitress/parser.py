@@ -48,10 +48,10 @@ class HTTPRequestParser(object):
     Once the stream is completed, the instance is passed to
     a server task constructor.
     """
-    completed = False        # Set once request is completed.
-    empty = False            # Set if no request was made.
-    expect_continue = False  # client sent "Expect: 100-continue" header
-    headers_finished = False # True when headers have been read
+    completed = False           # Set once request is completed.
+    empty = False               # Set if no request was made.
+    expect_continue = False     # client sent "Expect: 100-continue" header
+    headers_finished = False    # True when headers have been read
     header_plus = b''
     chunked = False
     content_length = 0
@@ -81,7 +81,7 @@ class HTTPRequestParser(object):
         body have been received.
         """
         if self.completed:
-            return 0 # Can't consume any more.
+            return 0  # Can't consume any more.
         datalen = len(data)
         br = self.body_rcv
         if br is None:

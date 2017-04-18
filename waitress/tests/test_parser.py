@@ -211,6 +211,27 @@ foo: bar"""
         self.parser.body_rcv = None
         self.parser.close() # doesn't raise
 
+    def test_header_continuations(self):
+        # Ensure that lines starting with a space or tab character
+        # are appended with a space to the preceding line
+        # as per https://www.ietf.org/rfc/rfc2616.txt
+        data = b"""\
+GET /foobar HTTP/1.1
+Transfer-Encoding:
+ chunked
+X-Forwarded-For:
+\t10.11.12.13,
+\tunknown,127.0.0.1,
+ 255.255.255.255
+"""
+        self.feed(data)
+        self.assertTrue(self.parser.completed)
+        self.assertEqual(self.parser.headers, {
+            'TRANSFER_ENCODING': 'chunked',
+            'X_FORWARDED_FOR':
+                '10.11.12.13, unknown,127.0.0.1, 255.255.255.255',
+        })
+
 class Test_split_uri(unittest.TestCase):
 
     def _callFUT(self, uri):
