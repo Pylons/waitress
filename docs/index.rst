@@ -311,7 +311,7 @@ Extended Documentation
 Change History
 --------------
 
-.. include:: ../CHANGES.txt
+.. include:: ../CHANGES.rst
 .. include:: ../HISTORY.txt
 
 Known Issues
