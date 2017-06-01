@@ -1,13 +1,11 @@
 1.0.2 (2017-02-04)
 ------------------
 
-Features
-~~~~~~~~
+Features:
 
 - Python 3.6 is now officially supported in Waitress
 
-Bugfixes
-~~~~~~~~
+Bugfixes:
 
 - Add a work-around for libc issue on Linux not following the documented
   standards. If getnameinfo() fails because of DNS not being available it
@@ -20,8 +18,7 @@ Bugfixes
 1.0.1 (2016-10-22)
 ------------------
 
-Bugfixes
-~~~~~~~~
+Bugfixes:
 
 - IPv6 support on Windows was broken due to missing constants in the socket
   module. This has been resolved by setting the constants on Windows if they
@@ -37,8 +34,7 @@ Bugfixes
 1.0.0 (2016-08-31)
 ------------------
 
-Bugfixes
-~~~~~~~~
+Bugfixes:
 
 - Removed `AI_ADDRCONFIG` from the call to `getaddrinfo`, this resolves an
   issue whereby `getaddrinfo` wouldn't return any addresses to `bind` to on
@@ -46,13 +42,11 @@ Bugfixes
   bound to. See https://github.com/Pylons/waitress/issues/131 for more
   information.
 
-Deprecations
-~~~~~~~~~~~~
+Deprecations:
 
 - Python 2.6 is no longer supported.
 
-Features
-~~~~~~~~
+Features:
 
 - IPv6 support
 
@@ -65,8 +59,7 @@ Features
 	from waitress import serve
 	serve(wsgiapp, listen='0.0.0.0:8080 [::]:9090 *:6543')
 
-Security
-~~~~~~~~
+Security:
 
 - Waitress will now drop HTTP headers that contain an underscore in the key
   when received from a client. This is to stop any possible underscore/dash
