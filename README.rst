@@ -1,17 +1,22 @@
 .. image:: https://img.shields.io/pypi/v/waitress.svg
     :target: https://pypi.python.org/pypi/waitress
+    :alt: waitress on PyPI
 
 .. image:: https://img.shields.io/pypi/l/waitress.svg
     :target: https://pypi.python.org/pypi/waitress
+    :alt: waitress on PyPI
 
 .. image:: https://img.shields.io/pypi/wheel/waitress.svg
     :target: https://pypi.python.org/pypi/waitress
+    :alt: waitress on PyPI
 
 .. image:: https://img.shields.io/pypi/pyversions/waitress.svg
     :target: https://pypi.python.org/pypi/waitress
+    :alt: waitress on PyPI
 
 .. image:: https://travis-ci.org/Pylons/waitress.svg?branch=master
     :target: https://travis-ci.org/Pylons/waitress
+    :alt: Travis CI for waitress (master branch)
 
 Waitress is meant to be a production-quality pure-Python WSGI server with very
 acceptable performance.  It has no dependencies except ones which live in the
