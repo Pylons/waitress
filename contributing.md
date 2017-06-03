@@ -7,42 +7,49 @@ Contribute](http://www.pylonsproject.org/community/how-to-contribute) and
 [Coding Style and
 Standards](http://docs.pylonsproject.org/en/latest/community/codestyle.html).
 
-You can contribute to this project in several ways.
 
-* [File an Issue on GitHub](https://github.com/Pylons/waitress/issues)
-* Fork this project and create a branch with your suggested change. When ready,
-  submit a pull request for consideration. [GitHub
-  Flow](https://guides.github.com/introduction/flow/index.html) describes the
-  workflow process and why it's a good practice.
-* Join the IRC channel [#pyramid](https://webchat.freenode.net/?channels=pyramid) on irc.freenode.net.
+Get support
+-----------
+See [Get Support](http://pylonsproject.org/community-support.html). You are reading this document most likely because you want to *contribute* to the project and not *get support*.
 
 
-Git Branches
+Working on issues
+-----------------
+
+To respect both your time and ours, we emphasize the following points.
+
+* We use the [Issue Tracker on GitHub](https://github.com/Pylons/waitress/issues) to discuss bugs, improvements, and feature requests. Search through existing issues before reporting a new one. Issues may be complex or wide-ranging. A discussion up front sets us all on the best path forward.
+* Minor issues—such as spelling, grammar, and syntax—don't require discussion and a pull request is sufficient.
+* After discussing the issue with maintainers and agreeing on a resolution, submit a pull request of your work. [GitHub Flow](https://guides.github.com/introduction/flow/index.html) describes the workflow process and why it's a good practice.
+
+
+Git branches
 ------------
 There is a single branch [master](https://github.com/Pylons/waitress/) on which development takes place and from which releases to PyPI are tagged. This is the default branch on GitHub.
 
 
-Running Tests
--------------
+Running tests and building documentation
+----------------------------------------
 
-*Note:* This section needs better instructions.
+We use [tox](http://tox.readthedocs.io/en/latest/) to automate test running, coverage, and building documentation across all supported Python versions.
 
-Run `tox` from within your checkout. This will run the tests across all
-supported systems and attempt to build the docs.
+To run everything configured in the `tox.ini` file:
 
-To run the tests for Python 2.x only:
+    $ tox
 
-    $ tox py2-cover
+To run tests on Python 2 and 3, and ensure full coverage, but exclude building of docs:
 
-To build the docs for Python 3.x only:
+    $ tox -e py2-cover,py3-cover,coverage
 
-    $ tox py3-docs
+To build the docs only:
+
+    $ tox -e docs
 
 See the `tox.ini` file for details.
 
 
-Building documentation for a Pylons Project project
----------------------------------------------------
+Contributing documentation
+--------------------------
 
 *Note:* These instructions might not work for Windows users. Suggestions to
 improve the process for Windows users are welcome by submitting an issue or a
