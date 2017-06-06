@@ -231,8 +231,12 @@ class Task(object):
                 close_on_finish()
 
             if not content_length_header:
-                response_headers.append(('Transfer-Encoding', 'chunked'))
-                self.chunked_response = True
+                # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
+                # for any response with a status code of 1xx or 204.
+                if not (self.status.startswith('1') or
+                        self.status.startswith('204')):
+                    response_headers.append(('Transfer-Encoding', 'chunked'))
+                    self.chunked_response = True
                 if not self.close_on_finish:
                     close_on_finish()
 
