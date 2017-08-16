@@ -288,15 +288,19 @@ class Test_crack_first_line(unittest.TestCase):
         return crack_first_line(line)
 
     def test_crack_first_line_matchok(self):
-        result = self._callFUT(b'get / HTTP/1.0')
+        result = self._callFUT(b'GET / HTTP/1.0')
         self.assertEqual(result, (b'GET', b'/', b'1.0'))
 
+    def test_crack_first_line_lowercase_method(self):
+        from waitress.parser import ParsingError
+        self.assertRaises(ParsingError, self._callFUT, b'get / HTTP/1.0')
+
     def test_crack_first_line_nomatch(self):
-        result = self._callFUT(b'get / bleh')
+        result = self._callFUT(b'GET / bleh')
         self.assertEqual(result, (b'', b'', b''))
 
     def test_crack_first_line_missing_version(self):
-        result = self._callFUT(b'get /')
+        result = self._callFUT(b'GET /')
         self.assertEqual(result, (b'GET', b'/', None))
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):

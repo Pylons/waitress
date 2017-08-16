@@ -291,8 +291,20 @@ def crack_first_line(line):
             version = m.group(5)
         else:
             version = None
-        command = m.group(1).upper()
+        method = m.group(1)
+
+        # the request methods that are currently defined are all uppercase:
+        # https://www.iana.org/assignments/http-methods/http-methods.xhtml and
+        # the request method is case sensitive according to
+        # https://tools.ietf.org/html/rfc7231#section-4.1
+
+        # By disallowing anything but uppercase methods we save poor
+        # unsuspecting souls from sending lowercase HTTP methods to waitress
+        # and having the request complete, while servers like nginx drop the
+        # request onto the floor.
+        if method != method.upper():
+            raise ParsingError('Malformed HTTP method "%s"' % tostr(method))
         uri = m.group(2)
-        return command, uri, version
+        return method, uri, version
     else:
         return b'', b'', b''
