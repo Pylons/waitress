@@ -253,7 +253,10 @@ class HTTPRequestParser(object):
 def split_uri(uri):
     # urlsplit handles byte input by returning bytes on py3, so
     # scheme, netloc, path, query, and fragment are bytes
-    scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
+    try:
+        scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
+    except UnicodeError:
+        raise ParsingError('Bad URI')
     return (
         tostr(scheme),
         tostr(netloc),
