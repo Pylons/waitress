@@ -1,3 +1,22 @@
+1.1.0 (2017-10-10)
+------------------
+
+Features
+~~~~~~~~
+
+- Waitress now has a __main__ and thus may be called with ``python -mwaitress``
+
+Bugfixes
+~~~~~~~~
+
+- Waitress no longer allows lowercase HTTP verbs. This change was made to fall
+  in line with most HTTP servers. See https://github.com/Pylons/waitress/pull/170
+
+- When receiving non-ascii bytes in the request URL, waitress will no longer
+  abruptly close the connection, instead returning a 400 Bad Request. See
+  https://github.com/Pylons/waitress/pull/162 and
+  https://github.com/Pylons/waitress/issues/64
+
 1.0.2 (2017-02-04)
 ------------------
 
