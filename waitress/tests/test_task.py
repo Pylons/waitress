@@ -65,6 +65,13 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(inst.queue.qsize(), 1)
         self.assertTrue(task.deferred)
 
+    def test_log_queue_depth(self):
+        task = DummyTask()
+        inst = self._makeOne()
+        inst.add_task(task)
+        inst.logger = DummyLogger()
+        self.assertEqual(len(inst.logger.logged), 1)
+
     def test_add_task_defer_raises(self):
         task = DummyTask(ValueError)
         inst = self._makeOne()
