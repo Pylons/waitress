@@ -108,6 +108,11 @@ class ThreadedTaskDispatcher(object):
                     running -= 1
 
     def add_task(self, task):
+        queue_depth = self.queue.qsize()
+        if queue_depth > 0:
+            self.logger.warning(
+                "Task queue depth is %d" %
+                queue_depth)
         try:
             task.defer()
             self.queue.put(task)
