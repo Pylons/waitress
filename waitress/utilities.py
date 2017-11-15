@@ -24,6 +24,7 @@ import time
 import calendar
 
 logger = logging.getLogger('waitress')
+queue_logger = logging.getLogger('waitress.queue')
 
 def find_double_newline(s):
     """Returns the position just after a double newline in the given string."""

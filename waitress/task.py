@@ -29,6 +29,7 @@ from waitress.compat import (
 from waitress.utilities import (
     build_http_date,
     logger,
+    queue_logger,
 )
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -55,6 +56,7 @@ class ThreadedTaskDispatcher(object):
     """
     stop_count = 0 # Number of threads that will stop soon.
     logger = logger
+    queue_logger = queue_logger
 
     def __init__(self):
         self.threads = {} # { thread number -> 1 }
@@ -108,6 +110,11 @@ class ThreadedTaskDispatcher(object):
                     running -= 1
 
     def add_task(self, task):
+        queue_depth = self.queue.qsize()
+        if queue_depth > 0:
+            self.queue_logger.warning(
+                "Task queue depth is %d" %
+                queue_depth)
         try:
             task.defer()
             self.queue.put(task)
