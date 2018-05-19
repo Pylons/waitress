@@ -23,7 +23,8 @@ matrix:
         - python: 3.5
           env: TOXENV=docs
     allow_failures:
-        - env: TOXENV=pypy3,py37
+        - env: TOXENV=pypy3
+        - env: TOXENV=py37
 
 install:
   - travis_retry pip install tox
