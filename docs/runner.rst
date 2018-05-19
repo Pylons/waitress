@@ -159,7 +159,7 @@ Tuning options:
     this. Default is 524288 (512KB).
 
 ``--connection-limit=INT``
-    Stop creating new channelse if too many are already active.  Default is
+    Stop creating new channels if too many are already active.  Default is
     100.
 
 ``--cleanup-interval=INT``
@@ -168,11 +168,11 @@ Tuning options:
 
 ``--channel-timeout=INT``
     Maximum number of seconds to leave inactive connections open.  Default is
-    120. 'Inactive' is defined as 'has recieved no data from the client and has
+    120. 'Inactive' is defined as 'has received no data from the client and has
     sent no data to the client'.
 
 ``--[no-]log-socket-errors``
-    Toggle whether premature client disconnect tracepacks ought to be logged.
+    Toggle whether premature client disconnect tracebacks ought to be logged.
     On by default.
 
 ``--max-request-header-size=INT``
