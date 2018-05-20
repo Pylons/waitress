@@ -18,6 +18,7 @@
 #sys.path.append(os.path.abspath('some/directory'))
 
 import sys, os
+import datetime
 import pkg_resources
 import pylons_sphinx_themes
 
@@ -41,7 +42,8 @@ master_doc = 'index'
 
 # General substitutions.
 project = 'waitress'
-copyright = '2012, Agendaless Consulting <chrism@plope.com>'
+thisyear = datetime.datetime.now().year
+copyright = '2012-%s, Agendaless Consulting <chrism@plope.com>' % thisyear
 
 # The default replacements for |version| and |release|, also used in various
 # other places throughout the built documents.
@@ -91,7 +93,7 @@ pygments_style = 'sphinx'
 # Add and use Pylons theme
 html_theme = 'pylons'
 html_theme_path = pylons_sphinx_themes.get_html_themes_path()
-html_theme_options = dict(github_url='http://github.com/Pylons/waitress')
+html_theme_options = dict(github_url='https://github.com/Pylons/waitress')
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
@@ -175,7 +177,7 @@ htmlhelp_basename = 'atemplatedoc'
 #  author, document class [howto/manual]).
 latex_documents = [
   ('index', 'waitress.tex', 'waitress Documentation',
-   'Pylons Developers', 'manual'),
+   'Pylons Project Developers', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the

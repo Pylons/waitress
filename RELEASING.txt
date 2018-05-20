@@ -1,0 +1,115 @@
+Releasing
+=========
+
+- For clarity, we define releases as follows.
+
+  - Alpha, beta, dev and similar statuses do not qualify whether a release is
+    major or minor. The term "pre-release" means alpha, beta, or dev.
+
+  - A release is final when it is no longer pre-release.
+
+  - A *major* release is where the first number either before or after the
+    first dot increases. Examples: 1.0 to 1.1a1, or 0.9 to 1.0.
+
+  - A *minor* or *bug fix* release is where the number after the second dot
+    increases. Example: 1.0 to 1.0.1.
+
+Prepare new release
+-------------------
+
+- Do platform test via tox:
+
+  $ tox -r
+
+  Make sure statement coverage is at 100% (the test run will fail if not).
+
+- Run tests on Windows if feasible.
+
+- Ensure all features of the release are documented (audit CHANGES.txt or
+  communicate with contributors).
+
+- Change CHANGES.txt heading to reflect the new version number.
+
+- Minor releases should include a link under "Bug Fix Releases" to the minor
+  feature changes in CHANGES.txt.
+
+- Change setup.py version to the release version number.
+
+- Make sure PyPI long description renders (requires ``readme_renderer``
+  installed into your Python)::
+
+  $ python setup.py check -r -s -m
+
+- Create a release tag.
+
+- Make sure your Python has ``setuptools-git``, ``twine``, and ``wheel``
+  installed and release to PyPI::
+
+  $ python setup.py sdist bdist_wheel
+  $ twine upload dist/waitress-X.X-*
+
+
+Prepare master for further development (major releases only)
+------------------------------------------------------------
+
+- In CHANGES.txt, preserve headings but clear out content. Add heading
+  "unreleased" for the version number.
+
+- Forward port the changes in CHANGES.txt to HISTORY.txt.
+
+- Change setup.py version to the next version number.
+
+
+Marketing and communications
+----------------------------
+
+- Check `https://wiki.python.org/moin/WebServers
+  <https://wiki.python.org/moin/WebServers>`_.
+
+- Announce to Twitter.
+
+```
+waitress 1.x released.
+
+PyPI
+https://pypi.org/project/waitress/1.x/
+
+=== One time only for new version, first pre-release ===
+What's New
+https://docs.pylonsproject.org/projects/waitress/en/latest/#id2
+=== For all subsequent pre-releases ===
+Changes
+https://docs.pylonsproject.org/projects/waitress/en/latest/#change-history
+
+Documentation:
+https://docs.pylonsproject.org/projects/waitress/en/latest/
+
+Issues
+https://github.com/Pylons/waitress/issues
+```
+
+- Announce to maillist.
+
+```
+waitress 1.X.X has been released.
+
+The full changelog is here:
+https://docs.pylonsproject.org/projects/waitress/en/latest/#change-history
+
+What's New In waitress 1.X:
+https://docs.pylonsproject.org/projects/waitress/en/latest/#id2
+
+Documentation:
+https://docs.pylonsproject.org/projects/waitress/en/latest/
+
+You can install it via PyPI:
+
+  pip install waitress==1.X
+
+Enjoy, and please report any issues you find to the issue tracker at
+https://github.com/Pylons/waitress/issues
+
+Thanks!
+
+- waitress core developers
+```
