@@ -182,8 +182,6 @@ class HTTPRequestParser(object):
             index = line.find(b':')
             if index > 0:
                 key = line[:index]
-                if b'_' in key:
-                    continue
                 value = line[index + 1:].strip()
                 key1 = tostr(key.upper().replace(b'-', b'_'))
                 # If a header already exists, we append subsequent values
