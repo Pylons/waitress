@@ -14,16 +14,8 @@ Releasing
   - A *minor* or *bug fix* release is where the number after the second dot
     increases. Example: 1.0 to 1.0.1.
 
-Prepare new release branch
---------------------------
-
-- Create a new release branch, incrementing the version number.
-
-- Do any necessary branch merges (e.g., master to branch, branch to master).
-
-- On release branch:
-
-  $ git pull
+Prepare new release
+-------------------
 
 - Do platform test via tox:
 
@@ -40,9 +32,6 @@ Prepare new release branch
 
 - Minor releases should include a link under "Bug Fix Releases" to the minor
   feature changes in CHANGES.txt.
-
-- Update README.rst to use correct versions of badges, URLs, and ALT option
-  according to the new release branch name.
 
 - Change setup.py version to the release version number.
 
@@ -63,13 +52,10 @@ Prepare new release branch
 Prepare master for further development (major releases only)
 ------------------------------------------------------------
 
-- Checkout master.
-
 - In CHANGES.txt, preserve headings but clear out content. Add heading
   "unreleased" for the version number.
 
-- From the release branch, forward port the changes in CHANGES.txt to
-  HISTORY.txt.
+- Forward port the changes in CHANGES.txt to HISTORY.txt.
 
 - Change setup.py version to the next version number.
 
