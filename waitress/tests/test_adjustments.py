@@ -224,7 +224,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.ident, None)
 
         inst = self._makeOne(ident='')
-        self.assertEqual(inst.ident, '')
+        self.assertEqual(inst.ident, None)
 
         inst = self._makeOne(ident='specific_header')
         self.assertEqual(inst.ident, 'specific_header')

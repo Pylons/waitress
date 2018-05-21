@@ -67,7 +67,7 @@ def slash_fixed_str(s):
     return s
 
 def str_iftruthy(s):
-    return str(s) if s else s
+    return str(s) if s else None
 
 class _str_marker(str):
     pass
