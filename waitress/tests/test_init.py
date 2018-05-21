@@ -14,12 +14,6 @@ class Test_serve(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(server.ran, True)
 
-    def test_empty_server_header(self):
-        server = DummyServerFactory()
-        app = object()
-        result = self._callFUT(app, _server=server, _quiet=True, ident=None)
-        self.assertIsNone(server.adj.ident)
-
 
 class Test_serve_paste(unittest.TestCase):
 

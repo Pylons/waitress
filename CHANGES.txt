@@ -1,3 +1,13 @@
+Unreleased (2018-05-21)
+-----------------------
+
+Features
+~~~~~~~~
+
+- Server header can be omitted by specifying `ident=None` or `ident=''`.
+  See https://github.com/Pylons/waitress/pull/187
+
+
 1.1.0 (2017-10-10)
 ------------------
 

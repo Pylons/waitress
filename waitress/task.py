@@ -250,11 +250,11 @@ class Task(object):
         # Set the Server and Date field, if not yet specified. This is needed
         # if the server is used as a proxy.
         ident = self.channel.server.adj.ident
-        if ident is not None:
-            if not server_header:
+        if not server_header:
+            if ident:
                 response_headers.append(('Server', ident))
-            else:
-                response_headers.append(('Via', ident))
+        else:
+            response_headers.append(('Via', ident))
 
         if not date_header:
             response_headers.append(('Date', build_http_date(self.start_time)))
