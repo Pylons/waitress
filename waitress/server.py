@@ -12,7 +12,6 @@
 #
 ##############################################################################
 
-import asyncore
 import os
 import os.path
 import socket
@@ -30,6 +29,7 @@ from waitress.compat import (
     IPPROTO_IPV6,
     IPV6_V6ONLY,
     )
+from . import wasyncore
 
 def create_server(application,
                   map=None,
@@ -98,10 +98,10 @@ def create_server(application,
 
 
 # This class is only ever used if we have multiple listen sockets. It allows
-# the serve() API to call .run() which starts the asyncore loop, and catches
+# the serve() API to call .run() which starts the wasyncore loop, and catches
 # SystemExit/KeyboardInterrupt so that it can atempt to cleanly shut down.
 class MultiSocketServer(object):
-    asyncore = asyncore # test shim
+    asyncore = wasyncore # test shim
 
     def __init__(self,
                  map=None,
@@ -139,7 +139,7 @@ class BaseWSGIServer(logging_dispatcher, object):
     channel_class = HTTPChannel
     next_channel_cleanup = 0
     socketmod = socket # test shim
-    asyncore = asyncore # test shim
+    asyncore = wasyncore # test shim
 
     def __init__(self,
                  application,
@@ -155,7 +155,7 @@ class BaseWSGIServer(logging_dispatcher, object):
             adj = Adjustments(**kw)
         if map is None:
             # use a nonglobal socket map by default to hopefully prevent
-            # conflicts with apps and libs that use the asyncore global socket
+            # conflicts with apps and libs that use the wasyncore global socket
             # map ala https://github.com/Pylons/waitress/issues/63
             map = {}
         if sockinfo is None:

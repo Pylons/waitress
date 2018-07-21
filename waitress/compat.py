@@ -1,3 +1,5 @@
+import fcntl
+import os
 import sys
 import types
 import platform
@@ -138,3 +140,22 @@ else: # pragma: no cover
             RuntimeWarning
         )
         HAS_IPV6 = False
+
+def set_nonblocking(fd):
+    if PY3 and sys.version_info[1] >= 5:
+        os.set_blocking(fd, False)
+    else:
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
+        flags = flags | os.O_NONBLOCK
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+
+if PY3:
+    ResourceWarning = ResourceWarning
+else:
+    ResourceWarning = UserWarning
+
+def qualname(cls):
+    if PY3:
+        return cls.__qualname__
+    return cls.__name__
+

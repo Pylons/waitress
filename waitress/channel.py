@@ -11,7 +11,6 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-import asyncore
 import socket
 import threading
 import time
@@ -33,6 +32,8 @@ from waitress.utilities import (
     logging_dispatcher,
     InternalServerError,
 )
+
+from . import wasyncore
 
 class HTTPChannel(logging_dispatcher, object):
     """
@@ -76,9 +77,9 @@ class HTTPChannel(logging_dispatcher, object):
         # outbuf_lock used to access any outbuf
         self.outbuf_lock = threading.Lock()
 
-        asyncore.dispatcher.__init__(self, sock, map=map)
+        wasyncore.dispatcher.__init__(self, sock, map=map)
 
-        # Don't let asyncore.dispatcher throttle self.addr on us.
+        # Don't let wasyncore.dispatcher throttle self.addr on us.
         self.addr = addr
 
     def any_outbuf_has_data(self):
@@ -281,23 +282,23 @@ class HTTPChannel(logging_dispatcher, object):
                 self.logger.exception(
                     'Unknown exception while trying to close outbuf')
         self.connected = False
-        asyncore.dispatcher.close(self)
+        wasyncore.dispatcher.close(self)
 
     def add_channel(self, map=None):
-        """See asyncore.dispatcher
+        """See wasyncore.dispatcher
 
         This hook keeps track of opened channels.
         """
-        asyncore.dispatcher.add_channel(self, map)
+        wasyncore.dispatcher.add_channel(self, map)
         self.server.active_channels[self._fileno] = self
 
     def del_channel(self, map=None):
-        """See asyncore.dispatcher
+        """See wasyncore.dispatcher
 
         This hook keeps track of closed channels.
         """
         fd = self._fileno # next line sets this to None
-        asyncore.dispatcher.del_channel(self, map)
+        wasyncore.dispatcher.del_channel(self, map)
         ac = self.server.active_channels
         if fd in ac:
             del ac[fd]

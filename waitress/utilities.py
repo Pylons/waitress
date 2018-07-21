@@ -14,7 +14,6 @@
 """Utility functions
 """
 
-import asyncore
 import errno
 import logging
 import os
@@ -22,6 +21,8 @@ import re
 import stat
 import time
 import calendar
+
+from . import wasyncore
 
 logger = logging.getLogger('waitress')
 queue_logger = logging.getLogger('waitress.queue')
@@ -170,7 +171,7 @@ def parse_http_date(d):
             return 0
     return retval
 
-class logging_dispatcher(asyncore.dispatcher):
+class logging_dispatcher(wasyncore.dispatcher):
     logger = logger
 
     def log_info(self, message, type='info'):
