@@ -46,7 +46,7 @@ many of the difficult problems for you, making the task of building
 sophisticated high-performance network servers and clients a snap.
 
 NB: this is a fork of asyncore from the stdlib that we've (the waitress
-developers) have named 'wasyncore' to ensure forward compatibility, as asyncore
+developers) named 'wasyncore' to ensure forward compatibility, as asyncore
 in the stdlib will be dropped soon.  It is neither a copy of the 2.7 asyncore
 nor the 3.X asyncore; it is a version compatible with either 2.7 or 3.X.
 """
@@ -75,10 +75,8 @@ except NameError:
 def _strerror(err):
     try:
         return os.strerror(err)
-    except (ValueError, OverflowError, NameError):
-        if err in errorcode:
-            return errorcode[err]
-        return "Unknown error %s" %err
+    except (TypeError, ValueError, OverflowError, NameError):
+        return "Unknown error %s" % err
 
 class ExitNow(Exception):
     pass
