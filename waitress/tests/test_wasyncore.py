@@ -368,6 +368,23 @@ def unlink(filename):
     except OSError:
         pass
 
+def _is_ipv6_enabled():
+    """Check whether IPv6 is enabled on this host."""
+    if compat.HAS_IPV6:
+        sock = None
+        try:
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            sock.bind(('::1', 0))
+            return True
+        except socket.error:
+            pass
+        finally:
+            if sock:
+                sock.close()
+    return False
+
+IPV6_ENABLED = _is_ipv6_enabled()
+
 class HelperFunctionTests(unittest.TestCase):
     def test_readwriteexc(self):
         # Check exception handling behavior of read, write and _exception
@@ -1057,7 +1074,7 @@ class TestAPI_UseIPv4Sockets(BaseTestAPI):
     family = socket.AF_INET
     addr = (HOST, 0)
 
-@unittest.skipUnless(compat.IPV6_ENABLED, 'IPv6 support required')
+@unittest.skipUnless(IPV6_ENABLED, 'IPv6 support required')
 class TestAPI_UseIPv6Sockets(BaseTestAPI):
     family = socket.AF_INET6
     addr = (HOSTv6, 0)
