@@ -99,8 +99,3 @@ class TestBadRequest(unittest.TestCase):
         inst = self._makeOne()
         self.assertEqual(inst.body, 1)
 
-class DummyLogger(object):
-
-    def log(self, severity, message):
-        self.severity = severity
-        self.message = message
