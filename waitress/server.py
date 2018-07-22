@@ -21,10 +21,8 @@ from waitress import trigger
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
 from waitress.task import ThreadedTaskDispatcher
-from waitress.utilities import (
-    cleanup_unix_socket,
-    logging_dispatcher,
-    )
+from waitress.utilities import cleanup_unix_socket
+
 from waitress.compat import (
     IPPROTO_IPV6,
     IPV6_V6ONLY,
@@ -134,7 +132,7 @@ class MultiSocketServer(object):
             self.task_dispatcher.shutdown()
 
 
-class BaseWSGIServer(logging_dispatcher, object):
+class BaseWSGIServer(wasyncore.dispatcher, object):
 
     channel_class = HTTPChannel
     next_channel_cleanup = 0

@@ -28,14 +28,11 @@ from waitress.task import (
     WSGITask,
 )
 
-from waitress.utilities import (
-    logging_dispatcher,
-    InternalServerError,
-)
+from waitress.utilities import InternalServerError
 
 from . import wasyncore
 
-class HTTPChannel(logging_dispatcher, object):
+class HTTPChannel(wasyncore.dispatcher, object):
     """
     Setting self.requests = [somerequest] prevents more requests from being
     received until the out buffers have been flushed.

@@ -52,7 +52,9 @@ nor the 3.X asyncore; it is a version compatible with either 2.7 or 3.X.
 """
 
 from . import compat
+from . import utilities
 
+import logging
 import select
 import socket
 import sys
@@ -233,6 +235,7 @@ class dispatcher:
     closing = False
     addr = None
     ignore_log_types = frozenset({'warning'})
+    logger = utilities.logger
 
     def __init__(self, sock=None, map=None):
         if map is None:
@@ -420,11 +423,15 @@ class dispatcher:
     # and 'log_info' is for informational, warning and error logging.
 
     def log(self, message):
-        sys.stderr.write('log: %s\n' % str(message))
+        self.logger.log(logging.DEBUG, message)
 
     def log_info(self, message, type='info'):
-        if type not in self.ignore_log_types:
-            print ('%s: %s' % (type, message))
+        severity = {
+            'info': logging.INFO,
+            'warning': logging.WARN,
+            'error': logging.ERROR,
+        }
+        self.logger.log(severity.get(type, logging.INFO), message)
 
     def handle_read_event(self):
         if self.accepting:

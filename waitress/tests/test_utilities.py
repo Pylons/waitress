@@ -89,21 +89,6 @@ class Test_find_double_newline(unittest.TestCase):
     def test_mixed(self):
         self.assertEqual(self._callFUT(b'\n\n00\r\n\r\n'), 2)
 
-class Test_logging_dispatcher(unittest.TestCase):
-
-    def _makeOne(self):
-        from waitress.utilities import logging_dispatcher
-        return logging_dispatcher(map={})
-
-    def test_log_info(self):
-        import logging
-        inst = self._makeOne()
-        logger = DummyLogger()
-        inst.logger = logger
-        inst.log_info('message', 'warning')
-        self.assertEqual(logger.severity, logging.WARN)
-        self.assertEqual(logger.message, 'message')
-
 class TestBadRequest(unittest.TestCase):
 
     def _makeOne(self):

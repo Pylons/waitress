@@ -141,6 +141,23 @@ else: # pragma: no cover
         )
         HAS_IPV6 = False
 
+def _is_ipv6_enabled():
+    """Check whether IPv6 is enabled on this host."""
+    if HAS_IPV6:
+        sock = None
+        try:
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            sock.bind(('::1', 0))
+            return True
+        except OSError:
+            pass
+        finally:
+            if sock:
+                sock.close()
+    return False
+
+IPV6_ENABLED = _is_ipv6_enabled()
+
 def set_nonblocking(fd):
     if PY3 and sys.version_info[1] >= 5:
         os.set_blocking(fd, False)
@@ -159,3 +176,9 @@ def qualname(cls):
         return cls.__qualname__
     return cls.__name__
 
+try:
+    import thread
+except ImportError:
+    # py3
+    import _thread as thread
+    

@@ -22,8 +22,6 @@ import stat
 import time
 import calendar
 
-from . import wasyncore
-
 logger = logging.getLogger('waitress')
 queue_logger = logging.getLogger('waitress.queue')
 
@@ -171,16 +169,6 @@ def parse_http_date(d):
             return 0
     return retval
 
-class logging_dispatcher(wasyncore.dispatcher):
-    logger = logger
-
-    def log_info(self, message, type='info'):
-        severity = {
-            'info': logging.INFO,
-            'warning': logging.WARN,
-            'error': logging.ERROR,
-        }
-        self.logger.log(severity.get(type, logging.INFO), message)
 
 def cleanup_unix_socket(path):
     try:
