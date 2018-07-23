@@ -682,13 +682,23 @@ class FileWrapperTest(unittest.TestCase):
 
     def test_resource_warning(self):
         # Issue #11453
-        fd = os.open(TESTFN, os.O_RDONLY)
-        f = asyncore.file_wrapper(fd)
+        got_warning = False
+        while got_warning is False:
+            # we try until we get the outcome we want because this
+            # test is not deterministic (gc_collect() may not
+            fd = os.open(TESTFN, os.O_RDONLY)
+            f = asyncore.file_wrapper(fd)
 
-        os.close(fd)
-        with check_warnings(('', compat.ResourceWarning)):
-            f = None
-            gc_collect()
+            os.close(fd)
+
+            try:
+                with check_warnings(('', compat.ResourceWarning)):
+                    f = None
+                    gc_collect()
+            except AssertionError: # pragma: no cover
+                pass
+            else:
+                got_warning = True
 
     def test_close_twice(self):
         fd = os.open(TESTFN, os.O_RDONLY)
@@ -1184,6 +1194,70 @@ class Test__exception(unittest.TestCase):
         self._callFUT(inst)
         self.assertTrue(inst.expt_event_handled)
         self.assertTrue(inst.error_handled)
+
+class Test_readwrite(unittest.TestCase):
+    def _callFUT(self, obj, flags):
+        from waitress.wasyncore import readwrite
+        return readwrite(obj, flags)
+
+    def test_handle_read_event(self):
+        flags = 0
+        flags |= select.POLLIN
+        inst = DummyDispatcher()
+        self._callFUT(inst, flags)
+        self.assertTrue(inst.read_event_handled)
+        
+    def test_handle_write_event(self):
+        flags = 0
+        flags |= select.POLLOUT
+        inst = DummyDispatcher()
+        self._callFUT(inst, flags)
+        self.assertTrue(inst.write_event_handled)
+
+    def test_handle_expt_event(self):
+        flags = 0
+        flags |= select.POLLPRI
+        inst = DummyDispatcher()
+        self._callFUT(inst, flags)
+        self.assertTrue(inst.expt_event_handled)
+
+    def test_handle_close(self):
+        flags = 0
+        flags |= select.POLLHUP
+        inst = DummyDispatcher()
+        self._callFUT(inst, flags)
+        self.assertTrue(inst.close_handled)
+
+    def test_socketerror_not_in_disconnected(self):
+        flags = 0
+        flags |= select.POLLIN
+        inst = DummyDispatcher(socket.error(errno.EALREADY, 'EALREADY'))
+        self._callFUT(inst, flags)
+        self.assertTrue(inst.read_event_handled)
+        self.assertTrue(inst.error_handled)
+        
+    def test_socketerror_in_disconnected(self):
+        flags = 0
+        flags |= select.POLLIN
+        inst = DummyDispatcher(socket.error(errno.ECONNRESET, 'ECONNRESET'))
+        self._callFUT(inst, flags)
+        self.assertTrue(inst.read_event_handled)
+        self.assertTrue(inst.close_handled)
+
+    def test_exception_in_reraised(self):
+        from waitress import wasyncore
+        flags = 0
+        flags |= select.POLLIN
+        inst = DummyDispatcher(wasyncore.ExitNow)
+        self.assertRaises(wasyncore.ExitNow, self._callFUT, inst, flags)
+        self.assertTrue(inst.read_event_handled)
+
+    def test_exception_not_in_reraised(self):
+        flags = 0
+        flags |= select.POLLIN
+        inst = DummyDispatcher(ValueError)
+        self._callFUT(inst, flags)
+        self.assertTrue(inst.error_handled)
         
 class DummyDispatcher(object):
     read_event_handled = False
@@ -1212,6 +1286,6 @@ class DummyDispatcher(object):
     def handle_error(self):
         self.error_handled = True
 
-    # def handle_close(self):
-    #     self.close_handled = True
+    def handle_close(self):
+        self.close_handled = True
         

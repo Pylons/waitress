@@ -130,7 +130,7 @@ def readwrite(obj, flags):
         obj.handle_error()
 
 def poll(timeout=0.0, map=None):
-    if map is None:
+    if map is None: # pragma: no cover
         map = socket_map
     if map:
         r = []; w = []; e = []
@@ -176,7 +176,7 @@ def poll(timeout=0.0, map=None):
 
 def poll2(timeout=0.0, map=None):
     # Use the poll() support added to the select module in Python 2.0
-    if map is None:
+    if map is None: # pragma: no cover
         map = socket_map
     if timeout is not None:
         # timeout is in milliseconds
@@ -209,7 +209,7 @@ def poll2(timeout=0.0, map=None):
 poll3 = poll2                           # Alias for backward compatibility
 
 def loop(timeout=30.0, use_poll=False, map=None, count=None):
-    if map is None:
+    if map is None: # pragma: no cover
         map = socket_map
 
     if use_poll and hasattr(select, 'poll'):
@@ -238,7 +238,7 @@ class dispatcher:
     logger = utilities.logger
 
     def __init__(self, sock=None, map=None):
-        if map is None:
+        if map is None: # pragma: no cover
             self._map = socket_map
         else:
             self._map = map
@@ -339,7 +339,7 @@ class dispatcher:
 
     def listen(self, num):
         self.accepting = True
-        if os.name == 'nt' and num > 5:
+        if os.name == 'nt' and num > 5: # pragma: no cover
             num = 5
         return self.socket.listen(num)
 
@@ -352,7 +352,7 @@ class dispatcher:
         self.connecting = True
         err = self.socket.connect_ex(address)
         if err in (EINPROGRESS, EALREADY, EWOULDBLOCK) \
-        or err == EINVAL and os.name == 'nt':
+        or err == EINVAL and os.name == 'nt': # pragma: no cover
             self.addr = address
             return
         if err in (0, EISCONN):
@@ -547,7 +547,7 @@ class dispatcher_with_send(dispatcher):
         return (not self.connected) or len(self.out_buffer)
 
     def send(self, data):
-        if self.debug:
+        if self.debug: # pragma: no cover
             self.log_info('sending %s' % repr(data))
         self.out_buffer = self.out_buffer + data
         self.initiate_send()
@@ -559,7 +559,7 @@ class dispatcher_with_send(dispatcher):
 def compact_traceback():
     t, v, tb = sys.exc_info()
     tbinfo = []
-    if not tb: # Must have a traceback
+    if not tb: # pragma: no cover
         raise AssertionError("traceback does not exist")
     while tb:
         tbinfo.append((
@@ -577,7 +577,7 @@ def compact_traceback():
     return (file, function, line), t, v, info
 
 def close_all(map=None, ignore_all=False):
-    if map is None:
+    if map is None: # pragma: no cover
         map = socket_map
     for x in list(map.values()): # list() FBO py3
         try:
