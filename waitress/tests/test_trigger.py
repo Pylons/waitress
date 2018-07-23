@@ -8,15 +8,23 @@ if not sys.platform.startswith("win"):
 
         def _makeOne(self, map):
             from waitress.trigger import trigger
-            return trigger(map)
+            self.inst = trigger(map)
+            return self.inst
+
+        def tearDown(self):
+            import socket
+            try:
+                self.inst.close() # prevent __del__ warning from file_dispatcher
+            except socket.error:
+                pass
 
         def test__close(self):
             map = {}
             inst = self._makeOne(map)
-            fd = os.open(os.path.abspath(__file__), os.O_RDONLY)
-            inst._fds = (fd,)
+            fd1, fd2 = inst._fds
             inst.close()
-            self.assertRaises(OSError, os.read, fd, 1)
+            self.assertRaises(OSError, os.read, fd1, 1)
+            self.assertRaises(OSError, os.read, fd2, 1)
 
         def test__physical_pull(self):
             map = {}

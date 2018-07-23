@@ -124,6 +124,7 @@ if os.name == 'posix':
             for fd in self._fds:
                 os.close(fd)
             self._fds = []
+            wasyncore.file_dispatcher.close(self)
 
         def _physical_pull(self):
             os.write(self.trigger, b'x')
