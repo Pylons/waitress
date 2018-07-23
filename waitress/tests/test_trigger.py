@@ -12,11 +12,7 @@ if not sys.platform.startswith("win"):
             return self.inst
 
         def tearDown(self):
-            import socket
-            try:
-                self.inst.close() # prevent __del__ warning from file_dispatcher
-            except socket.error:
-                pass
+            self.inst.close() # prevent __del__ warning from file_dispatcher
 
         def test__close(self):
             map = {}
