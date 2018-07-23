@@ -129,7 +129,11 @@ class MultiSocketServer(object):
                 use_poll=self.adj.asyncore_use_poll,
             )
         except (SystemExit, KeyboardInterrupt):
-            self.task_dispatcher.shutdown()
+            self.close()
+
+    def close(self):
+        wasyncore.close_all(self.map)
+        self.task_dispatcher.shutdown()
 
 
 class BaseWSGIServer(wasyncore.dispatcher, object):
@@ -283,6 +287,10 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
 
     def print_listen(self, format_str): # pragma: nocover
         print(format_str.format(self.effective_host, self.effective_port))
+
+    def close(self):
+        self.trigger.close()
+        return wasyncore.dispatcher.close(self)
 
 
 class TcpWSGIServer(BaseWSGIServer):
