@@ -132,8 +132,8 @@ class MultiSocketServer(object):
             self.close()
 
     def close(self):
-        wasyncore.close_all(self.map)
         self.task_dispatcher.shutdown()
+        wasyncore.close_all(self.map)
 
 
 class BaseWSGIServer(wasyncore.dispatcher, object):
