@@ -158,19 +158,19 @@ def poll(timeout=0.0, map=None):
 
         for fd in r:
             obj = map.get(fd)
-            if obj is None:
+            if obj is None: # pragma: no cover
                 continue
             read(obj)
 
         for fd in w:
             obj = map.get(fd)
-            if obj is None:
+            if obj is None: # pragma: no cover
                 continue
             write(obj)
 
         for fd in e:
             obj = map.get(fd)
-            if obj is None:
+            if obj is None: # pragma: no cover
                 continue
             _exception(obj)
 

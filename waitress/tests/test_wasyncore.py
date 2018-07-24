@@ -1258,6 +1258,56 @@ class Test_readwrite(unittest.TestCase):
         inst = DummyDispatcher(ValueError)
         self._callFUT(inst, flags)
         self.assertTrue(inst.error_handled)
+
+class Test_poll(unittest.TestCase):
+    def _callFUT(self, timeout=0.0, map=None):
+        from waitress.wasyncore import poll
+        return poll(timeout, map)
+
+    def test_nothing_writable_nothing_readable_but_map_not_empty(self):
+        # i read the mock.patch docs.  nerp.
+        dummy_time = DummyTime()
+        map = {0:DummyDispatcher()}
+        try:
+            from waitress import wasyncore
+            old_time = wasyncore.time
+            wasyncore.time = dummy_time
+            result = self._callFUT(map=map)
+        finally:
+            wasyncore.time = old_time
+        self.assertEqual(result, None)
+        self.assertEqual(dummy_time.sleepvals, [0.0])
+    
+    def test_select_raises_EINTR(self):
+        # i read the mock.patch docs.  nerp.
+        dummy_select = DummySelect(select.error(errno.EINTR))
+        disp = DummyDispatcher()
+        disp.readable = lambda: True
+        map = {0:disp}
+        try:
+            from waitress import wasyncore
+            old_select = wasyncore.select
+            wasyncore.select = dummy_select
+            result = self._callFUT(map=map)
+        finally:
+            wasyncore.select = old_select
+        self.assertEqual(result, None)
+        self.assertEqual(dummy_select.selected, [([0], [], [0], 0.0)])
+
+    def test_select_raises_non_EINTR(self):
+        # i read the mock.patch docs.  nerp.
+        dummy_select = DummySelect(select.error(errno.EBADF))
+        disp = DummyDispatcher()
+        disp.readable = lambda: True
+        map = {0:disp}
+        try:
+            from waitress import wasyncore
+            old_select = wasyncore.select
+            wasyncore.select = dummy_select
+            self.assertRaises(select.error, self._callFUT, map=map)
+        finally:
+            wasyncore.select = old_select
+        self.assertEqual(dummy_select.selected, [([0], [], [0], 0.0)])
         
 class DummyDispatcher(object):
     read_event_handled = False
@@ -1265,6 +1315,7 @@ class DummyDispatcher(object):
     expt_event_handled = False
     error_handled = False
     close_handled = False
+    accepting = False
     def __init__(self, exc=None):
         self.exc = exc
 
@@ -1288,4 +1339,27 @@ class DummyDispatcher(object):
 
     def handle_close(self):
         self.close_handled = True
+
+    def readable(self):
+        return False
+
+    def writable(self):
+        return False
+        
+class DummyTime(object):
+    def __init__(self):
+        self.sleepvals = []
+    def sleep(self, val):
+        self.sleepvals.append(val)
+
+class DummySelect(object):
+    error = select.error
+    def __init__(self, exc=None):
+        self.selected = []
+        self.exc = exc
+
+    def select(self, *arg):
+        self.selected.append(arg)
+        if self.exc is not None:
+            raise self.exc
         
