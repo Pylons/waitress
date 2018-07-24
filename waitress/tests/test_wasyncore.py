@@ -238,6 +238,12 @@ class dummysocket: # pragma: no cover
     def fileno(self):
         return 42
 
+    def setblocking(self, yesno):
+        self.isblocking = yesno
+
+    def getpeername(self):
+        return 'peername'
+
 class dummychannel: # pragma: no cover
     def __init__(self):
         self.socket = dummysocket()
@@ -1342,6 +1348,41 @@ class Test_poll2(unittest.TestCase):
         finally:
             wasyncore.select = old_select
         self.assertEqual(pollster.polled, [0.0])
+
+class Test_dispatcher(unittest.TestCase):
+    def _makeOne(self, sock=None, map=None):
+        from waitress.wasyncore import dispatcher
+        return dispatcher(sock=sock, map=map)
+
+    def test_unexpected_getpeername_exc(self):
+        sock = dummysocket()
+        def getpeername():
+            raise socket.error(errno.EBADF)
+        map = {}
+        sock.getpeername = getpeername
+        self.assertRaises(socket.error, self._makeOne, sock=sock, map=map)
+        self.assertEqual(map, {})
+
+    def test___repr__accepting(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        inst.accepting = True
+        inst.addr = ('localhost', 8080)
+        result = repr(inst)
+        expected = '<waitress.wasyncore.dispatcher listening localhost:8080 at'
+        self.assertEqual(result[:len(expected)], expected)
+    
+    def test___repr__connected(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        inst.accepting = False
+        inst.connected = True
+        inst.addr = ('localhost', 8080)
+        result = repr(inst)
+        expected = '<waitress.wasyncore.dispatcher connected localhost:8080 at'
+        self.assertEqual(result[:len(expected)], expected)
         
 class DummyDispatcher(object):
     read_event_handled = False

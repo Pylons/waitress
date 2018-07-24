@@ -278,7 +278,7 @@ class dispatcher:
         if self.addr is not None:
             try:
                 status.append('%s:%d' % self.addr)
-            except TypeError:
+            except TypeError: # pragma: no cover
                 status.append(repr(self.addr))
         return '<%s at %#x>' % (' '.join(status), id(self))
 
