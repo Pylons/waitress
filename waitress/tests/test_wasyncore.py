@@ -151,8 +151,7 @@ def threading_cleanup(*original_values): # pragma: no cover
             environment_altered = True
             sys.stderr.write(
                 "Warning -- threading_cleanup() failed to cleanup "
-                "%s threads (count: %s)"
-                % (values[0] - original_values[0])
+                "%s threads" % (values[0] - original_values[0])
                 )
             sys.stderr.flush()
 
@@ -1308,6 +1307,41 @@ class Test_poll(unittest.TestCase):
         finally:
             wasyncore.select = old_select
         self.assertEqual(dummy_select.selected, [([0], [], [0], 0.0)])
+
+class Test_poll2(unittest.TestCase):
+    def _callFUT(self, timeout=0.0, map=None):
+        from waitress.wasyncore import poll2
+        return poll2(timeout, map)
+
+    def test_select_raises_EINTR(self):
+        # i read the mock.patch docs.  nerp.
+        pollster = DummyPollster(exc=select.error(errno.EINTR))
+        dummy_select = DummySelect(pollster=pollster)
+        disp = DummyDispatcher()
+        map = {0:disp}
+        try:
+            from waitress import wasyncore
+            old_select = wasyncore.select
+            wasyncore.select = dummy_select
+            self._callFUT(map=map)
+        finally:
+            wasyncore.select = old_select
+        self.assertEqual(pollster.polled, [0.0])
+
+    def test_select_raises_non_EINTR(self):
+        # i read the mock.patch docs.  nerp.
+        pollster = DummyPollster(exc=select.error(errno.EBADF))
+        dummy_select = DummySelect(pollster=pollster)
+        disp = DummyDispatcher()
+        map = {0:disp}
+        try:
+            from waitress import wasyncore
+            old_select = wasyncore.select
+            wasyncore.select = dummy_select
+            self.assertRaises(select.error, self._callFUT, map=map)
+        finally:
+            wasyncore.select = old_select
+        self.assertEqual(pollster.polled, [0.0])
         
 class DummyDispatcher(object):
     read_event_handled = False
@@ -1354,12 +1388,27 @@ class DummyTime(object):
 
 class DummySelect(object):
     error = select.error
-    def __init__(self, exc=None):
+    def __init__(self, exc=None, pollster=None):
         self.selected = []
+        self.pollster = pollster
         self.exc = exc
 
     def select(self, *arg):
         self.selected.append(arg)
         if self.exc is not None:
             raise self.exc
+
+    def poll(self):
+        return self.pollster
+
+class DummyPollster(object):
+    def __init__(self, exc=None):
+        self.polled = []
+        self.exc = exc
         
+    def poll(self, timeout):
+        self.polled.append(timeout)
+        if self.exc is not None:
+            raise self.exc
+        return []
+    
