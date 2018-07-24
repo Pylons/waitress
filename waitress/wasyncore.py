@@ -202,7 +202,7 @@ def poll2(timeout=0.0, map=None):
 
         for fd, flags in r:
             obj = map.get(fd)
-            if obj is None:
+            if obj is None: # pragma: no cover
                 continue
             readwrite(obj, flags)
 
@@ -217,7 +217,7 @@ def loop(timeout=30.0, use_poll=False, map=None, count=None):
     else:
         poll_fun = poll
 
-    if count is None:
+    if count is None: # pragma: no cover
         while map:
             poll_fun(timeout, map)
 
