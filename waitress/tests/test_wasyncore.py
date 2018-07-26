@@ -1544,7 +1544,46 @@ class Test_dispatcher(unittest.TestCase):
         inst = self._makeOne(sock=sock, map=map)
         inst.handle_accepted(sock, '1')
         self.assertTrue(sock.closed)
-        
+
+class Test_dispatcher_with_send(unittest.TestCase):
+    def _makeOne(self, sock=None, map=None):
+        from waitress.wasyncore import dispatcher_with_send
+        return dispatcher_with_send(sock=sock, map=map)
+
+    def test_writable(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        inst.out_buffer = b'123'
+        inst.connected = True
+        self.assertTrue(inst.writable())
+
+class Test_close_all(unittest.TestCase):
+    def _callFUT(self, map=None, ignore_all=False):
+        from waitress.wasyncore import close_all
+        return close_all(map, ignore_all)
+
+    def test_socketerror_on_close_ebadf(self):
+        disp = DummyDispatcher(exc=socket.error(errno.EBADF))
+        map = {0:disp}
+        self._callFUT(map)
+        self.assertEqual(map, {})
+
+    def test_socketerror_on_close_non_ebadf(self):
+        disp = DummyDispatcher(exc=socket.error(errno.EAGAIN))
+        map = {0:disp}
+        self.assertRaises(socket.error, self._callFUT, map)
+
+    def test_reraised_exc_on_close(self):
+        disp = DummyDispatcher(exc=KeyboardInterrupt)
+        map = {0:disp}
+        self.assertRaises(KeyboardInterrupt, self._callFUT, map)
+
+    def test_unknown_exc_on_close(self):
+        disp = DummyDispatcher(exc=RuntimeError)
+        map = {0:disp}
+        self.assertRaises(RuntimeError, self._callFUT, map)
+
 class DummyDispatcher(object):
     read_event_handled = False
     write_event_handled = False
@@ -1581,6 +1620,10 @@ class DummyDispatcher(object):
 
     def writable(self):
         return False
+
+    def close(self):
+        if self.exc is not None:
+            raise self.exc
         
 class DummyTime(object):
     def __init__(self):
@@ -1612,4 +1655,5 @@ class DummyPollster(object):
         self.polled.append(timeout)
         if self.exc is not None:
             raise self.exc
-        return []
+        else: # pragma: no cover
+            return []

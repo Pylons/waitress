@@ -561,8 +561,7 @@ class dispatcher_with_send(dispatcher):
         num_sent = dispatcher.send(self, self.out_buffer[:65536])
         self.out_buffer = self.out_buffer[num_sent:]
 
-    def handle_write(self):
-        self.initiate_send()
+    handle_write = initiate_send
 
     def writable(self):
         return (not self.connected) or len(self.out_buffer)
@@ -579,7 +578,7 @@ def close_all(map=None, ignore_all=False):
     for x in list(map.values()): # list() FBO py3
         try:
             x.close()
-        except OSError as x: # really an OSError, not a socketerror
+        except socket.error as x:
             if x.args[0] == EBADF:
                 pass
             elif not ignore_all:
@@ -624,7 +623,7 @@ if os.name == 'posix':
         def send(self, *args):
             return os.write(self.fd, *args)
 
-        def getsockopt(self, level, optname, buflen=None):
+        def getsockopt(self, level, optname, buflen=None): # pragma: no cover
             if (level == socket.SOL_SOCKET and
                 optname == socket.SO_ERROR and
                 not buflen):
