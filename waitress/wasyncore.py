@@ -226,6 +226,26 @@ def loop(timeout=30.0, use_poll=False, map=None, count=None):
             poll_fun(timeout, map)
             count = count - 1
 
+def compact_traceback():
+    t, v, tb = sys.exc_info()
+    tbinfo = []
+    if not tb: # pragma: no cover
+        raise AssertionError("traceback does not exist")
+    while tb:
+        tbinfo.append((
+            tb.tb_frame.f_code.co_filename,
+            tb.tb_frame.f_code.co_name,
+            str(tb.tb_lineno)
+            ))
+        tb = tb.tb_next
+
+    # just to be safe
+    del tb
+
+    file, function, line = tbinfo[-1]
+    info = ' '.join(['[%s|%s|%s]' % x for x in tbinfo])
+    return (file, function, line), t, v, info
+
 class dispatcher:
 
     debug = False
@@ -236,6 +256,7 @@ class dispatcher:
     addr = None
     ignore_log_types = frozenset({'warning'})
     logger = utilities.logger
+    compact_traceback = staticmethod(compact_traceback) # for testing
 
     def __init__(self, sock=None, map=None):
         if map is None: # pragma: no cover
@@ -480,12 +501,12 @@ class dispatcher:
             self.handle_expt()
 
     def handle_error(self):
-        nil, t, v, tbinfo = compact_traceback()
+        nil, t, v, tbinfo = self.compact_traceback()
 
         # sometimes a user repr method will crash.
         try:
             self_repr = repr(self)
-        except:
+        except: # pragma: no cover
             self_repr = '<__repr__(self) failed for object at %0x>' % id(self)
 
         self.log_info(
@@ -551,30 +572,6 @@ class dispatcher_with_send(dispatcher):
             self.log_info('sending %s' % repr(data))
         self.out_buffer = self.out_buffer + data
         self.initiate_send()
-
-# ---------------------------------------------------------------------------
-# used for debugging.
-# ---------------------------------------------------------------------------
-
-def compact_traceback():
-    t, v, tb = sys.exc_info()
-    tbinfo = []
-    if not tb: # pragma: no cover
-        raise AssertionError("traceback does not exist")
-    while tb:
-        tbinfo.append((
-            tb.tb_frame.f_code.co_filename,
-            tb.tb_frame.f_code.co_name,
-            str(tb.tb_lineno)
-            ))
-        tb = tb.tb_next
-
-    # just to be safe
-    del tb
-
-    file, function, line = tbinfo[-1]
-    info = ' '.join(['[%s|%s|%s]' % x for x in tbinfo])
-    return (file, function, line), t, v, info
 
 def close_all(map=None, ignore_all=False):
     if map is None: # pragma: no cover

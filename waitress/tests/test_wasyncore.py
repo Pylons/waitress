@@ -1383,6 +1383,167 @@ class Test_dispatcher(unittest.TestCase):
         result = repr(inst)
         expected = '<waitress.wasyncore.dispatcher connected localhost:8080 at'
         self.assertEqual(result[:len(expected)], expected)
+
+    def test_set_reuse_addr_with_socketerror(self):
+        sock = dummysocket()
+        map = {}
+        def setsockopt(*arg, **kw):
+            sock.errored = True
+            raise socket.error
+        sock.setsockopt = setsockopt
+        sock.getsockopt = lambda *arg: 0
+        inst = self._makeOne(sock=sock, map=map)
+        inst.set_reuse_addr()
+        self.assertTrue(sock.errored)
+
+    def test_connect_raise_socket_error(self):
+        sock = dummysocket()
+        map = {}
+        sock.connect_ex = lambda *arg: 122
+        inst = self._makeOne(sock=sock, map=map)
+        self.assertRaises(socket.error, inst.connect, 0)
+
+    def test_accept_raise_TypeError(self):
+        sock = dummysocket()
+        map = {}
+        def accept(*arg, **kw):
+            raise TypeError
+        sock.accept = accept
+        inst = self._makeOne(sock=sock, map=map)
+        result = inst.accept()
+        self.assertEqual(result, None)
+
+    def test_accept_raise_unexpected_socketerror(self):
+        sock = dummysocket()
+        map = {}
+        def accept(*arg, **kw):
+            raise socket.error(122)
+        sock.accept = accept
+        inst = self._makeOne(sock=sock, map=map)
+        self.assertRaises(socket.error, inst.accept)
+
+    def test_send_raise_EWOULDBLOCK(self):
+        sock = dummysocket()
+        map = {}
+        def send(*arg, **kw):
+            raise socket.error(errno.EWOULDBLOCK)
+        sock.send = send
+        inst = self._makeOne(sock=sock, map=map)
+        result = inst.send('a')
+        self.assertEqual(result, 0)
+
+    def test_send_raise_unexpected_socketerror(self):
+        sock = dummysocket()
+        map = {}
+        def send(*arg, **kw):
+            raise socket.error(122)
+        sock.send = send
+        inst = self._makeOne(sock=sock, map=map)
+        self.assertRaises(socket.error, inst.send, 'a')
+
+    def test_recv_raises_disconnect(self):
+        sock = dummysocket()
+        map = {}
+        def recv(*arg, **kw):
+            raise socket.error(errno.ECONNRESET)
+        def handle_close():
+            inst.close_handled = True
+        sock.recv = recv
+        inst = self._makeOne(sock=sock, map=map)
+        inst.handle_close = handle_close
+        result = inst.recv(1)
+        self.assertEqual(result, b'')
+        self.assertTrue(inst.close_handled)
+
+    def test_close_raises_unknown_socket_error(self):
+        sock = dummysocket()
+        map = {}
+        def close():
+            raise socket.error(122)
+        sock.close = close
+        inst = self._makeOne(sock=sock, map=map)
+        inst.del_channel = lambda: None
+        self.assertRaises(socket.error, inst.close)
+
+    def test_handle_read_event_not_accepting_not_connected_connecting(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        def handle_connect_event():
+            inst.connect_event_handled = True
+        def handle_read():
+            inst.read_handled = True
+        inst.handle_connect_event = handle_connect_event
+        inst.handle_read = handle_read
+        inst.accepting = False
+        inst.connected = False
+        inst.connecting = True
+        inst.handle_read_event()
+        self.assertTrue(inst.connect_event_handled)
+        self.assertTrue(inst.read_handled)
+
+    def test_handle_connect_event_getsockopt_returns_error(self):
+        sock = dummysocket()
+        sock.getsockopt = lambda *arg: 122
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        self.assertRaises(socket.error, inst.handle_connect_event)
+
+    def test_handle_expt_event_getsockopt_returns_error(self):
+        sock = dummysocket()
+        sock.getsockopt = lambda *arg: 122
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        def handle_close():
+            inst.close_handled = True
+        inst.handle_close = handle_close
+        inst.handle_expt_event()
+        self.assertTrue(inst.close_handled)
+
+    def test_handle_write_event_while_accepting(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        inst.accepting = True
+        result = inst.handle_write_event()
+        self.assertEqual(result, None)
+
+    def test_handle_error_gardenpath(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        def handle_close():
+            inst.close_handled = True
+        def compact_traceback(*arg, **kw):
+            return None, None, None, None
+        def log_info(self, *arg):
+            inst.logged_info = arg
+        inst.handle_close = handle_close
+        inst.compact_traceback = compact_traceback
+        inst.log_info = log_info
+        inst.handle_error()
+        self.assertTrue(inst.close_handled)
+        self.assertEqual(inst.logged_info, ('error',))
+
+    def test_handle_close(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        def log_info(self, *arg):
+            inst.logged_info = arg
+        def close():
+            inst._closed = True
+        inst.log_info = log_info
+        inst.close = close
+        inst.handle_close()
+        self.assertTrue(inst._closed)
+        
+    def test_handle_accepted(self):
+        sock = dummysocket()
+        map = {}
+        inst = self._makeOne(sock=sock, map=map)
+        inst.handle_accepted(sock, '1')
+        self.assertTrue(sock.closed)
         
 class DummyDispatcher(object):
     read_event_handled = False
@@ -1452,4 +1613,3 @@ class DummyPollster(object):
         if self.exc is not None:
             raise self.exc
         return []
-    
