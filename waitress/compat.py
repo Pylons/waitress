@@ -145,7 +145,7 @@ else: # pragma: no cover
         )
         HAS_IPV6 = False
 
-def set_nonblocking(fd):
+def set_nonblocking(fd): # pragma: no cover
     if PY3 and sys.version_info[1] >= 5:
         os.set_blocking(fd, False)
     elif fcntl is None:
