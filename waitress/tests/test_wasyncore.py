@@ -1200,6 +1200,7 @@ class Test__exception(unittest.TestCase):
         self.assertTrue(inst.expt_event_handled)
         self.assertTrue(inst.error_handled)
 
+@unittest.skipUnless(hasattr(select, 'poll'), 'select.poll required')
 class Test_readwrite(unittest.TestCase):
     def _callFUT(self, obj, flags):
         from waitress.wasyncore import readwrite
