@@ -9,6 +9,11 @@ try:
 except ImportError: # pragma: no cover
     from urllib import parse as urlparse
 
+try:
+    import fcntl
+except ImportError: # pragma: no cover
+    fcntl = None # windows
+
 # True if we are running on Python 3.
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
@@ -143,8 +148,9 @@ else: # pragma: no cover
 def set_nonblocking(fd):
     if PY3 and sys.version_info[1] >= 5:
         os.set_blocking(fd, False)
+    elif fcntl is None:
+        raise RuntimeError('no fcntl module present')
     else:
-        import fcntl
         flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
         flags = flags | os.O_NONBLOCK
         fcntl.fcntl(fd, fcntl.F_SETFL, flags)

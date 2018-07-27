@@ -1400,7 +1400,7 @@ class Test_dispatcher(unittest.TestCase):
     def test_connect_raise_socket_error(self):
         sock = dummysocket()
         map = {}
-        sock.connect_ex = lambda *arg: 64
+        sock.connect_ex = lambda *arg: 1
         inst = self._makeOne(sock=sock, map=map)
         self.assertRaises(socket.error, inst.connect, 0)
 
