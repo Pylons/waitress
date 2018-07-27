@@ -1,4 +1,3 @@
-import fcntl
 import os
 import sys
 import types
@@ -145,6 +144,7 @@ def set_nonblocking(fd):
     if PY3 and sys.version_info[1] >= 5:
         os.set_blocking(fd, False)
     else:
+        import fcntl
         flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
         flags = flags | os.O_NONBLOCK
         fcntl.fcntl(fd, fcntl.F_SETFL, flags)
