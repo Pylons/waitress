@@ -201,7 +201,7 @@ class BaseWSGIServer(logging_dispatcher, object):
             if c != '.' and not c.isdigit():
                 return server_name
         try:
-            if server_name == '0.0.0.0' or server_name == '::':
+            if server_name == '0.0.0.0' or server_name == '::' or server_name == '127.0.0.1' :
                 return 'localhost'
             server_name = self.socketmod.gethostbyaddr(server_name)[0]
         except socket.error: # pragma: no cover
