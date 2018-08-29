@@ -219,6 +219,17 @@ class TestAdjustments(unittest.TestCase):
     def test_ipv6_disabled(self):
         self.assertRaises(ValueError, self._makeOne, ipv6=False, listen="[::]:8080")
 
+    def test_server_header_removable(self):
+        inst = self._makeOne(ident=None)
+        self.assertEqual(inst.ident, None)
+
+        inst = self._makeOne(ident='')
+        self.assertEqual(inst.ident, None)
+
+        inst = self._makeOne(ident='specific_header')
+        self.assertEqual(inst.ident, 'specific_header')
+
+
 class TestCLI(unittest.TestCase):
 
     def parse(self, argv):

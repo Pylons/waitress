@@ -1,5 +1,14 @@
-Next release
-------------
+Unreleased (2018-05-21)
+-----------------------
+
+Features
+~~~~~~~~
+
+- Server header can be omitted by specifying `ident=None` or `ident=''`.
+  See https://github.com/Pylons/waitress/pull/187
+  
+Compatibility
+~~~~~~~~~~~~~
 
 - Waitress has now "vendored" asyncore into itself as ``waitress.wasyncore``.
   This is to cope with the eventuality that asyncore will be removed from
