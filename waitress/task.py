@@ -251,9 +251,11 @@ class Task(object):
         # if the server is used as a proxy.
         ident = self.channel.server.adj.ident
         if not server_header:
-            response_headers.append(('Server', ident))
+            if ident:
+                response_headers.append(('Server', ident))
         else:
-            response_headers.append(('Via', ident))
+            response_headers.append(('Via', ident or 'waitress'))
+
         if not date_header:
             response_headers.append(('Date', build_http_date(self.start_time)))
 
