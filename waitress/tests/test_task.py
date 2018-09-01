@@ -704,8 +704,8 @@ class TestWSGITask(unittest.TestCase):
             'PATH_INFO', 'QUERY_STRING', 'REMOTE_ADDR', 'REQUEST_METHOD',
             'SCRIPT_NAME', 'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL',
             'SERVER_SOFTWARE', 'wsgi.errors', 'wsgi.file_wrapper', 'wsgi.input',
-            'wsgi.multiprocess', 'wsgi.multithread', 'wsgi.run_once',
-            'wsgi.url_scheme', 'wsgi.version'])
+            'wsgi.input_terminated', 'wsgi.multiprocess', 'wsgi.multithread',
+            'wsgi.run_once', 'wsgi.url_scheme', 'wsgi.version'])
 
         self.assertEqual(environ['REQUEST_METHOD'], 'GET')
         self.assertEqual(environ['SERVER_PORT'], '80')
@@ -727,6 +727,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.multiprocess'], False)
         self.assertEqual(environ['wsgi.run_once'], False)
         self.assertEqual(environ['wsgi.input'], 'stream')
+        self.assertEqual(environ['wsgi.input_terminated'], True)
         self.assertEqual(inst.environ, environ)
 
     def test_get_environment_values_w_scheme_override_untrusted(self):
@@ -767,8 +768,8 @@ class TestWSGITask(unittest.TestCase):
             'PATH_INFO', 'QUERY_STRING', 'REMOTE_ADDR', 'REQUEST_METHOD',
             'SCRIPT_NAME', 'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL',
             'SERVER_SOFTWARE', 'wsgi.errors', 'wsgi.file_wrapper', 'wsgi.input',
-            'wsgi.multiprocess', 'wsgi.multithread', 'wsgi.run_once',
-            'wsgi.url_scheme', 'wsgi.version'])
+            'wsgi.input_terminated', 'wsgi.multiprocess', 'wsgi.multithread',
+            'wsgi.run_once', 'wsgi.url_scheme', 'wsgi.version'])
 
         self.assertEqual(environ['REQUEST_METHOD'], 'GET')
         self.assertEqual(environ['SERVER_PORT'], '80')
@@ -790,6 +791,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.multiprocess'], False)
         self.assertEqual(environ['wsgi.run_once'], False)
         self.assertEqual(environ['wsgi.input'], 'stream')
+        self.assertEqual(environ['wsgi.input_terminated'], True)
         self.assertEqual(inst.environ, environ)
 
     def test_get_environment_values_w_bogus_scheme_override(self):
