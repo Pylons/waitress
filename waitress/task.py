@@ -155,6 +155,7 @@ class Task(object):
     content_length = None
     content_bytes_written = 0
     logged_write_excess = False
+    logged_write_no_body = False
     complete = False
     chunked_response = False
     logger = logger
@@ -210,7 +211,12 @@ class Task(object):
                 [x.capitalize() for x in headername.split('-')]
             )
             if headername == 'Content-Length':
-                content_length_header = headerval
+                if self.has_body:
+                    content_length_header = headerval
+                else:
+                    del response_headers[i]
+                    continue  # pragma: no cover
+
             if headername == 'Date':
                 date_header = headerval
             if headername == 'Server':
@@ -220,7 +226,11 @@ class Task(object):
             # replace with properly capitalized version
             response_headers[i] = (headername, headerval)
 
-        if content_length_header is None and self.content_length is not None:
+        if (
+            content_length_header is None and
+            self.content_length is not None and
+            self.has_body
+        ):
             content_length_header = str(self.content_length)
             self.response_headers.append(
                 ('Content-Length', content_length_header)
@@ -305,7 +315,8 @@ class Task(object):
             rh = self.build_response_header()
             channel.write_soon(rh)
             self.wrote_header = True
-        if data:
+
+        if data and self.has_body:
             towrite = data
             cl = self.content_length
             if self.chunked_response:
@@ -322,6 +333,18 @@ class Task(object):
                     self.logged_write_excess = True
             if towrite:
                 channel.write_soon(towrite)
+        else:
+            # Cheat, and tell the application we have written all of the bytes,
+            # even though the response shouldn't have a body and we are
+            # ignoring it entirely.
+            self.content_bytes_written += len(data)
+
+            if not self.logged_write_no_body:
+                self.logger.warning(
+                    'application-written content was ignored due to HTTP '
+                    'response that may not contain a message-body: (%s)' % self.status)
+                self.logged_write_no_body = True
+
 
 class ErrorTask(Task):
     """ An error task produces an error response
