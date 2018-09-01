@@ -915,9 +915,10 @@ class BaseTestAPI:
                 self.flag = True
                 self.close()
 
-            # def handle_expt(self):
-            #     self.flag = True
-            #     self.close()
+            def handle_expt(self):  # pragma: no cover
+                                    # needs to exist for MacOS testing
+                self.flag = True
+                self.close()
 
         class TestHandler(BaseTestHandler):
 
