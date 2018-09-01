@@ -6,7 +6,15 @@ Features
 
 - Server header can be omitted by specifying `ident=None` or `ident=''`.
   See https://github.com/Pylons/waitress/pull/187
-  
+
+Bugfixes
+~~~~~~~~
+
+- Waitress will no longer send Transfer-Encoding or Content-Length for 1xx or
+  204 responses. See https://github.com/Pylons/waitress/pull/166,
+  https://github.com/Pylons/waitress/issues/165 and
+  https://github.com/Pylons/waitress/issues/152
+
 Compatibility
 ~~~~~~~~~~~~~
 
