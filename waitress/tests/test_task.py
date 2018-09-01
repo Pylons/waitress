@@ -578,6 +578,34 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertEqual(len(inst.logger.logged), 0)
 
+    def test_execute_app_without_body_204_logged(self):
+        def app(environ, start_response):
+            start_response('204 No Content', [('Content-Length', '3')])
+            return [b'abc']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.logger = DummyLogger()
+        inst.execute()
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertNotIn(b'abc', inst.channel.written)
+        self.assertNotIn(b'Content-Length', inst.channel.written)
+        self.assertNotIn(b'Transfer-Encoding', inst.channel.written)
+        self.assertEqual(len(inst.logger.logged), 1)
+
+    def test_execute_app_without_body_304_logged(self):
+        def app(environ, start_response):
+            start_response('304 Not Modified', [('Content-Length', '3')])
+            return [b'abc']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.logger = DummyLogger()
+        inst.execute()
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertNotIn(b'abc', inst.channel.written)
+        self.assertNotIn(b'Content-Length', inst.channel.written)
+        self.assertNotIn(b'Transfer-Encoding', inst.channel.written)
+        self.assertEqual(len(inst.logger.logged), 1)
+
     def test_execute_app_returns_closeable(self):
         class closeable(list):
             def close(self):
