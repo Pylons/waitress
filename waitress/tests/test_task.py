@@ -245,6 +245,23 @@ class TestTask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
+    def test_build_response_header_v11_304_no_content_length_or_transfer_encoding(self):
+        # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
+        # for any response with a status code of 1xx, 204 or 304.
+        inst = self._makeOne()
+        inst.request = DummyParser()
+        inst.version = '1.1'
+        inst.status = '304 Not Modified'
+        result = inst.build_response_header()
+        lines = filter_lines(result)
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[0], b'HTTP/1.1 304 Not Modified')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: waitress')
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
+
     def test_build_response_header_via_added(self):
         inst = self._makeOne()
         inst.request = DummyParser()
