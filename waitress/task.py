@@ -536,6 +536,7 @@ class WSGITask(Task):
         environ['wsgi.run_once'] = False
         environ['wsgi.input'] = request.get_body_stream()
         environ['wsgi.file_wrapper'] = ReadOnlyFileBasedBuffer
+        environ['wsgi.input_terminated'] = True # wsgi.input is EOF terminated
 
         self.environ = environ
         return environ
