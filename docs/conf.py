@@ -17,7 +17,6 @@
 # make it absolute, like shown here.
 #sys.path.append(os.path.abspath('some/directory'))
 
-import sys, os
 import datetime
 import pkg_resources
 import pylons_sphinx_themes
@@ -29,7 +28,12 @@ import pylons_sphinx_themes
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.autodoc',
-    ]
+    'sphinx.ext.intersphinx',
+]
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -85,6 +89,9 @@ add_module_names = False
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+
+# Do not use smart quotes.
+smartquotes = False
 
 
 # Options for HTML output
