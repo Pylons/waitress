@@ -223,7 +223,7 @@ Bug Fixes
 Bug Fixes
 ~~~~~~~~~
 
-- http://corte.si/posts/code/pathod/pythonservers/index.html pointed out that
+- https://corte.si/posts/code/pathod/pythonservers/index.html pointed out that
   sending a bad header resulted in an exception leading to a 500 response
   instead of the more proper 400 response without an exception.
 
