@@ -1,5 +1,8 @@
+.. _index:
+
+========
 Waitress
---------
+========
 
 Waitress is meant to be a production-quality pure-Python WSGI server with
 very acceptable performance.  It has no dependencies except ones which live
@@ -178,6 +181,7 @@ Extended Documentation
    :maxdepth: 1
 
    usage
+   logging
    design
    differences
    api
@@ -195,7 +199,7 @@ Change History
 Known Issues
 ------------
 
-- Does not support SSL natively.
+- Does not support TLS natively.
 
 Support and Development
 -----------------------
