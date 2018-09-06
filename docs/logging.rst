@@ -54,14 +54,13 @@ It "just works" in environments that don't configure logging.
 This is by virtue of its default configuration setting of ``setup_console_handler = True``.
 
 
-.. _logging-to-a-file-using-python:
+.. TODO:
+.. .. _logging-to-a-file-using-python:
 
-Logging to a File Using Python
-------------------------------
+.. Logging to a File Using Python
+.. ------------------------------
 
-.. warning:: This section needs help.
-
-Show how to configure the WSGI logger via python.
+.. Show how to configure the WSGI logger via python.
 
 
 .. _logging-to-a-file-using-pastedeploy:
