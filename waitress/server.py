@@ -193,15 +193,11 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
 
     def get_server_name(self, ip):
         """Given an IP or hostname, try to determine the server name."""
-        if ip:
-            server_name = str(ip)
-        else:
-            server_name = str(self.socketmod.gethostname())
 
-        # Convert to a host name if necessary.
-        for c in server_name:
-            if c != '.' and not c.isdigit():
-                return server_name
+        if not ip:
+            raise ValueError('Requires an IP to get the server name')
+
+        server_name = str(ip)
         try:
             if server_name == '0.0.0.0' or server_name == '::':
                 return 'localhost'

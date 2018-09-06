@@ -74,8 +74,7 @@ class TestWSGIServer(unittest.TestCase):
 
     def test_get_server_name_empty(self):
         inst = self._makeOneWithMap(_start=False)
-        result = inst.get_server_name('')
-        self.assertTrue(result)
+        self.assertRaises(ValueError, inst.get_server_name, '')
 
     def test_get_server_name_with_ip(self):
         inst = self._makeOneWithMap(_start=False)
