@@ -10,7 +10,7 @@ class TestWSGIServer(unittest.TestCase):
                  _dispatcher=None, adj=None, map=None, _start=True,
                  _sock=None, _server=None):
         from waitress.server import create_server
-        return create_server(
+        self.inst = create_server(
             application,
             host=host,
             port=port,
@@ -18,6 +18,7 @@ class TestWSGIServer(unittest.TestCase):
             _dispatcher=_dispatcher,
             _start=_start,
             _sock=_sock)
+        return self.inst
 
     def _makeOneWithMap(self, adj=None, _start=True, host='127.0.0.1',
                         port=0, app=dummy_app):
@@ -40,15 +41,21 @@ class TestWSGIServer(unittest.TestCase):
         task_dispatcher = DummyTaskDispatcher()
         map = {}
         from waitress.server import create_server
-        return create_server(
+        self.inst = create_server(
             app,
             listen=listen,
             map=map,
             _dispatcher=task_dispatcher,
             _start=_start,
             _sock=sock)
+        return self.inst
+
+    def tearDown(self):
+        if self.inst is not None:
+            self.inst.close()
 
     def test_ctor_app_is_None(self):
+        self.inst = None
         self.assertRaises(ValueError, self._makeOneWithMap, app=None)
 
     def test_ctor_start_true(self):
@@ -105,6 +112,7 @@ class TestWSGIServer(unittest.TestCase):
 
     def test_pull_trigger(self):
         inst = self._makeOneWithMap(_start=False)
+        inst.trigger.close()
         inst.trigger = DummyTrigger()
         inst.pull_trigger()
         self.assertEqual(inst.trigger.pulled, True)
@@ -215,10 +223,10 @@ class TestWSGIServer(unittest.TestCase):
         from waitress.server import WSGIServer, TcpWSGIServer
         from waitress.adjustments import Adjustments
         self.assertTrue(WSGIServer is TcpWSGIServer)
-        inst = WSGIServer(None, _start=False, port=1234)
+        self.inst = WSGIServer(None, _start=False, port=1234)
         # Ensure the adjustment was actually applied.
         self.assertNotEqual(Adjustments.port, 1234)
-        self.assertEqual(inst.adj.port, 1234)
+        self.assertEqual(self.inst.adj.port, 1234)
 
 if hasattr(socket, 'AF_UNIX'):
 
@@ -227,7 +235,7 @@ if hasattr(socket, 'AF_UNIX'):
 
         def _makeOne(self, _start=True, _sock=None):
             from waitress.server import create_server
-            return create_server(
+            self.inst = create_server(
                 dummy_app,
                 map={},
                 _start=_start,
@@ -236,6 +244,10 @@ if hasattr(socket, 'AF_UNIX'):
                 unix_socket=self.unix_socket,
                 unix_socket_perms='600'
             )
+            return self.inst
+
+        def tearDown(self):
+            self.inst.close()
 
         def _makeDummy(self, *args, **kwargs):
             sock = DummySock(*args, **kwargs)
@@ -268,13 +280,13 @@ if hasattr(socket, 'AF_UNIX'):
 
         def test_creates_new_sockinfo(self):
             from waitress.server import UnixWSGIServer
-            inst = UnixWSGIServer(
+            self.inst = UnixWSGIServer(
                 dummy_app,
                 unix_socket=self.unix_socket,
                 unix_socket_perms='600'
             )
 
-            self.assertEqual(inst.sockinfo[0], socket.AF_UNIX)
+            self.assertEqual(self.inst.sockinfo[0], socket.AF_UNIX)
 
 class DummySock(object):
     accepted = False
@@ -317,6 +329,9 @@ class DummySock(object):
     def getsockname(self):
         return self.bound
 
+    def close(self):
+        pass
+
 class DummyTaskDispatcher(object):
 
     def __init__(self):
@@ -357,6 +372,9 @@ class DummyTrigger(object):
 
     def pull_trigger(self):
         self.pulled = True
+
+    def close(self):
+        pass
 
 class DummyLogger(object):
 

@@ -211,6 +211,57 @@ class TestTask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertTrue(('Connection', 'close') in inst.response_headers)
 
+    def test_build_response_header_v11_204_no_content_length_or_transfer_encoding(self):
+        # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
+        # for any response with a status code of 1xx or 204.
+        inst = self._makeOne()
+        inst.request = DummyParser()
+        inst.version = '1.1'
+        inst.status = '204 No Content'
+        result = inst.build_response_header()
+        lines = filter_lines(result)
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[0], b'HTTP/1.1 204 No Content')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: waitress')
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
+
+    def test_build_response_header_v11_1xx_no_content_length_or_transfer_encoding(self):
+        # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
+        # for any response with a status code of 1xx or 204.
+        inst = self._makeOne()
+        inst.request = DummyParser()
+        inst.version = '1.1'
+        inst.status = '100 Continue'
+        result = inst.build_response_header()
+        lines = filter_lines(result)
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[0], b'HTTP/1.1 100 Continue')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: waitress')
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
+
+    def test_build_response_header_v11_304_no_content_length_or_transfer_encoding(self):
+        # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
+        # for any response with a status code of 1xx, 204 or 304.
+        inst = self._makeOne()
+        inst.request = DummyParser()
+        inst.version = '1.1'
+        inst.status = '304 Not Modified'
+        result = inst.build_response_header()
+        lines = filter_lines(result)
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[0], b'HTTP/1.1 304 Not Modified')
+        self.assertEqual(lines[1], b'Connection: close')
+        self.assertTrue(lines[2].startswith(b'Date:'))
+        self.assertEqual(lines[3], b'Server: waitress')
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(('Connection', 'close') in inst.response_headers)
+
     def test_build_response_header_via_added(self):
         inst = self._makeOne()
         inst.request = DummyParser()
@@ -256,6 +307,12 @@ class TestTask(unittest.TestCase):
         inst.response_headers = [('Content-Length', '70')]
         inst.remove_content_length_header()
         self.assertEqual(inst.response_headers, [])
+
+    def test_remove_content_length_header_with_other(self):
+        inst = self._makeOne()
+        inst.response_headers = [('Content-Length', '70'), ('Content-Type', 'text/html')]
+        inst.remove_content_length_header()
+        self.assertEqual(inst.response_headers, [('Content-Type', 'text/html')])
 
     def test_start(self):
         inst = self._makeOne()
@@ -527,6 +584,34 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertEqual(len(inst.logger.logged), 0)
 
+    def test_execute_app_without_body_204_logged(self):
+        def app(environ, start_response):
+            start_response('204 No Content', [('Content-Length', '3')])
+            return [b'abc']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.logger = DummyLogger()
+        inst.execute()
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertNotIn(b'abc', inst.channel.written)
+        self.assertNotIn(b'Content-Length', inst.channel.written)
+        self.assertNotIn(b'Transfer-Encoding', inst.channel.written)
+        self.assertEqual(len(inst.logger.logged), 1)
+
+    def test_execute_app_without_body_304_logged(self):
+        def app(environ, start_response):
+            start_response('304 Not Modified', [('Content-Length', '3')])
+            return [b'abc']
+        inst = self._makeOne()
+        inst.channel.server.application = app
+        inst.logger = DummyLogger()
+        inst.execute()
+        self.assertEqual(inst.close_on_finish, True)
+        self.assertNotIn(b'abc', inst.channel.written)
+        self.assertNotIn(b'Content-Length', inst.channel.written)
+        self.assertNotIn(b'Transfer-Encoding', inst.channel.written)
+        self.assertEqual(len(inst.logger.logged), 1)
+
     def test_execute_app_returns_closeable(self):
         class closeable(list):
             def close(self):
@@ -670,8 +755,8 @@ class TestWSGITask(unittest.TestCase):
             'PATH_INFO', 'QUERY_STRING', 'REMOTE_ADDR', 'REQUEST_METHOD',
             'SCRIPT_NAME', 'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL',
             'SERVER_SOFTWARE', 'wsgi.errors', 'wsgi.file_wrapper', 'wsgi.input',
-            'wsgi.multiprocess', 'wsgi.multithread', 'wsgi.run_once',
-            'wsgi.url_scheme', 'wsgi.version'])
+            'wsgi.input_terminated', 'wsgi.multiprocess', 'wsgi.multithread',
+            'wsgi.run_once', 'wsgi.url_scheme', 'wsgi.version'])
 
         self.assertEqual(environ['REQUEST_METHOD'], 'GET')
         self.assertEqual(environ['SERVER_PORT'], '80')
@@ -693,6 +778,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.multiprocess'], False)
         self.assertEqual(environ['wsgi.run_once'], False)
         self.assertEqual(environ['wsgi.input'], 'stream')
+        self.assertEqual(environ['wsgi.input_terminated'], True)
         self.assertEqual(inst.environ, environ)
 
     def test_get_environment_values_w_scheme_override_untrusted(self):
@@ -733,8 +819,8 @@ class TestWSGITask(unittest.TestCase):
             'PATH_INFO', 'QUERY_STRING', 'REMOTE_ADDR', 'REQUEST_METHOD',
             'SCRIPT_NAME', 'SERVER_NAME', 'SERVER_PORT', 'SERVER_PROTOCOL',
             'SERVER_SOFTWARE', 'wsgi.errors', 'wsgi.file_wrapper', 'wsgi.input',
-            'wsgi.multiprocess', 'wsgi.multithread', 'wsgi.run_once',
-            'wsgi.url_scheme', 'wsgi.version'])
+            'wsgi.input_terminated', 'wsgi.multiprocess', 'wsgi.multithread',
+            'wsgi.run_once', 'wsgi.url_scheme', 'wsgi.version'])
 
         self.assertEqual(environ['REQUEST_METHOD'], 'GET')
         self.assertEqual(environ['SERVER_PORT'], '80')
@@ -756,6 +842,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['wsgi.multiprocess'], False)
         self.assertEqual(environ['wsgi.run_once'], False)
         self.assertEqual(environ['wsgi.input'], 'stream')
+        self.assertEqual(environ['wsgi.input_terminated'], True)
         self.assertEqual(inst.environ, environ)
 
     def test_get_environment_values_w_bogus_scheme_override(self):

@@ -66,6 +66,9 @@ def slash_fixed_str(s):
         s = '/' + s.lstrip('/').rstrip('/')
     return s
 
+def str_iftruthy(s):
+    return str(s) if s else None
+
 class _str_marker(str):
     pass
 
@@ -98,7 +101,7 @@ class Adjustments(object):
         ('max_request_header_size', int),
         ('max_request_body_size', int),
         ('expose_tracebacks', asbool),
-        ('ident', str),
+        ('ident', str_iftruthy),
         ('asyncore_loop_timeout', int),
         ('asyncore_use_poll', asbool),
         ('unix_socket', str),

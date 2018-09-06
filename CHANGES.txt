@@ -1,3 +1,30 @@
+Unreleased
+----------
+
+Features
+~~~~~~~~
+
+- Server header can be omitted by specifying `ident=None` or `ident=''`.
+  See https://github.com/Pylons/waitress/pull/187
+
+Bugfixes
+~~~~~~~~
+
+- Waitress will no longer send Transfer-Encoding or Content-Length for 1xx,
+  204, or 304 responses, and will completely ignore any message body sent by
+  the WSGI application, making sure to follow the HTTP standard. See
+  https://github.com/Pylons/waitress/pull/166,
+  https://github.com/Pylons/waitress/issues/165,
+  https://github.com/Pylons/waitress/issues/152, and
+  https://github.com/Pylons/waitress/pull/202
+
+Compatibility
+~~~~~~~~~~~~~
+
+- Waitress has now "vendored" asyncore into itself as ``waitress.wasyncore``.
+  This is to cope with the eventuality that asyncore will be removed from
+  the Python standard library in 3.8 or so.
+
 1.1.0 (2017-10-10)
 ------------------
 

@@ -14,6 +14,7 @@ class Test_serve(unittest.TestCase):
         self.assertEqual(result, None)
         self.assertEqual(server.ran, True)
 
+
 class Test_serve_paste(unittest.TestCase):
 
     def _callFUT(self, app, **kw):
