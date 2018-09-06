@@ -141,9 +141,9 @@ Web Traffic Logging With Paste's TransLogging Middleware
 The WSGI design is modular.  Waitress logs error conditions, debugging
 output, etc., but not web traffic.  For web traffic logging Paste
 provides the `TransLogger
-<http://pythonpaste.org/modules/translogger.html>`_
+<https://web.archive.org/web/20160707041338/http://pythonpaste.org/modules/translogger.html>`_
 :term:`middleware`.  TransLogger produces logs in the `Apache Combined
-Log Format <http://httpd.apache.org/docs/2.2/logs.html#combined>`_.
+Log Format <https://httpd.apache.org/docs/current/logs.html#combined>`_.
 But TransLogger does not write to files, the Python logging system
 must be configured to do this.  The Python `FileHandler
 <https://docs.python.org/3/library/logging.handlers.html#filehandler>`_
@@ -461,28 +461,26 @@ Known Issues
 Support and Development
 -----------------------
 
-The `Pylons Project web site <http://pylonsproject.org/>`_ is the main online
+The `Pylons Project web site <https://pylonsproject.org/>`_ is the main online
 source of Waitress support and development information.
 
 To report bugs, use the `issue tracker
-<http://github.com/Pylons/waitress/issues>`_.
+<https://github.com/Pylons/waitress/issues>`_.
 
 If you've got questions that aren't answered by this documentation,
-contact the `Pylons-devel maillist
-<http://groups.google.com/group/pylons-devel>`_ or join the `#pyramid
-IRC channel <irc://irc.freenode.net/#pyramid>`_.
+contact the `Pylons-discuss maillist
+<https://groups.google.com/forum/#!forum/pylons-discuss>`_ or join the `#pyramid
+IRC channel <https://webchat.freenode.net/?channels=pyramid>`_.
 
 Browse and check out tagged and trunk versions of Waitress via
-the `Waitress GitHub repository <http://github.com/Pylons/waitress/>`_.
+the `Waitress GitHub repository <https://github.com/Pylons/waitress/>`_.
 To check out the trunk via ``git``, use this command:
 
 .. code-block:: text
 
   git clone git@github.com:Pylons/waitress.git
 
-To find out how to become a contributor to Waitress, please see the
-`contributor's section of the documentation
-<http://docs.pylonsproject.org/index.html#contributing>`_.
+To find out how to become a contributor to Waitress, please see the guidelines in `contributing.md <https://github.com/Pylons/waitress/blob/master/contributing.md>`_ and `How to Contribute Source Code and Documentation <https://pylonsproject.org/community-how-to-contribute.html>`_.
 
 Why?
 ----
@@ -512,7 +510,7 @@ framework distribution simply for its server component is awkward.  The test
 suite of the CherryPy server also depends on the CherryPy web framework, so
 even if we forked its server component into a separate distribution, we would
 have still needed to backfill for all of its tests.  The CherryPy team has
-started work on `Cheroot <https://bitbucket.org/cherrypy/cheroot>`_, which
+started work on `Cheroot <https://bitbucket.org/cherrypy/cheroot/src/default/>`_, which
 should solve this problem, however.
 
 Waitress is a fork of the WSGI-related components which existed in

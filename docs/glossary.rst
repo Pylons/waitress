@@ -8,22 +8,21 @@ Glossary
 
    PasteDeploy
       A system for configuration of WSGI web components in declarative
-      ``.ini`` format.  See http://pythonpaste.org/deploy/.
+      ``.ini`` format.  See https://web.archive.org/web/20161029233359/http://pythonpaste.org/deploy/.
 
    asyncore
-      A standard library module for asynchronous communications.  See
-      http://docs.python.org/library/asyncore.html .
+      A Python standard library module for asynchronous communications.  See :mod:`asyncore`.
 
    middleware
      *Middleware* is a :term:`WSGI` concept.  It is a WSGI component
      that acts both as a server and an application.  Interesting uses
      for middleware exist, such as caching, content-transport
-     encoding, and other functions.  See `WSGI.org <http://www.wsgi.org>`_
-     or `PyPI <http://python.org/pypi>`_ to find middleware for your
+     encoding, and other functions.  See `WSGI.org <https://wsgi.readthedocs.io/en/latest/>`_
+     or `PyPI <https://pypi.org/search/?c=Topic+%3A%3A+Internet+%3A%3A+WWW%2FHTTP+%3A%3A+WSGI+%3A%3A+Middleware>`_ to find middleware for your
      application.
 
    WSGI
-     `Web Server Gateway Interface <http://www.wsgi.org/>`_.  This is a
+     `Web Server Gateway Interface <https://wsgi.readthedocs.io/en/latest/>`_.  This is a
      Python standard for connecting web applications to web servers,
      similar to the concept of Java Servlets.  Waitress requires
      that your application be served as a WSGI application.

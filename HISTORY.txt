@@ -254,7 +254,7 @@ Features
 ~~~~~~~~
 
 - Support the WSGI ``wsgi.file_wrapper`` protocol as per
-  http://www.python.org/dev/peps/pep-0333/#optional-platform-specific-file-handling.
+  https://www.python.org/dev/peps/pep-0333/#optional-platform-specific-file-handling.
   Here's a usage example::
 
     import os

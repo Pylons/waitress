@@ -286,7 +286,7 @@ class Test_get_header_lines(unittest.TestCase):
         self.assertEqual(result, [b'slam\tslim'])
 
     def test_get_header_lines_malformed(self):
-        # http://corte.si/posts/code/pathod/pythonservers/index.html
+        # https://corte.si/posts/code/pathod/pythonservers/index.html
         from waitress.parser import ParsingError
         self.assertRaises(ParsingError,
                           self._callFUT, b' Host: localhost\r\n\r\n')
