@@ -308,6 +308,12 @@ class TestTask(unittest.TestCase):
         inst.remove_content_length_header()
         self.assertEqual(inst.response_headers, [])
 
+    def test_remove_content_length_header_with_other(self):
+        inst = self._makeOne()
+        inst.response_headers = [('Content-Length', '70'), ('Content-Type', 'text/html')]
+        inst.remove_content_length_header()
+        self.assertEqual(inst.response_headers, [('Content-Type', 'text/html')])
+
     def test_start(self):
         inst = self._makeOne()
         inst.start()
