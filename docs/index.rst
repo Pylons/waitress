@@ -37,7 +37,7 @@ Change History
 Known Issues
 ------------
 
-- Does not support TLS natively. See :ref:`reverse-proxy` for more information.
+- Does not support TLS natively. See :ref:`using-behind-a-reverse-proxy` for more information.
 
 Support and Development
 -----------------------
