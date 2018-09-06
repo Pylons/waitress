@@ -25,6 +25,15 @@ Compatibility
   This is to cope with the eventuality that asyncore will be removed from
   the Python standard library in 3.8 or so.
 
+Documentation
+~~~~~~~~~~~~~
+
+- Bring in documentation of paste.translogger from Pyramid. Reorganize and
+  clean up documentation. See
+  https://github.com/Pylons/waitress/pull/205
+  https://github.com/Pylons/waitress/pull/70
+  https://github.com/Pylons/waitress/pull/206
+
 1.1.0 (2017-10-10)
 ------------------
 
