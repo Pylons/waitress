@@ -373,5 +373,8 @@ if hasattr(socket, 'AF_UNIX'):
         def fix_addr(self, addr):
             return ('localhost', None)
 
+        def get_server_name(self, ip):
+            return 'localhost'
+
 # Compatibility alias.
 WSGIServer = TcpWSGIServer
