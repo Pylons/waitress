@@ -198,12 +198,30 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
             raise ValueError('Requires an IP to get the server name')
 
         server_name = str(ip)
-        try:
-            if server_name == '0.0.0.0' or server_name == '::':
+
+        # If we are bound to all IP's, just return the current hostname, only
+        # fall-back to "localhost" if we fail to get the hostname
+        if server_name == '0.0.0.0' or server_name == '::':
+            try:
+                return str(self.socketmod.gethostname())
+            except (socket.error, UnicodeDecodeError):  # pragma: no cover
+                # We also deal with UnicodeDecodeError in case of Windows with
+                # non-ascii hostname
                 return 'localhost'
+
+        # Now let's try and convert the IP address to a proper hostname
+        try:
             server_name = self.socketmod.gethostbyaddr(server_name)[0]
-        except socket.error: # pragma: no cover
+        except (socket.error, UnicodeDecodeError):  # pragma: no cover
+            # We also deal with UnicodeDecodeError in case of Windows with
+            # non-ascii hostname
             pass
+
+        # If it contains an IPv6 literal, make sure to surround it with
+        # brackets
+        if ':' in server_name and '[' not in server_name:
+            server_name = '[{}]'.format(server_name)
+
         return server_name
 
     def getsockname(self):

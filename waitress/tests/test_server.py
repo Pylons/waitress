@@ -89,7 +89,17 @@ class TestWSGIServer(unittest.TestCase):
     def test_get_server_name_0000(self):
         inst = self._makeOneWithMap(_start=False)
         result = inst.get_server_name('0.0.0.0')
-        self.assertEqual(result, 'localhost')
+        self.assertTrue(len(result) != 0)
+
+    def test_get_server_name_double_colon(self):
+        inst = self._makeOneWithMap(_start=False)
+        result = inst.get_server_name('::')
+        self.assertTrue(len(result) != 0)
+
+    def test_get_server_name_ipv6(self):
+        inst = self._makeOneWithMap(_start=False)
+        result = inst.get_server_name('2001:DB8::ffff')
+        self.assertEqual('[2001:DB8::ffff]', result)
 
     def test_get_server_multi(self):
         inst = self._makeOneWithMulti()
