@@ -251,3 +251,24 @@ def undquote(value):
 
 
 Forwarded = namedtuple('Forwarded', ['by', 'for_', 'host', 'proto'])
+
+
+def clear_untrusted_headers(
+    headers, untrusted_headers, log_warning=False, logger=logger
+):
+    untrusted_headers_removed = [
+        header
+        for header in untrusted_headers
+        if headers.pop(header, False) is not False
+    ]
+
+    if any(untrusted_headers_removed) and log_warning:
+        untrusted_headers_removed = [
+            "-".join([x.capitalize() for x in header.split("_")])
+            for header in untrusted_headers_removed
+        ]
+        logger.warning(
+            "Removed untrusted headers (%s). Waitress recommends these be "
+            "removed upstream.",
+            ", ".join(untrusted_headers_removed),
+        )
