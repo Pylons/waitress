@@ -981,7 +981,7 @@ class DummyChannel(object):
     closed_when_done = False
     adj = DummyAdj()
     creation_time = 0
-    addr = ['127.0.0.1']
+    addr = ('127.0.0.1', 80)
 
     def __init__(self, server=None):
         if server is None:
