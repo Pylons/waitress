@@ -1,7 +1,7 @@
 Support for ``wsgi.file_wrapper``
 ---------------------------------
 
-Waitress supports the Python Web Server Gateway Interface v1.0 as specified in :pep:`333`.  Here's a usage example:
+Waitress supports the Python Web Server Gateway Interface v1.0 as specified in :pep:`3333`.  Here's a usage example:
 
 .. code-block:: python
 
