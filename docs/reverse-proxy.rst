@@ -133,14 +133,18 @@ the client to your Waitress server, as well as sending along a
 If your proxy accepts both HTTP and HTTPS URLs, and you want your application
 to generate the appropriate url based on the incoming scheme, also set up
 your proxy to send a ``X-Forwarded-Proto`` with the original URL scheme along
-with each proxied request.  For example, when using nginx::
+with each proxied request.  For example, when using nginx.
+
+.. code-block:: nginx
 
     proxy_set_header        X-Forwarded-Proto $scheme;
 
 It's permitted to set an ``X-Forwarded-For`` header too; the
 ``PrefixMiddleware`` uses this to adjust other environment variables (you'll
 have to read its docs to find out which ones, I don't know what they are).  For
-the ``X-Forwarded-For`` header::
+the ``X-Forwarded-For`` header.
+
+.. code-block:: nginx
 
     proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
 
