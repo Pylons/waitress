@@ -20,20 +20,19 @@ port
         May not be used with ``listen``
 
 listen
-    Tell waitress to listen on an host/port combination. It is to be provided
-    as a space delineated list of host/port:
-
-    Examples:
-
-        - ``listen="127.0.0.1:8080 [::1]:8080"``
-        - ``listen="*:8080 *:6543"``
-
-	A wildcard for the hostname is also supported and will bind to both
-	IPv4/IPv6 depending on whether they are enabled or disabled.
-
-	IPv6 IP addresses are supported by surrounding the IP address with brackets.
-
     .. versionadded:: 1.0
+        Tell waitress to listen on combinations of ``host:port`` arguments.
+        Combinations should be a quoted, space-delimited list, as in the following examples.
+
+        .. code-block:: python
+
+            listen="127.0.0.1:8080 [::1]:8080"
+            listen="*:8080 *:6543"
+
+        A wildcard for the hostname is also supported and will bind to both
+        IPv4/IPv6 depending on whether they are enabled or disabled.
+
+        IPv6 IP addresses are supported by surrounding the IP address with brackets.
 
 ipv4
     Enable or disable IPv4 (boolean)
