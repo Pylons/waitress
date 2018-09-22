@@ -18,7 +18,9 @@ Waitress, in either case, as it will be used by most applications to generate
 correct URLs.
 
 For example, when using nginx as a reverse proxy, you might add the following
-lines in a ``location`` section::
+lines in a ``location`` section.
+
+.. code-block:: nginx
 
     proxy_set_header        Host $host;
 
