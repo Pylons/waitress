@@ -17,7 +17,7 @@ your reverse proxy to pass along the ``Host`` header sent by the client to
 Waitress, in either case, as it will be used by most applications to generate
 correct URLs.
 
-For example, when using Nginx as a reverse proxy, you might add the following
+For example, when using nginx as a reverse proxy, you might add the following
 lines in a ``location`` section::
 
     proxy_set_header        Host $host;
@@ -66,7 +66,7 @@ Passing the ``X_FORWARDED_PROTO`` header to set ``wsgi.url_scheme``
 If your proxy accepts both HTTP and HTTPS URLs, and you want your application
 to generate the appropriate url based on the incoming scheme, also set up
 your proxy to send a ``X-Forwarded-Proto`` with the original URL scheme along
-with each proxied request.  For example, when using Nginx::
+with each proxied request.  For example, when using nginx::
 
     proxy_set_header        X-Forwarded-Proto $scheme;
 
@@ -131,7 +131,7 @@ the client to your Waitress server, as well as sending along a
 If your proxy accepts both HTTP and HTTPS URLs, and you want your application
 to generate the appropriate url based on the incoming scheme, also set up
 your proxy to send a ``X-Forwarded-Proto`` with the original URL scheme along
-with each proxied request.  For example, when using Nginx::
+with each proxied request.  For example, when using nginx::
 
     proxy_set_header        X-Forwarded-Proto $scheme;
 
