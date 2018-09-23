@@ -3,14 +3,10 @@
 waitress-serve
 --------------
 
-Waitress comes bundled with a thin command-line wrapper around the
-``waitress.serve`` function called ``waitress-serve``. This is useful for
-development, and in production situations where serving of static assets is
-delegated to a reverse proxy, such as Nginx or Apache.
+.. versionadded:: 0.8.4
 
-.. note::
-
-   This feature is new as of Waitress 0.8.4.
+    Waitress comes bundled with a thin command-line wrapper around the ``waitress.serve`` function called ``waitress-serve``.
+    This is useful for development, and in production situations where serving of static assets is delegated to a reverse proxy, such as nginx or Apache.
 
 ``waitress-serve`` takes the very same :ref:`arguments <arguments>` as the
 ``waitress.serve`` function, but where the function's arguments have
