@@ -1,11 +1,19 @@
 Design
 ------
 
-Waitress uses a combination of asynchronous and synchronous code to do its
-job.  It handles I/O to and from clients using the :term:`asyncore` library.
+Waitress uses a combination of asynchronous and synchronous code to do its job.
+It handles I/O to and from clients using the :term:`wasyncore`, which is :term:`asyncore` vendored into Waitress.
 It services requests via threads.
 
-The :term:`asyncore` module in the Python standard library:
+.. note::
+    :term:`asyncore` has been deprecated since Python 3.6.
+    Work continues on its inevitable removal from the Python standard library.
+    Its recommended replacement is :mod:`asyncio`.
+
+    Although :term:`asyncore` has been vendored into Waitress as :term:`wasyncore`, you may see references to "asyncore" in this documentation's code examples and API.
+    The terms are effectively the same and may be used interchangeably.
+
+The :term:`wasyncore` module:
 
 - Uses the ``select.select`` function to wait for connections from clients
   and determine if a connected client is ready to receive output.
@@ -37,10 +45,12 @@ channel, and can write back to the channel's output buffer.  When all worker
 threads are in use, scheduled tasks will wait in a queue for a worker thread
 to become available.
 
-I/O is always done asynchronously (by asyncore) in the main thread.  Worker
-threads never do any I/O.  This means that 1) a large number of clients can
-be connected to the server at once and 2) worker threads will never be hung
-up trying to send data to a slow client.
+I/O is always done asynchronously (by :term:`wasyncore`) in the main thread.
+Worker threads never do any I/O.
+This means that
+
+#.  a large number of clients can be connected to the server at once, and
+#.  worker threads will never be hung up trying to send data to a slow client.
 
 No attempt is made to kill a "hung thread".  It's assumed that when a task
 (application logic) starts that it will eventually complete.  If for some
