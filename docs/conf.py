@@ -169,6 +169,14 @@ html_last_updated_fmt = '%b %d, %Y'
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'waitress'
 
+# Control display of sidebars
+html_sidebars = {'**': [
+    'localtoc.html',
+    'ethicalads.html',
+    'relations.html',
+    'sourcelink.html',
+    'searchbox.html',
+]}
 
 # Options for LaTeX output
 # ------------------------
