@@ -136,15 +136,16 @@ expose_tracebacks
     ``False``.
 
 asyncore_loop_timeout
-    The ``timeout`` value (seconds) passed to ``asyncore.loop`` to run the
-    mainloop.  Default: 1.  (New in 0.8.3.)
+    .. versionadded:: 0.8.3
+        The ``timeout`` value (seconds) passed to ``asyncore.loop`` to run the mainloop.
+        Default: 1.
 
 asyncore_use_poll
-    Boolean: switch from using select() to poll() in ``asyncore.loop``.
-    By default asyncore.loop() uses select() which has a limit of 1024
-    file descriptors. Select() and poll() provide basically the same
-    functionality, but poll() doesn't have the file descriptors limit.
-    Default: False (New in 0.8.6)
+    .. versionadded:: 0.8.6
+        Boolean: switch from using ``select()`` to ``poll()`` in ``asyncore.loop``.
+        By default ``asyncore.loop()`` uses ``select()`` which has a limit of 1024 file descriptors.
+        ``select()`` and ``poll()`` provide basically the same functionality, but ``poll()`` doesn't have the file descriptors limit.
+        Default: False.
 
 url_prefix
     String: the value used as the WSGI ``SCRIPT_NAME`` value.  Setting this to
