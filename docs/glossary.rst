@@ -14,8 +14,8 @@ Glossary
         A Python standard library module for asynchronous communications.  See :mod:`asyncore`.
 
         .. versionchanged:: 1.2.0
-            Waitress has now "vendored" asyncore into itself as ``waitress.wasyncore``.
-            This is to cope with the eventuality that asyncore will be removed from the Python standard library in Python 3.8 or so.
+            Waitress has now "vendored" ``asyncore`` into itself as ``waitress.wasyncore``.
+            This is to cope with the eventuality that ``asyncore`` will be removed from the Python standard library in Python 3.8 or so.
 
     middleware
         *Middleware* is a :term:`WSGI` concept.
@@ -32,4 +32,3 @@ Glossary
         .. versionchanged:: 1.2.0
             Waitress has now "vendored" :term:`asyncore` into itself as ``waitress.wasyncore``.
             This is to cope with the eventuality that ``asyncore`` will be removed from the Python standard library in Python 3.8 or so.
-
