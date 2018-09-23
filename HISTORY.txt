@@ -223,7 +223,7 @@ Bug Fixes
 Bug Fixes
 ~~~~~~~~~
 
-- http://corte.si/posts/code/pathod/pythonservers/index.html pointed out that
+- https://corte.si/posts/code/pathod/pythonservers/index.html pointed out that
   sending a bad header resulted in an exception leading to a 500 response
   instead of the more proper 400 response without an exception.
 
@@ -254,7 +254,7 @@ Features
 ~~~~~~~~
 
 - Support the WSGI ``wsgi.file_wrapper`` protocol as per
-  http://www.python.org/dev/peps/pep-0333/#optional-platform-specific-file-handling.
+  https://www.python.org/dev/peps/pep-0333/#optional-platform-specific-file-handling.
   Here's a usage example::
 
     import os
