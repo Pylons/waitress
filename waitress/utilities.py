@@ -14,13 +14,14 @@
 """Utility functions
 """
 
+import calendar
 import errno
 import logging
 import os
 import re
 import stat
 import time
-import calendar
+from collections import namedtuple
 
 logger = logging.getLogger('waitress')
 queue_logger = logging.getLogger('waitress.queue')
@@ -247,3 +248,6 @@ def undquote(value):
         return value
 
     raise ValueError('Invalid quoting in value')
+
+
+Forwarded = namedtuple('Forwarded', ['by', 'for_', 'host', 'proto'])
