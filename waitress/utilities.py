@@ -204,3 +204,46 @@ class RequestEntityTooLarge(BadRequest):
 class InternalServerError(Error):
     code = 500
     reason = 'Internal Server Error'
+
+
+# RFC 5234 Appendix B.1 "Core Rules":
+# VCHAR         =  %x21-7E
+#                  ; visible (printing) characters
+vchar_re = '\x21-\x7e'
+
+# RFC 7230 Section 3.2.6 "Field Value Components":
+# quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+# qdtext        = HTAB / SP /%x21 / %x23-5B / %x5D-7E / obs-text
+# obs-text      = %x80-FF
+# quoted-pair   = "\" ( HTAB / SP / VCHAR / obs-text )
+obs_text_re = '\x80-\xff'
+
+# The '\\' between \x5b and \x5d is needed to escape \x5d (']')
+qdtext_re = '[\t \x21\x23-\x5b\\\x5d-\x7e' + obs_text_re + ']'
+
+quoted_pair_re = r'\\' + '([\t ' + vchar_re + obs_text_re + '])'
+quoted_string_re = \
+    '"(?:(?:' + qdtext_re + ')|(?:' + quoted_pair_re + '))*"'
+
+quoted_string = re.compile(quoted_string_re)
+quoted_pair = re.compile(quoted_pair_re)
+
+
+def undquote(value):
+    if value.startswith('"') and value.endswith('"'):
+        # So it claims to be DQUOTE'ed, let's validate that
+        matches = quoted_string.match(value)
+
+        if matches and matches.end() == len(value):
+            # Remove the DQUOTE's from the value
+            value = value[1:-1]
+
+            # Remove all backslashes that are followed by a valid vchar or
+            # obs-text
+            value = quoted_pair.sub(r'\1', value)
+
+            return value
+    elif not value.startswith('"') and not value.endswith('"'):
+        return value
+
+    raise ValueError('Invalid quoting in value')
