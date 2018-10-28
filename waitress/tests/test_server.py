@@ -62,7 +62,6 @@ class TestWSGIServer(unittest.TestCase):
             _dispatcher=_dispatcher,
             _start=_start,
             _sock=_sock,
-            bind_sockets=False,
             sockets=_sockets)
         return self.inst
 
@@ -321,7 +320,6 @@ if hasattr(socket, 'AF_UNIX'):
                 _dispatcher=_dispatcher,
                 _start=_start,
                 _sock=_sock,
-                bind_sockets=False,
                 sockets=_sockets)
             return self.inst
 

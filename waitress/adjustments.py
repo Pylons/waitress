@@ -112,7 +112,6 @@ class Adjustments(object):
         ('unix_socket', str),
         ('unix_socket_perms', asoctal),
         ('sockets', as_socket_list),
-        ('bind_sockets', asbool),
     )
 
     _param_map = dict(_params)
@@ -227,10 +226,6 @@ class Adjustments(object):
     # be used for e.g. socket activation
     sockets = []
 
-    # Enable binding to sockets by default. This can be turned off for sockets
-    # that are supplied from the outside, e.g. using socket activation
-    bind_sockets = True
-
     def __init__(self, **kw):
 
         if 'listen' in kw and ('host' in kw or 'port' in kw):
@@ -241,9 +236,6 @@ class Adjustments(object):
 
         if 'sockets' in kw and ('host' in kw or 'port' in kw):
             raise ValueError('host and or port may not be set if sockets is set.')
-
-        if 'sockets' in kw and ('bind_sockets' not in kw or kw['bind_sockets']):
-            raise ValueError('Sockets passed should be bound already, please turn bind of with bind_sockets=False')
 
         for k, v in kw.items():
             if k not in self._param_map:

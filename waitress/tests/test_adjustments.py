@@ -239,20 +239,8 @@ class TestAdjustments(unittest.TestCase):
         sockets = [
             socket.socket(socket.AF_INET6, socket.SOCK_STREAM),
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
-        inst = self._makeOne(sockets=sockets, bind_sockets=False)
+        inst = self._makeOne(sockets=sockets)
         self.assertEqual(inst.sockets, sockets)
-        sockets[0].close()
-        sockets[1].close()
-
-    def test_dont_use_sockets_with_bind_enabled(self):
-        sockets = [
-            socket.socket(socket.AF_INET6, socket.SOCK_STREAM),
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
-        self.assertRaises(
-            ValueError,
-            self._makeOne,
-            sockets=sockets,
-            bind_sockets=True)
         sockets[0].close()
         sockets[1].close()
 
@@ -274,14 +262,6 @@ class TestAdjustments(unittest.TestCase):
             port='8080',
             sockets=sockets)
         sockets[0].close()
-
-    def test_default_bind_sockets(self):
-        inst = self._makeOne()
-        self.assertEqual(inst.bind_sockets, True)
-
-    def test_good_bind_sockets(self):
-        inst = self._makeOne(bind_sockets=False)
-        self.assertEqual(inst.bind_sockets, False)
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)

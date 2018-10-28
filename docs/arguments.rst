@@ -51,6 +51,14 @@ unix_socket_perms
     Octal permissions to use for the Unix domain socket (string), default is
     ``600``. Only used if ``unix_socket`` is not ``None``.
 
+sockets
+    A list of sockets. The sockets can be internet or unix sockets and have to be bound.
+    If the socket list is not empty waitress creates one server for each socket.
+    Default is ``[]``.
+
+    .. warning::
+        May not be used with ``listen``, ``host`` and/or ``port`` or ``unix_socket``
+
 threads
     number of threads used to process application logic (integer), default
     ``4``

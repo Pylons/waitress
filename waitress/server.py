@@ -85,8 +85,8 @@ def create_server(application,
             effective_listen.append((last_serv.effective_host, last_serv.effective_port))
 
     for sock in adj.sockets:
+        sockinfo = (sock.family, sock.type, sock.proto, sock.getsockname())
         if sock.family == socket.AF_INET or sock.family == socket.AF_INET6:
-            sockinfo = (sock.family, sock.type, sock.proto, sock.getsockname())
             last_serv = TcpWSGIServer(
                 application,
                 map,
@@ -94,6 +94,7 @@ def create_server(application,
                 sock,
                 dispatcher=dispatcher,
                 adj=adj,
+                bind_socket=False,
                 sockinfo=sockinfo)
             effective_listen.append((last_serv.effective_host, last_serv.effective_port))
         elif hasattr(socket, 'AF_UNIX') and sock.family == socket.AF_UNIX:
@@ -104,7 +105,8 @@ def create_server(application,
                 sock,
                 dispatcher=dispatcher,
                 adj=adj,
-                sockinfo=(sock.family, sock.type, sock.proto, sock.getsockname()))
+                bind_socket=False,
+                sockinfo=sockinfo)
             effective_listen.append((last_serv.effective_host, last_serv.effective_port))
 
     # We are running a single server, so we can just return the last server,
@@ -175,6 +177,7 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
                  dispatcher=None,  # dispatcher
                  adj=None,         # adjustments
                  sockinfo=None,    # opaque object
+                 bind_socket=True,
                  **kw
                  ):
         if adj is None:
@@ -206,7 +209,7 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
 
         self.set_reuse_addr()
 
-        if adj.bind_sockets:
+        if bind_socket:
             self.bind_server_socket()
 
         self.effective_host, self.effective_port = self.getsockname()
