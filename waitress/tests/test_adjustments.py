@@ -263,6 +263,15 @@ class TestAdjustments(unittest.TestCase):
             sockets=sockets)
         sockets[0].close()
 
+    def test_dont_mix_sockets_and_unix_socket(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            unix_socket='./tmp',
+            sockets=sockets)
+        sockets[0].close()
+
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
 
