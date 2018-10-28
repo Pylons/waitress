@@ -69,23 +69,47 @@ def create_server(application,
 
     effective_listen = []
     last_serv = None
-    for sockinfo in adj.listen:
-        # When TcpWSGIServer is called, it registers itself in the map. This
-        # side-effect is all we need it for, so we don't store a reference to
-        # or return it to the user.
-        last_serv = TcpWSGIServer(
-            application,
-            map,
-            _start,
-            _sock,
-            dispatcher=dispatcher,
-            adj=adj,
-            sockinfo=sockinfo)
-        effective_listen.append((last_serv.effective_host, last_serv.effective_port))
+    if not adj.sockets:
+        for sockinfo in adj.listen:
+            # When TcpWSGIServer is called, it registers itself in the map. This
+            # side-effect is all we need it for, so we don't store a reference to
+            # or return it to the user.
+            last_serv = TcpWSGIServer(
+                application,
+                map,
+                _start,
+                _sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                sockinfo=sockinfo)
+            effective_listen.append((last_serv.effective_host, last_serv.effective_port))
+
+    for sock in adj.sockets:
+        if sock.family == socket.AF_INET or sock.family == socket.AF_INET6:
+            sockinfo = (sock.family, sock.type, sock.proto, sock.getsockname())
+            last_serv = TcpWSGIServer(
+                application,
+                map,
+                _start,
+                sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                sockinfo=sockinfo)
+            effective_listen.append((last_serv.effective_host, last_serv.effective_port))
+        elif hasattr(socket, 'AF_UNIX') and sock.family == socket.AF_UNIX:
+            last_serv = UnixWSGIServer(
+                application,
+                map,
+                _start,
+                sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                sockinfo=(sock.family, sock.type, sock.proto, sock.getsockname()))
+            effective_listen.append((last_serv.effective_host, last_serv.effective_port))
 
     # We are running a single server, so we can just return the last server,
     # saves us from having to create one more object
-    if len(adj.listen) == 1:
+    if len(adj.listen) == 1 and len(adj.sockets) == 0 or len(adj.sockets) == 1:
         # In this case we have no need to use a MultiSocketServer
         return last_serv
 
@@ -181,7 +205,10 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
                 self.socket.setsockopt(IPPROTO_IPV6, IPV6_V6ONLY, 1)
 
         self.set_reuse_addr()
-        self.bind_server_socket()
+
+        if adj.bind_sockets:
+            self.bind_server_socket()
+
         self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.effective_host)
         self.active_channels = {}
@@ -225,7 +252,21 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
         return server_name
 
     def getsockname(self):
-        raise NotImplementedError # pragma: no cover
+        try:
+            return self.socketmod.getnameinfo(
+                self.socket.getsockname(),
+                self.socketmod.NI_NUMERICSERV
+            )
+        except: # pragma: no cover
+            # This only happens on Linux because a DNS issue is considered a
+            # temporary failure that will raise (even when NI_NAMEREQD is not
+            # set). Instead we try again, but this time we just ask for the
+            # numerichost and the numericserv (port) and return those. It is
+            # better than nothing.
+            return self.socketmod.getnameinfo(
+                self.socket.getsockname(),
+                self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV
+            )
 
     def accept_connections(self):
         self.accepting = True
@@ -312,23 +353,6 @@ class TcpWSGIServer(BaseWSGIServer):
     def bind_server_socket(self):
         (_, _, _, sockaddr) = self.sockinfo
         self.bind(sockaddr)
-
-    def getsockname(self):
-        try:
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(),
-                self.socketmod.NI_NUMERICSERV
-            )
-        except: # pragma: no cover
-            # This only happens on Linux because a DNS issue is considered a
-            # temporary failure that will raise (even when NI_NAMEREQD is not
-            # set). Instead we try again, but this time we just ask for the
-            # numerichost and the numericserv (port) and return those. It is
-            # better than nothing.
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(),
-                self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV
-            )
 
     def set_socket_options(self, conn):
         for (level, optname, value) in self.adj.socket_options:

@@ -50,6 +50,22 @@ class TestWSGIServer(unittest.TestCase):
             _sock=sock)
         return self.inst
 
+    def _makeWithSockets(self, application=dummy_app, _dispatcher=None, map=None,
+                         _start=True, _sock=None, _server=None, sockets=None):
+        from waitress.server import create_server
+        _sockets = []
+        if sockets is not None:
+            _sockets = sockets
+        self.inst = create_server(
+            application,
+            map=map,
+            _dispatcher=_dispatcher,
+            _start=_start,
+            _sock=_sock,
+            bind_sockets=False,
+            sockets=_sockets)
+        return self.inst
+
     def tearDown(self):
         if self.inst is not None:
             self.inst.close()
@@ -237,6 +253,44 @@ class TestWSGIServer(unittest.TestCase):
         self.assertNotEqual(Adjustments.port, 1234)
         self.assertEqual(self.inst.adj.port, 1234)
 
+    def test_create_with_one_tcp_socket(self):
+        from waitress.server import TcpWSGIServer
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        inst = self._makeWithSockets(_start=False, sockets=sockets)
+        self.assertTrue(isinstance(inst, TcpWSGIServer))
+
+    def test_create_with_multiple_tcp_sockets(self):
+        from waitress.server import MultiSocketServer
+        sockets = [
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+            socket.socket(socket.AF_INET6, socket.SOCK_STREAM)]
+        inst = self._makeWithSockets(_start=False, sockets=sockets)
+        self.assertTrue(isinstance(inst, MultiSocketServer))
+        self.assertEqual(len(inst.effective_listen), 2)
+
+    def test_create_with_one_socket_should_not_bind_socket(self):
+        innersock = DummySock()
+        sockets = [DummySock(acceptresult=(innersock, None))]
+        sockets[0].bind(('127.0.0.1', 80))
+        sockets[0].bind_called = False
+        inst = self._makeWithSockets(_start=False, sockets=sockets)
+        self.assertEqual(inst.socket.bound, ('127.0.0.1', 80))
+        self.assertFalse(inst.socket.bind_called)
+
+    def test_create_with_one_socket_handle_accept_noerror(self):
+        innersock = DummySock()
+        sockets = [DummySock(acceptresult=(innersock, None))]
+        sockets[0].bind(('127.0.0.1', 80))
+        inst = self._makeWithSockets(sockets=sockets)
+        L = []
+        inst.channel_class = lambda *arg, **kw: L.append(arg)
+        inst.adj = DummyAdj
+        inst.handle_accept()
+        self.assertEqual(sockets[0].accepted, True)
+        self.assertEqual(innersock.opts, [('level', 'optname', 'value')])
+        self.assertEqual(L, [(inst, innersock, None, inst.adj)])
+
+
 if hasattr(socket, 'AF_UNIX'):
 
     class TestUnixWSGIServer(unittest.TestCase):
@@ -253,6 +307,22 @@ if hasattr(socket, 'AF_UNIX'):
                 unix_socket=self.unix_socket,
                 unix_socket_perms='600'
             )
+            return self.inst
+
+        def _makeWithSockets(self, application=dummy_app, _dispatcher=None, map=None,
+                             _start=True, _sock=None, _server=None, sockets=None):
+            from waitress.server import create_server
+            _sockets = []
+            if sockets is not None:
+                _sockets = sockets
+            self.inst = create_server(
+                application,
+                map=map,
+                _dispatcher=_dispatcher,
+                _start=_start,
+                _sock=_sock,
+                bind_sockets=False,
+                sockets=_sockets)
             return self.inst
 
         def tearDown(self):
@@ -297,18 +367,35 @@ if hasattr(socket, 'AF_UNIX'):
 
             self.assertEqual(self.inst.sockinfo[0], socket.AF_UNIX)
 
-class DummySock(object):
+        def test_create_with_unix_socket(self):
+            from waitress.server import MultiSocketServer, BaseWSGIServer, \
+                                        TcpWSGIServer, UnixWSGIServer
+            sockets = [
+                socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+            inst = self._makeWithSockets(sockets=sockets, _start=False)
+            self.assertTrue(isinstance(inst, MultiSocketServer))
+            server = list(filter(lambda s: isinstance(s, BaseWSGIServer), inst.map.values()))
+            self.assertTrue(isinstance(server[0], UnixWSGIServer))
+            self.assertTrue(isinstance(server[1], TcpWSGIServer))
+
+
+class DummySock(socket.socket):
     accepted = False
     blocking = False
     family = socket.AF_INET
+    type = socket.SOCK_STREAM
+    proto = 0
 
     def __init__(self, toraise=None, acceptresult=(None, None)):
         self.toraise = toraise
         self.acceptresult = acceptresult
         self.bound = None
         self.opts = []
+        self.bind_called = False
 
     def bind(self, addr):
+        self.bind_called = True
         self.bound = addr
 
     def accept(self):
