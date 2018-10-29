@@ -255,6 +255,7 @@ class TestWSGIServer(unittest.TestCase):
     def test_create_with_one_tcp_socket(self):
         from waitress.server import TcpWSGIServer
         sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        sockets[0].bind(('127.0.0.1', 0))
         inst = self._makeWithSockets(_start=False, sockets=sockets)
         self.assertTrue(isinstance(inst, TcpWSGIServer))
 
@@ -262,7 +263,9 @@ class TestWSGIServer(unittest.TestCase):
         from waitress.server import MultiSocketServer
         sockets = [
             socket.socket(socket.AF_INET, socket.SOCK_STREAM),
-            socket.socket(socket.AF_INET6, socket.SOCK_STREAM)]
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        sockets[0].bind(('127.0.0.1', 0))
+        sockets[1].bind(('127.0.0.1', 0))
         inst = self._makeWithSockets(_start=False, sockets=sockets)
         self.assertTrue(isinstance(inst, MultiSocketServer))
         self.assertEqual(len(inst.effective_listen), 2)
