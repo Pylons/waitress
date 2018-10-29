@@ -71,7 +71,7 @@ def str_iftruthy(s):
 
 def as_socket_list(sockets):
     """Checks if the elements in the list are of type socket and
-    returns None if not."""
+    removes them if not."""
     return [sock for sock in sockets if isinstance(sock, socket.socket)]
 
 class _str_marker(str):
