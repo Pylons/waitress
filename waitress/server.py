@@ -255,21 +255,7 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
         return server_name
 
     def getsockname(self):
-        try:
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(),
-                self.socketmod.NI_NUMERICSERV
-            )
-        except: # pragma: no cover
-            # This only happens on Linux because a DNS issue is considered a
-            # temporary failure that will raise (even when NI_NAMEREQD is not
-            # set). Instead we try again, but this time we just ask for the
-            # numerichost and the numericserv (port) and return those. It is
-            # better than nothing.
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(),
-                self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV
-            )
+        raise NotImplementedError # pragma: no cover
 
     def accept_connections(self):
         self.accepting = True
@@ -356,6 +342,23 @@ class TcpWSGIServer(BaseWSGIServer):
     def bind_server_socket(self):
         (_, _, _, sockaddr) = self.sockinfo
         self.bind(sockaddr)
+
+    def getsockname(self):
+        try:
+            return self.socketmod.getnameinfo(
+                self.socket.getsockname(),
+                self.socketmod.NI_NUMERICSERV
+            )
+        except: # pragma: no cover
+            # This only happens on Linux because a DNS issue is considered a
+            # temporary failure that will raise (even when NI_NAMEREQD is not
+            # set). Instead we try again, but this time we just ask for the
+            # numerichost and the numericserv (port) and return those. It is
+            # better than nothing.
+            return self.socketmod.getnameinfo(
+                self.socket.getsockname(),
+                self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV
+            )
 
     def set_socket_options(self, conn):
         for (level, optname, value) in self.adj.socket_options:
