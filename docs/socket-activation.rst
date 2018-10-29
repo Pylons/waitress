@@ -41,7 +41,7 @@ pre-bound sockets.
 
 Generally, to implement socket activation for a given init system, a wrapper
 script uses the init system specific libraries to retrieve the sockets from
-the init system and the starts waitress passing the sockets using the parameter
+the init system. Afterwards it starts waitress passing the sockets with the parameter
 ``sockets``. Note that the sockets have to be bound, which all init systems
 supporting socket activation do.
 
