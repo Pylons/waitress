@@ -35,7 +35,7 @@ pre-bound sockets.
         sockets[0].bind(('127.0.0.1', 8080))
         sockets[1].bind(('127.0.0.1', 9090))
         sockets[2].bind('./test_socket')
-        waitress.serve(app, sockets=sockets, bind_sockets=False)
+        waitress.serve(app, sockets=sockets)
         for socket in sockets:
             socket.close()
 
