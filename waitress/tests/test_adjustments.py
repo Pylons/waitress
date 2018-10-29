@@ -56,7 +56,7 @@ class Test_as_socket_list(unittest.TestCase):
         sockets = [
             socket.socket(socket.AF_INET, socket.SOCK_STREAM),
             socket.socket(socket.AF_INET6, socket.SOCK_STREAM)]
-        if hasattr(sockets, 'AF_UNIX'):
+        if hasattr(socket, 'AF_UNIX'):
             sockets.append(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM))
         new_sockets = as_socket_list(sockets)
         self.assertEqual(sockets, new_sockets)

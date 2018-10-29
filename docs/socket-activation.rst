@@ -2,10 +2,10 @@ Socket Activation
 -----------------
 
 While waitress does not support the various implementations of socket activation,
-e.g. using systemd or launchd, it is prepared to receive pre-bound applications
+for example using systemd or launchd, it is prepared to receive pre-bound applications
 from an init system.
 
-The following shows a code example starting waitress with three different,
+The following shows a code example starting waitress with three different
 pre-bound sockets.
 
 .. code-block:: python
@@ -41,7 +41,7 @@ pre-bound sockets.
 
 Generally, to implement socket activation for a given init system, a wrapper
 script uses the init system specific libraries to retrieve the sockets from
-the init system. Afterwards it starts waitress passing the sockets with the parameter
+the init system. Afterwards it starts waitress, passing the sockets with the parameter
 ``sockets``. Note that the sockets have to be bound, which all init systems
 supporting socket activation do.
 

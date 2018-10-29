@@ -53,12 +53,12 @@ unix_socket_perms
 
 sockets
     .. versionadded:: 1.1.1
-        A list of sockets. The sockets can be internet or unix sockets and have to be bound.
+        A list of sockets. The sockets can be Internet or UNIX sockets and have to be bound.
         If the socket list is not empty, waitress creates one server for each socket.
         Default is ``[]``.
 
         .. warning::
-            May not be used with ``listen``, ``host`` and/or ``port`` or ``unix_socket``
+            May not be used with ``listen``, ``host``, ``port`` or ``unix_socket``
 
 threads
     number of threads used to process application logic (integer), default
