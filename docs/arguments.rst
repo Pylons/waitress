@@ -53,7 +53,7 @@ unix_socket_perms
 
 sockets
     A list of sockets. The sockets can be internet or unix sockets and have to be bound.
-    If the socket list is not empty waitress creates one server for each socket.
+    If the socket list is not empty, waitress creates one server for each socket.
     Default is ``[]``.
 
     .. warning::

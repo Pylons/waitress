@@ -26,6 +26,7 @@ Extended Documentation
    arguments
    filewrapper
    runner
+   socket-activation
    glossary
 
 Change History
