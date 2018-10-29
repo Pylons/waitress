@@ -229,7 +229,7 @@ class Adjustments(object):
     def __init__(self, **kw):
 
         if 'listen' in kw and ('host' in kw or 'port' in kw):
-            raise ValueError('host and or port may not be set if listen is set.')
+            raise ValueError('host or port may not be set if listen is set.')
 
         if 'listen' in kw and 'sockets' in kw:
             raise ValueError('socket may not be set if listen is set.')
