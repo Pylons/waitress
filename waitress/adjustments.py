@@ -118,7 +118,7 @@ class Adjustments(object):
 
     listen = ['{}:{}'.format(host, port)]
 
-    # mumber of threads available for tasks
+    # number of threads available for tasks
     threads = 4
 
     # Host allowed to overrid ``wsgi.url_scheme`` via header
