@@ -240,6 +240,12 @@ class Adjustments(object):
         if 'sockets' in kw and 'unix_socket' in kw:
             raise ValueError('unix_socket may not be set if sockets is set')
 
+        if 'unix_socket' in kw and ('host' in kw or 'port' in kw):
+            raise ValueError('unix_socket may not be set if host or port is set')
+
+        if 'unix_socket' in kw and 'listen' in kw:
+            raise ValueError('unix_socket may not be set if listen is set')
+
         for k, v in kw.items():
             if k not in self._param_map:
                 raise ValueError('Unknown adjustment %r' % k)

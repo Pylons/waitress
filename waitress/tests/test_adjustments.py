@@ -124,7 +124,6 @@ class TestAdjustments(unittest.TestCase):
             ident='abc',
             asyncore_loop_timeout='5',
             asyncore_use_poll=True,
-            unix_socket='/tmp/waitress.sock',
             unix_socket_perms='777',
             url_prefix='///foo/',
             ipv4=True,
@@ -151,7 +150,6 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.asyncore_loop_timeout, 5)
         self.assertEqual(inst.asyncore_use_poll, True)
         self.assertEqual(inst.ident, 'abc')
-        self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
         self.assertEqual(inst.ipv4, True)
@@ -268,9 +266,24 @@ class TestAdjustments(unittest.TestCase):
         self.assertRaises(
             ValueError,
             self._makeOne,
-            unix_socket='./tmp',
+            unix_socket='./tmp/test',
             sockets=sockets)
         sockets[0].close()
+
+    def test_dont_mix_unix_socket_and_host_port(self):
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            unix_socket='./tmp/test',
+            host='localhost',
+            port='8080')
+
+    def test_dont_mix_unix_socket_and_listen(self):
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            unix_socket='./tmp/test',
+            listen='127.0.0.1:8080')
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
