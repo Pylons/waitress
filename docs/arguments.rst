@@ -53,7 +53,8 @@ unix_socket_perms
 
 sockets
     .. versionadded:: 1.1.1
-        A list of sockets. The sockets can be Internet or UNIX sockets and have to be bound.
+        A list of sockets. The sockets can be either Internet or UNIX sockets and have
+        to be bound. Internet and UNIX sockets cannot be mixed.
         If the socket list is not empty, waitress creates one server for each socket.
         Default is ``[]``.
 

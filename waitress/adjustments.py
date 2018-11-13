@@ -326,6 +326,8 @@ class Adjustments(object):
 
         self.listen = wanted_sockets
 
+        self.check_sockets(self.sockets)
+
     @classmethod
     def parse_args(cls, argv):
         """Pre-parse command line arguments for input into __init__.  Note that
@@ -366,3 +368,21 @@ class Adjustments(object):
                 kw[param] = value
 
         return kw, args
+
+    @classmethod
+    def check_sockets(cls, sockets):
+        has_unix_socket = False
+        has_inet_socket = False
+        has_unsupported_socket = False
+        for sock in sockets:
+            if (sock.family == socket.AF_INET or sock.family == socket.AF_INET6) and \
+                    sock.type == socket.SOCK_STREAM:
+                has_inet_socket = True
+            elif sock.family == socket.AF_UNIX and sock.type == socket.SOCK_STREAM:
+                has_unix_socket = True
+            else:
+                has_unsupported_socket = True
+        if has_unix_socket and has_inet_socket:
+            raise ValueError('Internet and UNIX sockets may not be mixed.')
+        if has_unsupported_socket:
+            raise ValueError('Only Internet or UNIX stream sockets may be used.')

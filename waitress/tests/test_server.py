@@ -373,12 +373,12 @@ if hasattr(socket, 'AF_UNIX'):
                                         TcpWSGIServer, UnixWSGIServer
             sockets = [
                 socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
-                socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+                socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)]
             inst = self._makeWithSockets(sockets=sockets, _start=False)
             self.assertTrue(isinstance(inst, MultiSocketServer))
             server = list(filter(lambda s: isinstance(s, BaseWSGIServer), inst.map.values()))
             self.assertTrue(isinstance(server[0], UnixWSGIServer))
-            self.assertTrue(isinstance(server[1], TcpWSGIServer))
+            self.assertTrue(isinstance(server[1], UnixWSGIServer))
 
 
 class DummySock(socket.socket):

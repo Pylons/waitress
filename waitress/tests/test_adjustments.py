@@ -285,6 +285,14 @@ class TestAdjustments(unittest.TestCase):
             unix_socket='./tmp/test',
             listen='127.0.0.1:8080')
 
+    def test_dont_use_unsupported_socket_types(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            sockets=sockets)
+        sockets[0].close()
+
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
 
@@ -378,3 +386,21 @@ class TestCLI(unittest.TestCase):
     def test_bad_param(self):
         import getopt
         self.assertRaises(getopt.GetoptError, self.parse, ['--no-host'])
+
+
+if hasattr(socket, 'AF_UNIX'):
+    class TestUnixSocket(unittest.TestCase):
+        def _makeOne(self, **kw):
+            from waitress.adjustments import Adjustments
+            return Adjustments(**kw)
+
+        def test_dont_mix_internet_and_unix_sockets(self):
+            sockets = [
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+                socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)]
+            self.assertRaises(
+                ValueError,
+                self._makeOne,
+                sockets=sockets)
+            sockets[0].close()
+            sockets[1].close()
