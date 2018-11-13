@@ -111,7 +111,7 @@ def create_server(application,
 
     # We are running a single server, so we can just return the last server,
     # saves us from having to create one more object
-    if len(adj.listen) == 1 and len(adj.sockets) == 0 or len(adj.sockets) == 1:
+    if len(effective_listen) == 1:
         # In this case we have no need to use a MultiSocketServer
         return last_serv
 

@@ -2,8 +2,9 @@ Socket Activation
 -----------------
 
 While waitress does not support the various implementations of socket activation,
-for example using systemd or launchd, it is prepared to receive pre-bound applications
-from an init system.
+for example using systemd or launchd, it is prepared to receive pre-bound sockets
+from init systems, process and socket managers or other launchers that can provide
+pre-bound sockets.
 
 The following shows a code example starting waitress with three different
 pre-bound sockets.
