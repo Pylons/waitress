@@ -6,7 +6,7 @@ for example using systemd or launchd, it is prepared to receive pre-bound socket
 from init systems, process and socket managers or other launchers that can provide
 pre-bound sockets.
 
-The following shows a code example starting waitress with three different
+The following shows a code example starting waitress with two Internet sockets
 pre-bound sockets.
 
 .. code-block:: python
@@ -31,11 +31,9 @@ pre-bound sockets.
     if __name__ == '__main__':
         sockets = [
             socket.socket(socket.AF_INET, socket.SOCK_STREAM),
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
-            socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)]
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
         sockets[0].bind(('127.0.0.1', 8080))
         sockets[1].bind(('127.0.0.1', 9090))
-        sockets[2].bind('./test_socket')
         waitress.serve(app, sockets=sockets)
         for socket in sockets:
             socket.close()
