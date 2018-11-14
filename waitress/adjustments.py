@@ -378,7 +378,9 @@ class Adjustments(object):
             if (sock.family == socket.AF_INET or sock.family == socket.AF_INET6) and \
                     sock.type == socket.SOCK_STREAM:
                 has_inet_socket = True
-            elif sock.family == socket.AF_UNIX and sock.type == socket.SOCK_STREAM:
+            elif hasattr(socket, 'AF_UNIX') and \
+                    sock.family == socket.AF_UNIX and \
+                    sock.type == socket.SOCK_STREAM:
                 has_unix_socket = True
             else:
                 has_unsupported_socket = True
