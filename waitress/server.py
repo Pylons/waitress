@@ -69,23 +69,49 @@ def create_server(application,
 
     effective_listen = []
     last_serv = None
-    for sockinfo in adj.listen:
-        # When TcpWSGIServer is called, it registers itself in the map. This
-        # side-effect is all we need it for, so we don't store a reference to
-        # or return it to the user.
-        last_serv = TcpWSGIServer(
-            application,
-            map,
-            _start,
-            _sock,
-            dispatcher=dispatcher,
-            adj=adj,
-            sockinfo=sockinfo)
-        effective_listen.append((last_serv.effective_host, last_serv.effective_port))
+    if not adj.sockets:
+        for sockinfo in adj.listen:
+            # When TcpWSGIServer is called, it registers itself in the map. This
+            # side-effect is all we need it for, so we don't store a reference to
+            # or return it to the user.
+            last_serv = TcpWSGIServer(
+                application,
+                map,
+                _start,
+                _sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                sockinfo=sockinfo)
+            effective_listen.append((last_serv.effective_host, last_serv.effective_port))
+
+    for sock in adj.sockets:
+        sockinfo = (sock.family, sock.type, sock.proto, sock.getsockname())
+        if sock.family == socket.AF_INET or sock.family == socket.AF_INET6:
+            last_serv = TcpWSGIServer(
+                application,
+                map,
+                _start,
+                sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                bind_socket=False,
+                sockinfo=sockinfo)
+            effective_listen.append((last_serv.effective_host, last_serv.effective_port))
+        elif hasattr(socket, 'AF_UNIX') and sock.family == socket.AF_UNIX:
+            last_serv = UnixWSGIServer(
+                application,
+                map,
+                _start,
+                sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                bind_socket=False,
+                sockinfo=sockinfo)
+            effective_listen.append((last_serv.effective_host, last_serv.effective_port))
 
     # We are running a single server, so we can just return the last server,
     # saves us from having to create one more object
-    if len(adj.listen) == 1:
+    if len(effective_listen) == 1:
         # In this case we have no need to use a MultiSocketServer
         return last_serv
 
@@ -151,6 +177,7 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
                  dispatcher=None,  # dispatcher
                  adj=None,         # adjustments
                  sockinfo=None,    # opaque object
+                 bind_socket=True,
                  **kw
                  ):
         if adj is None:
@@ -181,7 +208,10 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
                 self.socket.setsockopt(IPPROTO_IPV6, IPV6_V6ONLY, 1)
 
         self.set_reuse_addr()
-        self.bind_server_socket()
+
+        if bind_socket:
+            self.bind_server_socket()
+
         self.effective_host, self.effective_port = self.getsockname()
         self.server_name = self.get_server_name(self.effective_host)
         self.active_channels = {}

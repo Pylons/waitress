@@ -69,6 +69,11 @@ def slash_fixed_str(s):
 def str_iftruthy(s):
     return str(s) if s else None
 
+def as_socket_list(sockets):
+    """Checks if the elements in the list are of type socket and
+    removes them if not."""
+    return [sock for sock in sockets if isinstance(sock, socket.socket)]
+
 class _str_marker(str):
     pass
 
@@ -106,6 +111,7 @@ class Adjustments(object):
         ('asyncore_use_poll', asbool),
         ('unix_socket', str),
         ('unix_socket_perms', asoctal),
+        ('sockets', as_socket_list),
     )
 
     _param_map = dict(_params)
@@ -216,10 +222,29 @@ class Adjustments(object):
     # Enable IPv6 by default
     ipv6 = True
 
+    # A list of sockets that waitress will use to accept connections. They can
+    # be used for e.g. socket activation
+    sockets = []
+
     def __init__(self, **kw):
 
         if 'listen' in kw and ('host' in kw or 'port' in kw):
-            raise ValueError('host and or port may not be set if listen is set.')
+            raise ValueError('host or port may not be set if listen is set.')
+
+        if 'listen' in kw and 'sockets' in kw:
+            raise ValueError('socket may not be set if listen is set.')
+
+        if 'sockets' in kw and ('host' in kw or 'port' in kw):
+            raise ValueError('host or port may not be set if sockets is set.')
+
+        if 'sockets' in kw and 'unix_socket' in kw:
+            raise ValueError('unix_socket may not be set if sockets is set')
+
+        if 'unix_socket' in kw and ('host' in kw or 'port' in kw):
+            raise ValueError('unix_socket may not be set if host or port is set')
+
+        if 'unix_socket' in kw and 'listen' in kw:
+            raise ValueError('unix_socket may not be set if listen is set')
 
         for k, v in kw.items():
             if k not in self._param_map:
@@ -301,6 +326,8 @@ class Adjustments(object):
 
         self.listen = wanted_sockets
 
+        self.check_sockets(self.sockets)
+
     @classmethod
     def parse_args(cls, argv):
         """Pre-parse command line arguments for input into __init__.  Note that
@@ -341,3 +368,23 @@ class Adjustments(object):
                 kw[param] = value
 
         return kw, args
+
+    @classmethod
+    def check_sockets(cls, sockets):
+        has_unix_socket = False
+        has_inet_socket = False
+        has_unsupported_socket = False
+        for sock in sockets:
+            if (sock.family == socket.AF_INET or sock.family == socket.AF_INET6) and \
+                    sock.type == socket.SOCK_STREAM:
+                has_inet_socket = True
+            elif hasattr(socket, 'AF_UNIX') and \
+                    sock.family == socket.AF_UNIX and \
+                    sock.type == socket.SOCK_STREAM:
+                has_unix_socket = True
+            else:
+                has_unsupported_socket = True
+        if has_unix_socket and has_inet_socket:
+            raise ValueError('Internet and UNIX sockets may not be mixed.')
+        if has_unsupported_socket:
+            raise ValueError('Only Internet or UNIX stream sockets may be used.')

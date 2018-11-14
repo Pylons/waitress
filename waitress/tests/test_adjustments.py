@@ -49,6 +49,31 @@ class Test_asbool(unittest.TestCase):
         result = self._callFUT(1)
         self.assertEqual(result, True)
 
+class Test_as_socket_list(unittest.TestCase):
+
+    def test_only_sockets_in_list(self):
+        from waitress.adjustments import as_socket_list
+        sockets = [
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+            socket.socket(socket.AF_INET6, socket.SOCK_STREAM)]
+        if hasattr(socket, 'AF_UNIX'):
+            sockets.append(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM))
+        new_sockets = as_socket_list(sockets)
+        self.assertEqual(sockets, new_sockets)
+        for sock in sockets:
+            sock.close()
+
+    def test_not_only_sockets_in_list(self):
+        from waitress.adjustments import as_socket_list
+        sockets = [
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+            socket.socket(socket.AF_INET6, socket.SOCK_STREAM),
+            {'something': 'else'}]
+        new_sockets = as_socket_list(sockets)
+        self.assertEqual(new_sockets, [sockets[0], sockets[1]])
+        for sock in [sock for sock in sockets if isinstance(sock, socket.socket)]:
+            sock.close()
+
 class TestAdjustments(unittest.TestCase):
 
     def _hasIPv6(self): # pragma: nocover
@@ -99,7 +124,6 @@ class TestAdjustments(unittest.TestCase):
             ident='abc',
             asyncore_loop_timeout='5',
             asyncore_use_poll=True,
-            unix_socket='/tmp/waitress.sock',
             unix_socket_perms='777',
             url_prefix='///foo/',
             ipv4=True,
@@ -126,7 +150,6 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.asyncore_loop_timeout, 5)
         self.assertEqual(inst.asyncore_use_poll, True)
         self.assertEqual(inst.ident, 'abc')
-        self.assertEqual(inst.unix_socket, '/tmp/waitress.sock')
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, '/foo')
         self.assertEqual(inst.ipv4, True)
@@ -209,6 +232,66 @@ class TestAdjustments(unittest.TestCase):
             port='8080',
             listen='127.0.0.1:8080',
         )
+
+    def test_good_sockets(self):
+        sockets = [
+            socket.socket(socket.AF_INET6, socket.SOCK_STREAM),
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        inst = self._makeOne(sockets=sockets)
+        self.assertEqual(inst.sockets, sockets)
+        sockets[0].close()
+        sockets[1].close()
+
+    def test_dont_mix_sockets_and_listen(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            listen='127.0.0.1:8080',
+            sockets=sockets)
+        sockets[0].close()
+
+    def test_dont_mix_sockets_and_host_port(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            host='localhost',
+            port='8080',
+            sockets=sockets)
+        sockets[0].close()
+
+    def test_dont_mix_sockets_and_unix_socket(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            unix_socket='./tmp/test',
+            sockets=sockets)
+        sockets[0].close()
+
+    def test_dont_mix_unix_socket_and_host_port(self):
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            unix_socket='./tmp/test',
+            host='localhost',
+            port='8080')
+
+    def test_dont_mix_unix_socket_and_listen(self):
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            unix_socket='./tmp/test',
+            listen='127.0.0.1:8080')
+
+    def test_dont_use_unsupported_socket_types(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]
+        self.assertRaises(
+            ValueError,
+            self._makeOne,
+            sockets=sockets)
+        sockets[0].close()
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
@@ -303,3 +386,21 @@ class TestCLI(unittest.TestCase):
     def test_bad_param(self):
         import getopt
         self.assertRaises(getopt.GetoptError, self.parse, ['--no-host'])
+
+
+if hasattr(socket, 'AF_UNIX'):
+    class TestUnixSocket(unittest.TestCase):
+        def _makeOne(self, **kw):
+            from waitress.adjustments import Adjustments
+            return Adjustments(**kw)
+
+        def test_dont_mix_internet_and_unix_sockets(self):
+            sockets = [
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+                socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)]
+            self.assertRaises(
+                ValueError,
+                self._makeOne,
+                sockets=sockets)
+            sockets[0].close()
+            sockets[1].close()
