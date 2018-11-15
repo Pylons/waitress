@@ -6,7 +6,7 @@ for example using systemd or launchd, it is prepared to receive pre-bound socket
 from init systems, process and socket managers, or other launchers that can provide
 pre-bound sockets.
 
-The following shows a code example starting waitress with two Internet sockets pre-bound sockets.
+The following shows a code example starting waitress with two pre-bound Internet sockets.
 
 .. code-block:: python
 
