@@ -54,6 +54,8 @@ def text_(s, encoding='latin-1', errors='strict'):
 
 if PY3: # pragma: no cover
     def tostr(s):
+        if s is None:
+            return 'None'
         if isinstance(s, text_type):
             s = s.encode('latin-1')
         return str(s, 'latin-1', 'strict')
