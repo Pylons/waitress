@@ -1123,6 +1123,7 @@ class TestWSGITask(unittest.TestCase):
         )
 
         self.assertEqual(len(inst.logger.logged), 1)
+        self.assertNotIn('X_FORWARDED_FOR', headers)
 
         self.assertEqual(environ['REMOTE_ADDR'], '198.51.100.2')
         self.assertEqual(environ['SERVER_NAME'], 'example.com')
