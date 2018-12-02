@@ -1,5 +1,6 @@
 import sys
 import socket
+import warnings
 
 from waitress.compat import (
     PY2,
@@ -108,6 +109,9 @@ class TestAdjustments(unittest.TestCase):
             port='8080',
             threads='5',
             trusted_proxy='192.168.1.1',
+            trusted_proxy_headers={'forwarded'},
+            trusted_proxy_count=2,
+            log_untrusted_proxy_headers=True,
             url_scheme='https',
             backlog='20',
             recv_bytes='200',
@@ -134,6 +138,9 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
         self.assertEqual(inst.trusted_proxy, '192.168.1.1')
+        self.assertEqual(inst.trusted_proxy_headers, {'forwarded'})
+        self.assertEqual(inst.trusted_proxy_count, 2)
+        self.assertEqual(inst.log_untrusted_proxy_headers, True)
         self.assertEqual(inst.url_scheme, 'https')
         self.assertEqual(inst.backlog, 20)
         self.assertEqual(inst.recv_bytes, 200)
@@ -292,6 +299,49 @@ class TestAdjustments(unittest.TestCase):
             self._makeOne,
             sockets=sockets)
         sockets[0].close()
+
+    def test_dont_mix_forwarded_with_x_forwarded(self):
+        with self.assertRaises(ValueError) as cm:
+            self._makeOne(trusted_proxy_headers={'forwarded', 'x-forwarded-for'})
+
+        self.assertIn('The Forwarded proxy header', str(cm.exception))
+
+    def test_unknown_trusted_proxy_header(self):
+        with self.assertRaises(ValueError) as cm:
+            self._makeOne(trusted_proxy_headers={'forwarded', 'x-forwarded-unknown'})
+
+        self.assertIn(
+            'unknown trusted_proxy_headers value (x-forwarded-unknown)',
+            str(cm.exception)
+        )
+
+    def test_trusted_proxy_headers_string_list(self):
+        inst = self._makeOne(trusted_proxy_headers='x-forwarded-for x-forwarded-by')
+        self.assertEqual(inst.trusted_proxy_headers, {'x-forwarded-for', 'x-forwarded-by'})
+
+    def test_trusted_proxy_headers_string_list_newlines(self):
+        inst = self._makeOne(trusted_proxy_headers='x-forwarded-for\nx-forwarded-by\nx-forwarded-host')
+        self.assertEqual(inst.trusted_proxy_headers, {'x-forwarded-for', 'x-forwarded-by', 'x-forwarded-host'})
+
+    def test_no_trusted_proxy_headers_trusted_proxy(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.resetwarnings()
+            warnings.simplefilter("always")
+            self._makeOne(trusted_proxy='localhost')
+
+            self.assertGreaterEqual(len(w), 1)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+            self.assertIn("Implicitly trusting X-Forwarded-Proto", str(w[0]))
+
+    def test_clear_untrusted_proxy_headers(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.resetwarnings()
+            warnings.simplefilter("always")
+            self._makeOne(trusted_proxy='localhost', trusted_proxy_headers={'x-forwarded-for'})
+
+            self.assertGreaterEqual(len(w), 1)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+            self.assertIn("clear_untrusted_proxy_headers will be set to True", str(w[0]))
 
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
