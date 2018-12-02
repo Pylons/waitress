@@ -27,6 +27,7 @@ from .utilities import (
     logger,
     queue_logger,
     undquote,
+    PROXY_HEADERS,
 )
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -44,15 +45,6 @@ hop_by_hop = frozenset((
     'transfer-encoding',
     'upgrade'
 ))
-
-PROXY_HEADERS = frozenset({
-    'X_FORWARDED_FOR',
-    'X_FORWARDED_HOST',
-    'X_FORWARDED_PROTO',
-    'X_FORWARDED_PORT',
-    'X_FORWARDED_BY',
-    'FORWARDED',
-})
 
 
 class JustTesting(Exception):

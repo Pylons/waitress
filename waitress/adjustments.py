@@ -17,7 +17,8 @@ import getopt
 import socket
 import warnings
 
-from waitress.compat import (
+from .utilities import PROXY_HEADERS
+from .compat import (
     PY2,
     WIN,
     string_types,
@@ -26,14 +27,7 @@ from waitress.compat import (
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
 
-KNOWN_PROXY_HEADERS = frozenset({
-    'forwarded',
-    'x-forwarded-by',
-    'x-forwarded-for',
-    'x-forwarded-host',
-    'x-forwarded-port',
-    'x-forwarded-proto',
-})
+KNOWN_PROXY_HEADERS = {header.lower().replace('_', '-') for header in PROXY_HEADERS}
 
 def asbool(s):
     """ Return the boolean value ``True`` if the case-lowered value of string
@@ -167,7 +161,7 @@ class Adjustments(object):
     # Which of the proxy headers should we trust, this is a set where you
     # either specify forwarded or one or more of forwarded-host, forwarded-for,
     # forwarded-proto, forwarded-port.
-    trusted_proxy_headers = {}
+    trusted_proxy_headers = set()
 
     # Would you like waitress to log warnings about untrusted proxy headers
     # that were encountered while processing the proxy headers? This only makes

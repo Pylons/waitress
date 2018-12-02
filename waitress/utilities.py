@@ -26,6 +26,15 @@ from collections import namedtuple
 logger = logging.getLogger('waitress')
 queue_logger = logging.getLogger('waitress.queue')
 
+PROXY_HEADERS = frozenset({
+    'X_FORWARDED_FOR',
+    'X_FORWARDED_HOST',
+    'X_FORWARDED_PROTO',
+    'X_FORWARDED_PORT',
+    'X_FORWARDED_BY',
+    'FORWARDED',
+})
+
 def find_double_newline(s):
     """Returns the position just after a double newline in the given string."""
     pos1 = s.find(b'\n\r\n') # One kind of double newline
