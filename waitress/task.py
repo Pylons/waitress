@@ -587,6 +587,11 @@ class WSGITask(Task):
                 forwarded_port = ""
                 warn_unspecified_behavior("X-Forwarded-Port")
 
+        if "x-forwarded-by" in trusted_proxy_headers:
+            # Waitress itself does not use X-Forwarded-By, but we can not
+            # remove it so it can get set in the environ
+            untrusted_headers.remove("X_FORWARDED_BY")
+
         if "forwarded" in trusted_proxy_headers:
             forwarded = headers.get("FORWARDED", None)
             untrusted_headers = PROXY_HEADERS - {"FORWARDED"}
