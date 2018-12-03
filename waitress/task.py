@@ -17,19 +17,16 @@ import sys
 import threading
 import time
 
-from waitress.buffers import ReadOnlyFileBasedBuffer
-
-from waitress.compat import (
-    tobytes,
-    Queue,
-    Empty,
-    reraise,
-)
-
-from waitress.utilities import (
+from .buffers import ReadOnlyFileBasedBuffer
+from .compat import Empty, Queue, reraise, tobytes
+from .utilities import (
+    Forwarded,
+    PROXY_HEADERS,
     build_http_date,
+    clear_untrusted_headers,
     logger,
     queue_logger,
+    undquote,
 )
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -47,6 +44,7 @@ hop_by_hop = frozenset((
     'transfer-encoding',
     'upgrade'
 ))
+
 
 class JustTesting(Exception):
     pass
@@ -508,6 +506,229 @@ class WSGITask(Task):
             if hasattr(app_iter, 'close'):
                 app_iter.close()
 
+    def parse_proxy_headers(
+        self,
+        environ,
+        headers,
+        trusted_proxy_count=1,
+        trusted_proxy_headers=None,
+    ):
+        if trusted_proxy_headers is None:
+            trusted_proxy_headers = set()
+
+        forwarded_for = []
+        forwarded_host = forwarded_proto = forwarded_port = forwarded = ""
+        client_addr = None
+        untrusted_headers = set(PROXY_HEADERS)
+
+        def warn_unspecified_behavior(header):
+            self.logger.warning(
+                "Found multiple values in %s, this has unspecified behaviour. "
+                "Ignoring header value.",
+                header,
+            )
+
+        if "x-forwarded-for" in trusted_proxy_headers and "X_FORWARDED_FOR" in headers:
+            forwarded_for = []
+
+            for forward_hop in headers["X_FORWARDED_FOR"].split(","):
+                forward_hop = forward_hop.strip()
+                forward_hop = undquote(forward_hop)
+
+                # Make sure that all IPv6 addresses are surrounded by brackets
+
+                if ":" in forward_hop and forward_hop[-1] != "]":
+                    forwarded_for.append("[{}]".format(forward_hop))
+                else:
+                    forwarded_for.append(forward_hop)
+
+            forwarded_for = forwarded_for[-trusted_proxy_count:]
+            client_addr = forwarded_for[0]
+
+            untrusted_headers.remove("X_FORWARDED_FOR")
+
+        if "x-forwarded-host" in trusted_proxy_headers and "X_FORWARDED_HOST" in headers:
+            forwarded_host_multiple = []
+
+            for forward_host in headers["X_FORWARDED_HOST"].split(","):
+                forward_host = forward_host.strip()
+                forward_host = undquote(forward_host)
+                forwarded_host_multiple.append(forward_host)
+
+            forwarded_host_multiple = forwarded_host_multiple[-trusted_proxy_count:]
+            forwarded_host = forwarded_host_multiple[0]
+
+            untrusted_headers.remove("X_FORWARDED_HOST")
+
+        if "x-forwarded-proto" in trusted_proxy_headers:
+            forwarded_proto = undquote(headers.get("X_FORWARDED_PROTO", ""))
+            untrusted_headers.remove("X_FORWARDED_PROTO")
+
+            if "," in forwarded_proto:
+                forwarded_proto = ""
+                warn_unspecified_behavior("X-Forwarded-Proto")
+
+        if "x-forwarded-port" in trusted_proxy_headers:
+            forwarded_port = undquote(headers.get("X_FORWARDED_PORT", ""))
+            untrusted_headers.remove("X_FORWARDED_PORT")
+
+            if "," in forwarded_port:
+                forwarded_port = ""
+                warn_unspecified_behavior("X-Forwarded-Port")
+
+        if "x-forwarded-by" in trusted_proxy_headers:
+            # Waitress itself does not use X-Forwarded-By, but we can not
+            # remove it so it can get set in the environ
+            untrusted_headers.remove("X_FORWARDED_BY")
+
+        if "forwarded" in trusted_proxy_headers:
+            forwarded = headers.get("FORWARDED", None)
+            untrusted_headers = PROXY_HEADERS - {"FORWARDED"}
+
+        # If the Forwarded header exists, it gets priority
+        if forwarded:
+            proxies = []
+
+            for forwarded_element in forwarded.split(","):
+                # Remove whitespace that may have been introduced when
+                # appending a new entry
+                forwarded_element = forwarded_element.strip()
+
+                forwarded_for = forwarded_host = forwarded_proto = ""
+                forwarded_port = forwarded_by = ""
+
+                for pair in forwarded_element.split(";"):
+                    pair = pair.lower()
+
+                    if not pair:
+                        continue
+
+                    token, equals, value = pair.partition("=")
+
+                    if equals != "=":
+                        raise ValueError("Invalid forwarded-pair in Forwarded element")
+
+                    if token.strip() != token:
+                        raise ValueError("token may not be surrounded by whitespace")
+
+                    if value.strip() != value:
+                        raise ValueError("value may not be surrounded by whitespace")
+
+                    if token == "by":
+                        forwarded_by = undquote(value)
+
+                    elif token == "for":
+                        forwarded_for = undquote(value)
+
+                    elif token == "host":
+                        forwarded_host = undquote(value)
+
+                    elif token == "proto":
+                        forwarded_proto = undquote(value)
+
+                    else:
+                        self.logger.warning("Unknown Forwarded token: %s" % token)
+
+                proxies.append(
+                    Forwarded(
+                        forwarded_by, forwarded_for, forwarded_host, forwarded_proto
+                    )
+                )
+
+            proxies = proxies[-trusted_proxy_count:]
+
+            # Iterate backwards and fill in some values, the oldest entry that
+            # contains the information we expect is the one we use. We expect
+            # that intermediate proxies may re-write the host header or proto,
+            # but the oldest entry is the one that contains the information the
+            # client expects when generating URL's
+            #
+            # Forwarded: for="[2001:db8::1]";host="example.com:8443";proto="https"
+            # Forwarded: for=192.0.2.1;host="example.internal:8080"
+            #
+            # (After HTTPS header folding) should mean that we use as values:
+            #
+            # Host: example.com
+            # Protocol: https
+            # Port: 8443
+
+            for proxy in proxies[::-1]:
+                client_addr = proxy.for_ or client_addr
+                forwarded_host = proxy.host or forwarded_host
+                forwarded_proto = proxy.proto or forwarded_proto
+
+        if forwarded_proto:
+            forwarded_proto = forwarded_proto.lower()
+
+            if forwarded_proto not in {"http", "https"}:
+                raise ValueError(
+                    'Invalid "Forwarded Proto=" or "X-Forwarded-Proto" value.'
+                )
+
+            # Set the URL scheme to the proxy provided proto
+            environ["wsgi.url_scheme"] = forwarded_proto
+
+            if not forwarded_port:
+                if forwarded_proto == "http":
+                    forwarded_port = "80"
+
+                if forwarded_proto == "https":
+                    forwarded_port = "443"
+
+        if forwarded_host:
+            forwarded_host = forwarded_host.strip()
+
+            if ":" in forwarded_host and forwarded_host[-1] != "]":
+                host, port = forwarded_host.rsplit(":", 1)
+                host, port = host.strip(), str(port)
+
+                # We trust the port in the Forwarded Host/X-Forwarded-Host over
+                # X-Forwarded-Port, or whatever we got from Forwarded
+                # Proto/X-Forwarded-Proto.
+
+                if forwarded_port != port:
+                    forwarded_port = port
+
+                # We trust the proxy server's forwarded Host
+                environ["SERVER_NAME"] = host
+                environ["HTTP_HOST"] = forwarded_host
+            else:
+                # We trust the proxy server's forwarded Host
+                environ["SERVER_NAME"] = forwarded_host
+                environ["HTTP_HOST"] = forwarded_host
+
+                if forwarded_port:
+                    if forwarded_port not in {"443", "80"}:
+                        environ["HTTP_HOST"] = "{}:{}".format(
+                            forwarded_host, forwarded_port
+                        )
+                    elif (
+                        forwarded_port == "80" and environ["wsgi.url_scheme"] != "http"
+                    ):
+                        environ["HTTP_HOST"] = "{}:{}".format(
+                            forwarded_host, forwarded_port
+                        )
+                    elif (
+                        forwarded_port == "443"
+                        and environ["wsgi.url_scheme"] != "https"
+                    ):
+                        environ["HTTP_HOST"] = "{}:{}".format(
+                            forwarded_host, forwarded_port
+                        )
+
+        if forwarded_port:
+            environ["SERVER_PORT"] = str(forwarded_port)
+
+        if client_addr:
+            if ":" in client_addr and client_addr[-1] != "]":
+                addr, port = client_addr.rsplit(":", 1)
+                environ["REMOTE_ADDR"] = addr.strip()
+                environ["REMOTE_PORT"] = port.strip()
+            else:
+                environ["REMOTE_ADDR"] = client_addr.strip()
+
+        return untrusted_headers
+
     def get_environment(self):
         """Returns a WSGI environment."""
         environ = self.environ
@@ -542,25 +763,61 @@ class WSGITask(Task):
                 if path.startswith(url_prefix_with_trailing_slash):
                     path = path[len(url_prefix):]
 
-        environ = {}
-        environ['REQUEST_METHOD'] = request.command.upper()
-        environ['SERVER_PORT'] = str(server.effective_port)
-        environ['SERVER_NAME'] = server.server_name
-        environ['SERVER_SOFTWARE'] = server.adj.ident
-        environ['SERVER_PROTOCOL'] = 'HTTP/%s' % self.version
-        environ['SCRIPT_NAME'] = url_prefix
-        environ['PATH_INFO'] = path
-        environ['QUERY_STRING'] = request.query
-        host = environ['REMOTE_ADDR'] = channel.addr[0]
+        environ = {
+            'REQUEST_METHOD': request.command.upper(),
+            'SERVER_PORT': str(server.effective_port),
+            'SERVER_NAME': server.server_name,
+            'SERVER_SOFTWARE': server.adj.ident,
+            'SERVER_PROTOCOL': 'HTTP/%s' % self.version,
+            'SCRIPT_NAME': url_prefix,
+            'PATH_INFO': path,
+            'QUERY_STRING': request.query,
+            'wsgi.url_scheme': request.url_scheme,
+
+            # the following environment variables are required by the WSGI spec
+            'wsgi.version': (1, 0),
+
+            # apps should use the logging module
+            'wsgi.errors': sys.stderr,
+            'wsgi.multithread': True,
+            'wsgi.multiprocess': False,
+            'wsgi.run_once': False,
+            'wsgi.input': request.get_body_stream(),
+            'wsgi.file_wrapper': ReadOnlyFileBasedBuffer,
+            'wsgi.input_terminated': True,  # wsgi.input is EOF terminated
+        }
+        remote_peer = environ['REMOTE_ADDR'] = channel.addr[0]
 
         headers = dict(request.headers)
-        if host == server.adj.trusted_proxy:
-            wsgi_url_scheme = headers.pop('X_FORWARDED_PROTO',
-                                          request.url_scheme)
+
+        untrusted_headers = PROXY_HEADERS
+        if remote_peer == server.adj.trusted_proxy:
+            untrusted_headers = self.parse_proxy_headers(
+                environ,
+                headers,
+                trusted_proxy_count=server.adj.trusted_proxy_count,
+                trusted_proxy_headers=server.adj.trusted_proxy_headers,
+            )
         else:
-            wsgi_url_scheme = request.url_scheme
-        if wsgi_url_scheme not in ('http', 'https'):
-            raise ValueError('Invalid X_FORWARDED_PROTO value')
+            # If we are not relying on a proxy, we still want to try and set
+            # the REMOTE_PORT to something useful, maybe None though.
+            environ["REMOTE_PORT"] = str(channel.addr[1])
+
+        # Nah, we aren't actually going to look up the reverse DNS for
+        # REMOTE_ADDR, but we will happily set this environment variable for
+        # the WSGI application. Spec says we can just set this to REMOTE_ADDR,
+        # so we do.
+        environ["REMOTE_HOST"] = environ["REMOTE_ADDR"]
+
+        # Clear out the untrusted proxy headers
+        if server.adj.clear_untrusted_proxy_headers:
+            clear_untrusted_headers(
+                headers,
+                untrusted_headers,
+                log_warning=server.adj.log_untrusted_proxy_headers,
+                logger=self.logger,
+            )
+
         for key, value in headers.items():
             value = value.strip()
             mykey = rename_headers.get(key, None)
@@ -569,16 +826,6 @@ class WSGITask(Task):
             if mykey not in environ:
                 environ[mykey] = value
 
-        # the following environment variables are required by the WSGI spec
-        environ['wsgi.version'] = (1, 0)
-        environ['wsgi.url_scheme'] = wsgi_url_scheme
-        environ['wsgi.errors'] = sys.stderr # apps should use the logging module
-        environ['wsgi.multithread'] = True
-        environ['wsgi.multiprocess'] = False
-        environ['wsgi.run_once'] = False
-        environ['wsgi.input'] = request.get_body_stream()
-        environ['wsgi.file_wrapper'] = ReadOnlyFileBasedBuffer
-        environ['wsgi.input_terminated'] = True # wsgi.input is EOF terminated
-
+        # cache the environ for this request
         self.environ = environ
         return environ

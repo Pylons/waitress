@@ -99,3 +99,36 @@ class TestBadRequest(unittest.TestCase):
         inst = self._makeOne()
         self.assertEqual(inst.body, 1)
 
+class Test_undquote(unittest.TestCase):
+
+    def _callFUT(self, value):
+        from waitress.utilities import undquote
+        return undquote(value)
+
+    def test_empty(self):
+        self.assertEqual(self._callFUT(''), '')
+
+    def test_quoted(self):
+        self.assertEqual(self._callFUT('"test"'), 'test')
+
+    def test_unquoted(self):
+        self.assertEqual(self._callFUT('test'), 'test')
+
+    def test_quoted_backslash_quote(self):
+        self.assertEqual(self._callFUT('"\\""'), '"')
+
+    def test_quoted_htab(self):
+        self.assertEqual(self._callFUT("\"\t\""), "\t")
+
+    def test_quoted_backslash_htab(self):
+        self.assertEqual(self._callFUT("\"\\\t\""), "\t")
+
+    def test_quoted_backslash_invalid(self):
+        self.assertRaises(ValueError, self._callFUT, '"\\"')
+
+    def test_invalid_quoting(self):
+        self.assertRaises(ValueError, self._callFUT, '"test')
+
+    def test_invalid_quoting_single_quote(self):
+        self.assertRaises(ValueError, self._callFUT, '"')
+

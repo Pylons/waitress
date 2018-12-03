@@ -14,16 +14,26 @@
 """Utility functions
 """
 
+import calendar
 import errno
 import logging
 import os
 import re
 import stat
 import time
-import calendar
+from collections import namedtuple
 
 logger = logging.getLogger('waitress')
 queue_logger = logging.getLogger('waitress.queue')
+
+PROXY_HEADERS = frozenset({
+    'X_FORWARDED_FOR',
+    'X_FORWARDED_HOST',
+    'X_FORWARDED_PROTO',
+    'X_FORWARDED_PORT',
+    'X_FORWARDED_BY',
+    'FORWARDED',
+})
 
 def find_double_newline(s):
     """Returns the position just after a double newline in the given string."""
@@ -204,3 +214,70 @@ class RequestEntityTooLarge(BadRequest):
 class InternalServerError(Error):
     code = 500
     reason = 'Internal Server Error'
+
+
+# RFC 5234 Appendix B.1 "Core Rules":
+# VCHAR         =  %x21-7E
+#                  ; visible (printing) characters
+vchar_re = '\x21-\x7e'
+
+# RFC 7230 Section 3.2.6 "Field Value Components":
+# quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+# qdtext        = HTAB / SP /%x21 / %x23-5B / %x5D-7E / obs-text
+# obs-text      = %x80-FF
+# quoted-pair   = "\" ( HTAB / SP / VCHAR / obs-text )
+obs_text_re = '\x80-\xff'
+
+# The '\\' between \x5b and \x5d is needed to escape \x5d (']')
+qdtext_re = '[\t \x21\x23-\x5b\\\x5d-\x7e' + obs_text_re + ']'
+
+quoted_pair_re = r'\\' + '([\t ' + vchar_re + obs_text_re + '])'
+quoted_string_re = \
+    '"(?:(?:' + qdtext_re + ')|(?:' + quoted_pair_re + '))*"'
+
+quoted_string = re.compile(quoted_string_re)
+quoted_pair = re.compile(quoted_pair_re)
+
+
+def undquote(value):
+    if value.startswith('"') and value.endswith('"'):
+        # So it claims to be DQUOTE'ed, let's validate that
+        matches = quoted_string.match(value)
+
+        if matches and matches.end() == len(value):
+            # Remove the DQUOTE's from the value
+            value = value[1:-1]
+
+            # Remove all backslashes that are followed by a valid vchar or
+            # obs-text
+            value = quoted_pair.sub(r'\1', value)
+
+            return value
+    elif not value.startswith('"') and not value.endswith('"'):
+        return value
+
+    raise ValueError('Invalid quoting in value')
+
+
+Forwarded = namedtuple('Forwarded', ['by', 'for_', 'host', 'proto'])
+
+
+def clear_untrusted_headers(
+    headers, untrusted_headers, log_warning=False, logger=logger
+):
+    untrusted_headers_removed = [
+        header
+        for header in untrusted_headers
+        if headers.pop(header, False) is not False
+    ]
+
+    if any(untrusted_headers_removed) and log_warning:
+        untrusted_headers_removed = [
+            "-".join([x.capitalize() for x in header.split("_")])
+            for header in untrusted_headers_removed
+        ]
+        logger.warning(
+            "Removed untrusted headers (%s). Waitress recommends these be "
+            "removed upstream.",
+            ", ".join(untrusted_headers_removed),
+        )

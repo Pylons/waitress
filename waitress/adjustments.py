@@ -15,8 +15,10 @@
 """
 import getopt
 import socket
+import warnings
 
-from waitress.compat import (
+from .utilities import PROXY_HEADERS
+from .compat import (
     PY2,
     WIN,
     string_types,
@@ -24,6 +26,8 @@ from waitress.compat import (
     )
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
+
+KNOWN_PROXY_HEADERS = {header.lower().replace('_', '-') for header in PROXY_HEADERS}
 
 def asbool(s):
     """ Return the boolean value ``True`` if the case-lowered value of string
@@ -58,6 +62,9 @@ def aslist(value):
         result.extend(subvalues)
     return result
 
+def asset(value):
+    return set(aslist(value))
+
 def slash_fixed_str(s):
     s = s.strip()
     if s:
@@ -80,6 +87,9 @@ class _str_marker(str):
 class _int_marker(int):
     pass
 
+class _bool_marker(object):
+    pass
+
 class Adjustments(object):
     """This class contains tunable parameters.
     """
@@ -91,7 +101,11 @@ class Adjustments(object):
         ('ipv6', asbool),
         ('listen', aslist),
         ('threads', int),
-        ('trusted_proxy', str),
+        ('trusted_proxy', str_iftruthy),
+        ('trusted_proxy_count', int),
+        ('trusted_proxy_headers', asset),
+        ('log_untrusted_proxy_headers', asbool),
+        ('clear_untrusted_proxy_headers', asbool),
         ('url_scheme', str),
         ('url_prefix', slash_fixed_str),
         ('backlog', int),
@@ -129,6 +143,35 @@ class Adjustments(object):
 
     # Host allowed to overrid ``wsgi.url_scheme`` via header
     trusted_proxy = None
+
+    # How many proxies we trust when chained
+    #
+    # X-Forwarded-For: 192.0.2.1, "[2001:db8::1]"
+    #
+    # or
+    #
+    # Forwarded: for=192.0.2.1, For="[2001:db8::1]"
+    #
+    # means there were (potentially), two proxies involved. If we know there is
+    # only 1 valid proxy, then that initial IP address "192.0.2.1" is not
+    # trusted and we completely ignore it. If there are two trusted proxies in
+    # the path, this value should be set to a higher number.
+    trusted_proxy_count = 1
+
+    # Which of the proxy headers should we trust, this is a set where you
+    # either specify forwarded or one or more of forwarded-host, forwarded-for,
+    # forwarded-proto, forwarded-port.
+    trusted_proxy_headers = set()
+
+    # Would you like waitress to log warnings about untrusted proxy headers
+    # that were encountered while processing the proxy headers? This only makes
+    # sense to set when you have a trusted_proxy, and you expect the upstream
+    # proxy server to filter invalid headers
+    log_untrusted_proxy_headers = False
+
+    # Should waitress clear any proxy headers that are not deemed trusted from
+    # the environ? Change to True by default in 2.x
+    clear_untrusted_proxy_headers = _bool_marker
 
     # default ``wsgi.url_scheme`` value
     url_scheme = 'http'
@@ -323,6 +366,56 @@ class Adjustments(object):
                         hp_pairs.append((sockaddr[0].split('%', 1)[0], sockaddr[1]))
             except:
                 raise ValueError('Invalid host/port specified.')
+
+        if (
+            self.trusted_proxy is None and
+            (
+                self.trusted_proxy_headers or
+                (self.clear_untrusted_proxy_headers is not _bool_marker)
+            )
+        ):
+            raise ValueError(
+                "The values trusted_proxy_headers and clear_untrusted_proxy_headers "
+                "have no meaning without setting trusted_proxy. Cowardly refusing to "
+                "continue."
+            )
+
+        if self.trusted_proxy_headers:
+            self.trusted_proxy_headers = {header.lower() for header in self.trusted_proxy_headers}
+
+            unknown_values = self.trusted_proxy_headers - KNOWN_PROXY_HEADERS
+            if unknown_values:
+                raise ValueError(
+                    "Received unknown trusted_proxy_headers value (%s) expected one "
+                    "of %s" % (", ".join(unknown_values), ", ".join(KNOWN_PROXY_HEADERS))
+                )
+
+            if (
+                'forwarded' in self.trusted_proxy_headers and
+                self.trusted_proxy_headers - {'forwarded'}
+            ):
+                raise ValueError(
+                    "The Forwarded proxy header and the "
+                    "X-Forwarded-{By,Host,Proto,Port,For} headers are mutually "
+                    "exclusive. Can't trust both!"
+                )
+        elif self.trusted_proxy is not None:
+            warnings.warn(
+                'No proxy headers were marked as trusted, but trusted_proxy was set. '
+                'Implicitly trusting X-Forwarded-Proto for backwards compatibility. '
+                'This will be removed in future versions of waitress.',
+                DeprecationWarning
+            )
+            self.trusted_proxy_headers = {'x-forwarded-proto'}
+
+        if self.trusted_proxy and self.clear_untrusted_proxy_headers is _bool_marker:
+            warnings.warn(
+                'In future versions of Waitress clear_untrusted_proxy_headers will be '
+                'set to True by default. You may opt-out by setting this value to '
+                'False, or opt-in explicitly by setting this to True.',
+                DeprecationWarning
+            )
+            self.clear_untrusted_proxy_headers = False
 
         self.listen = wanted_sockets
 
