@@ -66,8 +66,83 @@ threads
     ``4``
 
 trusted_proxy
-    IP address of a client allowed to override ``url_scheme`` via the
-    ``X_FORWARDED_PROTO`` header.
+    IP address of a remote peer allowed to override various WSGI environment
+    variables using proxy headers.
+
+    For unix sockets, set this value to ``localhost`` instead of an IP address
+
+    default ``None``
+
+trusted_proxy_count
+    How many proxies we trust when chained
+    
+    X-Forwarded-For: 192.0.2.1, "[2001:db8::1]"
+    
+    or
+   
+    Forwarded: for=192.0.2.1, For="[2001:db8::1]"
+    
+    means there were (potentially), two proxies involved. If we know there is
+    only 1 valid proxy, then that initial IP address "192.0.2.1" is not trusted
+    and we completely ignore it.
+    
+    If there are two trusted proxies in the path, this value should be set to
+    2. If there are more proxies, this value should be set higher.
+
+    default ``1``
+
+    .. versionadded:: 1.2.0
+
+trusted_proxy_headers
+    Which of the proxy headers should we trust, this is a set where you
+    either specify forwarded or one or more of x-forwarded-host, x-forwarded-for,
+    x-forwarded-proto, x-forwarded-port.
+
+    This list of trusted headers is used when ``trusted_proxy`` is set and will
+    allow waitress to modify the WSGI environment using the values provided by
+    the proxy.
+
+    .. versionadded:: 1.2.0
+       If ``trusted_proxy`` is set, the default is ``x-forwarded-proto`` to
+       match older versions of Waitress. Users should explicitly opt-in by
+       selecting the headers to be trusted as future versions of waitress will
+       use an empty default.
+
+    .. warning::
+       It is an error to set this value without setting ``trusted_proxy``
+
+log_untrusted_proxy_headers
+    Should waitress log warning messages about proxy headers that are being
+    sent from upstream that are not trusted by ``trusted_proxy_headers`` but
+    are being cleared due to ``clear_untrusted_proxy_headers``?
+
+    This may be useful for debugging if you expect your upstream proxy server
+    to only send specific headers.
+
+    default ``False``
+   
+    .. versionadded:: 1.2.0
+
+    .. warning::
+       It is a no-op to set this value without also setting
+       ``clear_untrusted_proxy_headers`` and ``trusted_proxy``
+
+clear_untrusted_proxy_headers
+   This tells Waitress to remove any untrusted proxy headers ("Forwarded",
+   "X-Forwared-For", "X-Forwarded-By", "X-Forwarded-Host", "X-Forwarded-Port",
+   "X-Forwarded-Proto") not explicitly allowed by ``trusted_proxy_headers``
+
+   default ``False``
+
+   .. versionadded: 1.2.0
+      The default value is set to ``False`` for backwards compatibility. In
+      future versions of Waitress this default will be changed to ``True``.
+      Warnings will be raised unless the user explicitly provides a value for
+      this option, allowing the user to opt-in to the new safety features
+      automatically.
+
+   .. warning::
+      It is an error to set this value without setting ``trusted_proxy``
 
 url_scheme
     default ``wsgi.url_scheme`` value (string), default ``http``;  can be
