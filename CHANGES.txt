@@ -4,6 +4,28 @@ Unreleased
 Features
 ~~~~~~~~
 
+- Waitress has increased it's support of the X-Forwarded-* headers and includes
+  Forwarded (RFC7239) support. This may be used to allow proxy servers to
+  influence the WSGI environment. See
+  https://github.com/Pylons/waitress/pull/209
+
+  This also provides a new security feature when using Waitress behind a proxy
+  in that it is possible to remove untrusted proxy headers thereby making sure
+  that downstream WSGI applications don't accidentally use those proxy headers
+  to make security decisions.
+
+  The documentation has more information, see the following new arguments:
+
+  - trusted_proxy_count
+  - trusted_proxy_headers
+  - clear_untrusted_proxy_headers
+  - log_untrusted_proxy_headers (useful for debugging)
+
+  Be aware that the defaults for these are currently backwards compatible with
+  older versions of Waitress, this will change in a future release of waitress.
+  If you expect to need this behaviour please explicitly set these variables in
+  your configuration, or pin this version of waitress.
+
 - Server header can be omitted by specifying `ident=None` or `ident=''`.
   See https://github.com/Pylons/waitress/pull/187
 
