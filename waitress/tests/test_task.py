@@ -1318,6 +1318,50 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(len(inst.logger.logged), 1)
         self.assertIn("Found multiple values in X-Forwarded-Port", inst.logger.logged[0])
 
+    def test_parse_forwarded_port_wrong_proto_port_80(self):
+        inst = self._makeOne()
+        inst.logger = DummyLogger()
+
+        headers = {
+            'X_FORWARDED_PORT': '80',
+            'X_FORWARDED_PROTO': 'https',
+            'X_FORWARDED_HOST': 'example.com',
+        }
+        environ = {}
+        inst.parse_proxy_headers(
+            environ,
+            headers,
+            trusted_proxy_count=1,
+            trusted_proxy_headers={'x-forwarded-port', 'x-forwarded-host', 'x-forwarded-proto'}
+        )
+
+        self.assertEqual(environ['SERVER_NAME'], 'example.com')
+        self.assertEqual(environ['HTTP_HOST'], 'example.com:80')
+        self.assertEqual(environ['SERVER_PORT'], '80')
+        self.assertEqual(environ['wsgi.url_scheme'], 'https')
+
+    def test_parse_forwarded_port_wrong_proto_port_443(self):
+        inst = self._makeOne()
+        inst.logger = DummyLogger()
+
+        headers = {
+            'X_FORWARDED_PORT': '443',
+            'X_FORWARDED_PROTO': 'http',
+            'X_FORWARDED_HOST': 'example.com',
+        }
+        environ = {}
+        inst.parse_proxy_headers(
+            environ,
+            headers,
+            trusted_proxy_count=1,
+            trusted_proxy_headers={'x-forwarded-port', 'x-forwarded-host', 'x-forwarded-proto'}
+        )
+
+        self.assertEqual(environ['SERVER_NAME'], 'example.com')
+        self.assertEqual(environ['HTTP_HOST'], 'example.com:443')
+        self.assertEqual(environ['SERVER_PORT'], '443')
+        self.assertEqual(environ['wsgi.url_scheme'], 'http')
+
 
 class TestErrorTask(unittest.TestCase):
 

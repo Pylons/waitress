@@ -709,10 +709,24 @@ class WSGITask(Task):
                 environ["SERVER_NAME"] = forwarded_host
                 environ["HTTP_HOST"] = forwarded_host
 
-                if forwarded_port and forwarded_port not in {"443", "80"}:
-                    environ["HTTP_HOST"] = "{}:{}".format(
-                        forwarded_host, forwarded_port
-                    )
+                if forwarded_port:
+                    if forwarded_port not in {"443", "80"}:
+                        environ["HTTP_HOST"] = "{}:{}".format(
+                            forwarded_host, forwarded_port
+                        )
+                    elif (
+                        forwarded_port == "80" and environ["wsgi.url_scheme"] != "http"
+                    ):
+                        environ["HTTP_HOST"] = "{}:{}".format(
+                            forwarded_host, forwarded_port
+                        )
+                    elif (
+                        forwarded_port == "443"
+                        and environ["wsgi.url_scheme"] != "https"
+                    ):
+                        environ["HTTP_HOST"] = "{}:{}".format(
+                            forwarded_host, forwarded_port
+                        )
 
         if forwarded_port:
             environ["SERVER_PORT"] = str(forwarded_port)
