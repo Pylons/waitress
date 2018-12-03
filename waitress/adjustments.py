@@ -101,7 +101,7 @@ class Adjustments(object):
         ('ipv6', asbool),
         ('listen', aslist),
         ('threads', int),
-        ('trusted_proxy', str),
+        ('trusted_proxy', str_iftruthy),
         ('trusted_proxy_count', int),
         ('trusted_proxy_headers', asset),
         ('log_untrusted_proxy_headers', asbool),
@@ -367,6 +367,19 @@ class Adjustments(object):
             except:
                 raise ValueError('Invalid host/port specified.')
 
+        if (
+            self.trusted_proxy is None and
+            (
+                self.trusted_proxy_headers or
+                (self.clear_untrusted_proxy_headers is not _bool_marker)
+            )
+        ):
+            raise ValueError(
+                "The values trusted_proxy_headers and clear_untrusted_proxy_headers "
+                "have no meaning without setting trusted_proxy. Cowardly refusing to "
+                "continue."
+            )
+
         if self.trusted_proxy_headers:
             self.trusted_proxy_headers = {header.lower() for header in self.trusted_proxy_headers}
 
@@ -395,7 +408,7 @@ class Adjustments(object):
             )
             self.trusted_proxy_headers = {'x-forwarded-proto'}
 
-        if self.clear_untrusted_proxy_headers is _bool_marker:
+        if self.trusted_proxy and self.clear_untrusted_proxy_headers is _bool_marker:
             warnings.warn(
                 'In future versions of Waitress clear_untrusted_proxy_headers will be '
                 'set to True by default. You may opt-out by setting this value to '

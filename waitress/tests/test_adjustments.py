@@ -302,25 +302,34 @@ class TestAdjustments(unittest.TestCase):
 
     def test_dont_mix_forwarded_with_x_forwarded(self):
         with self.assertRaises(ValueError) as cm:
-            self._makeOne(trusted_proxy_headers={'forwarded', 'x-forwarded-for'})
+            self._makeOne(trusted_proxy='localhost', trusted_proxy_headers={'forwarded', 'x-forwarded-for'})
 
         self.assertIn('The Forwarded proxy header', str(cm.exception))
 
     def test_unknown_trusted_proxy_header(self):
         with self.assertRaises(ValueError) as cm:
-            self._makeOne(trusted_proxy_headers={'forwarded', 'x-forwarded-unknown'})
+            self._makeOne(trusted_proxy='localhost', trusted_proxy_headers={'forwarded', 'x-forwarded-unknown'})
 
         self.assertIn(
             'unknown trusted_proxy_headers value (x-forwarded-unknown)',
             str(cm.exception)
         )
 
+    def test_trusted_proxy_headers_no_trusted_proxy(self):
+        with self.assertRaises(ValueError) as cm:
+            self._makeOne(trusted_proxy_headers={'forwarded'})
+
+        self.assertIn(
+            'Cowardly refusing to continue.',
+            str(cm.exception)
+        )
+
     def test_trusted_proxy_headers_string_list(self):
-        inst = self._makeOne(trusted_proxy_headers='x-forwarded-for x-forwarded-by')
+        inst = self._makeOne(trusted_proxy='localhost', trusted_proxy_headers='x-forwarded-for x-forwarded-by')
         self.assertEqual(inst.trusted_proxy_headers, {'x-forwarded-for', 'x-forwarded-by'})
 
     def test_trusted_proxy_headers_string_list_newlines(self):
-        inst = self._makeOne(trusted_proxy_headers='x-forwarded-for\nx-forwarded-by\nx-forwarded-host')
+        inst = self._makeOne(trusted_proxy='localhost', trusted_proxy_headers='x-forwarded-for\nx-forwarded-by\nx-forwarded-host')
         self.assertEqual(inst.trusted_proxy_headers, {'x-forwarded-for', 'x-forwarded-by', 'x-forwarded-host'})
 
     def test_no_trusted_proxy_headers_trusted_proxy(self):
