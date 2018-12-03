@@ -27,7 +27,6 @@ from .utilities import (
     logger,
     queue_logger,
     undquote,
-    PROXY_HEADERS,
 )
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -513,8 +512,6 @@ class WSGITask(Task):
         headers,
         trusted_proxy_count=1,
         trusted_proxy_headers=None,
-        log_untrusted_proxy_headers=False,
-        clear_untrusted_proxy_headers=True,
     ):
         if trusted_proxy_headers is None:
             trusted_proxy_headers = set()
@@ -660,15 +657,6 @@ class WSGITask(Task):
                 forwarded_host = proxy.host or forwarded_host
                 forwarded_proto = proxy.proto or forwarded_proto
 
-        # Clear out the untrusted proxy headers.
-        if clear_untrusted_proxy_headers:
-            clear_untrusted_headers(
-                headers,
-                untrusted_headers,
-                log_warning=log_untrusted_proxy_headers,
-                logger=self.logger,
-            )
-
         if forwarded_proto:
             forwarded_proto = forwarded_proto.lower()
 
@@ -739,6 +727,8 @@ class WSGITask(Task):
             else:
                 environ["REMOTE_ADDR"] = client_addr.strip()
 
+        return untrusted_headers
+
     def get_environment(self):
         """Returns a WSGI environment."""
         environ = self.environ
@@ -773,28 +763,40 @@ class WSGITask(Task):
                 if path.startswith(url_prefix_with_trailing_slash):
                     path = path[len(url_prefix):]
 
-        environ = {}
-        environ['REQUEST_METHOD'] = request.command.upper()
-        environ['SERVER_PORT'] = str(server.effective_port)
-        environ['SERVER_NAME'] = server.server_name
-        environ['SERVER_SOFTWARE'] = server.adj.ident
-        environ['SERVER_PROTOCOL'] = 'HTTP/%s' % self.version
-        environ['SCRIPT_NAME'] = url_prefix
-        environ['PATH_INFO'] = path
-        environ['QUERY_STRING'] = request.query
+        environ = {
+            'REQUEST_METHOD': request.command.upper(),
+            'SERVER_PORT': str(server.effective_port),
+            'SERVER_NAME': server.server_name,
+            'SERVER_SOFTWARE': server.adj.ident,
+            'SERVER_PROTOCOL': 'HTTP/%s' % self.version,
+            'SCRIPT_NAME': url_prefix,
+            'PATH_INFO': path,
+            'QUERY_STRING': request.query,
+            'wsgi.url_scheme': request.url_scheme,
+
+            # the following environment variables are required by the WSGI spec
+            'wsgi.version': (1, 0),
+
+            # apps should use the logging module
+            'wsgi.errors': sys.stderr,
+            'wsgi.multithread': True,
+            'wsgi.multiprocess': False,
+            'wsgi.run_once': False,
+            'wsgi.input': request.get_body_stream(),
+            'wsgi.file_wrapper': ReadOnlyFileBasedBuffer,
+            'wsgi.input_terminated': True,  # wsgi.input is EOF terminated
+        }
         remote_peer = environ['REMOTE_ADDR'] = channel.addr[0]
-        environ['wsgi.url_scheme'] = request.url_scheme
 
         headers = dict(request.headers)
 
+        untrusted_headers = PROXY_HEADERS
         if remote_peer == server.adj.trusted_proxy:
-            self.parse_proxy_headers(
+            untrusted_headers = self.parse_proxy_headers(
                 environ,
                 headers,
                 trusted_proxy_count=server.adj.trusted_proxy_count,
                 trusted_proxy_headers=server.adj.trusted_proxy_headers,
-                log_untrusted_proxy_headers=server.adj.log_untrusted_proxy_headers,
-                clear_untrusted_proxy_headers=server.adj.clear_untrusted_proxy_headers,
             )
         else:
             # If we are not relying on a proxy, we still want to try and set
@@ -807,6 +809,15 @@ class WSGITask(Task):
         # so we do.
         environ["REMOTE_HOST"] = environ["REMOTE_ADDR"]
 
+        # Clear out the untrusted proxy headers
+        if server.adj.clear_untrusted_proxy_headers:
+            clear_untrusted_headers(
+                headers,
+                untrusted_headers,
+                log_warning=server.adj.log_untrusted_proxy_headers,
+                logger=self.logger,
+            )
+
         for key, value in headers.items():
             value = value.strip()
             mykey = rename_headers.get(key, None)
@@ -815,17 +826,6 @@ class WSGITask(Task):
             if mykey not in environ:
                 environ[mykey] = value
 
-        # the following environment variables are required by the WSGI spec
-        environ['wsgi.version'] = (1, 0)
-
-        # apps should use the logging module
-        environ['wsgi.errors'] = sys.stderr
-        environ['wsgi.multithread'] = True
-        environ['wsgi.multiprocess'] = False
-        environ['wsgi.run_once'] = False
-        environ['wsgi.input'] = request.get_body_stream()
-        environ['wsgi.file_wrapper'] = ReadOnlyFileBasedBuffer
-        environ['wsgi.input_terminated'] = True  # wsgi.input is EOF terminated
-
+        # cache the environ for this request
         self.environ = environ
         return environ

@@ -854,7 +854,7 @@ class TestWSGITask(unittest.TestCase):
 
     def test_get_environment_values_w_bogus_scheme_override(self):
         inst = self._makeOne()
-        inst.channel.addr = ['192.168.1.1']
+        inst.channel.addr = ['192.168.1.1', 80]
         inst.channel.server.adj.trusted_proxy = '192.168.1.1'
         inst.channel.server.adj.trusted_proxy_headers = {'x-forwarded-proto'}
         request = DummyParser()
@@ -869,6 +869,95 @@ class TestWSGITask(unittest.TestCase):
         inst.request = request
         self.assertRaises(ValueError, inst.get_environment)
 
+    def test_get_environment_warning_other_proxy_headers(self):
+        inst = self._makeOne()
+        inst.logger = DummyLogger()
+
+        inst.request.headers = {
+            'X_FORWARDED_FOR': '[2001:db8::1]',
+            'FORWARDED': 'For=198.51.100.2;host=example.com:8080;proto=https'
+        }
+        inst.channel.addr = ['192.168.1.1', 80]
+        inst.channel.server.adj.trusted_proxy = '192.168.1.1'
+        inst.channel.server.adj.trusted_proxy_count = 1
+        inst.channel.server.adj.trusted_proxy_headers = {'forwarded'}
+        inst.channel.server.adj.log_untrusted_proxy_headers = True
+        environ = inst.get_environment()
+
+        self.assertEqual(len(inst.logger.logged), 1)
+        self.assertNotIn('HTTP_X_FORWARDED_FOR', environ)
+
+        self.assertEqual(environ['REMOTE_ADDR'], '198.51.100.2')
+        self.assertEqual(environ['SERVER_NAME'], 'example.com')
+        self.assertEqual(environ['HTTP_HOST'], 'example.com:8080')
+        self.assertEqual(environ['SERVER_PORT'], '8080')
+        self.assertEqual(environ['wsgi.url_scheme'], 'https')
+
+    def test_get_environment_contains_all_headers_including_untrusted(self):
+        inst = self._makeOne()
+        inst.logger = DummyLogger()
+
+        inst.request.headers = {
+            'X_FORWARDED_FOR': '198.51.100.2',
+            'X_FORWARDED_BY': 'Waitress',
+            'X_FORWARDED_PROTO': 'https',
+            'X_FORWARDED_HOST': 'example.org',
+        }
+        headers_orig = inst.request.headers.copy()
+        inst.channel.addr = ['192.168.1.1', 80]
+        inst.channel.server.adj.trusted_proxy = '192.168.1.1'
+        inst.channel.server.adj.trusted_proxy_count = 1
+        inst.channel.server.adj.trusted_proxy_headers = {'x-forwarded-by'}
+        inst.channel.server.adj.clear_untrusted_proxy_headers = False
+        environ = inst.get_environment()
+
+        for k, expected in headers_orig.items():
+            result = environ['HTTP_%s' % k]
+            self.assertEqual(result, expected)
+
+    def test_get_environment_contains_only_trusted_headers(self):
+        inst = self._makeOne()
+        inst.logger = DummyLogger()
+
+        inst.request.headers = {
+            'X_FORWARDED_FOR': '198.51.100.2',
+            'X_FORWARDED_BY': 'Waitress',
+            'X_FORWARDED_PROTO': 'https',
+            'X_FORWARDED_HOST': 'example.org',
+        }
+        inst.channel.addr = ['192.168.1.1', 80]
+        inst.channel.server.adj.trusted_proxy = '192.168.1.1'
+        inst.channel.server.adj.trusted_proxy_count = 1
+        inst.channel.server.adj.trusted_proxy_headers = {'x-forwarded-by'}
+        inst.channel.server.adj.clear_untrusted_proxy_headers = True
+        environ = inst.get_environment()
+
+        self.assertEqual(environ['HTTP_X_FORWARDED_BY'], 'Waitress')
+        self.assertNotIn('HTTP_X_FORWARDED_FOR', environ)
+        self.assertNotIn('HTTP_X_FORWARDED_PROTO', environ)
+        self.assertNotIn('HTTP_X_FORWARDED_HOST', environ)
+
+    def test_get_environment_clears_headers_if_untrusted_proxy(self):
+        inst = self._makeOne()
+        inst.logger = DummyLogger()
+
+        inst.request.headers = {
+            'X_FORWARDED_FOR': '198.51.100.2',
+            'X_FORWARDED_BY': 'Waitress',
+            'X_FORWARDED_PROTO': 'https',
+            'X_FORWARDED_HOST': 'example.org',
+        }
+        inst.channel.addr = ['192.168.1.255', 80]
+        inst.channel.server.adj.trusted_proxy = '192.168.1.1'
+        inst.channel.server.adj.trusted_proxy_count = 1
+        inst.channel.server.adj.trusted_proxy_headers = {'x-forwarded-by'}
+        inst.channel.server.adj.clear_untrusted_proxy_headers = True
+        environ = inst.get_environment()
+
+        self.assertNotIn('HTTP_X_FORWARDED_BY', environ)
+        self.assertNotIn('HTTP_X_FORWARDED_FOR', environ)
+        self.assertNotIn('HTTP_X_FORWARDED_PROTO', environ)
+        self.assertNotIn('HTTP_X_FORWARDED_HOST', environ)
 
     def test_parse_proxy_headers_forwarded_for(self):
         inst = self._makeOne()
@@ -1105,32 +1194,6 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ['SERVER_PORT'], '8080')
         self.assertEqual(environ['wsgi.url_scheme'], 'https')
 
-    def test_parse_forwarded_warning_other_proxy_headers(self):
-        inst = self._makeOne()
-        inst.logger = DummyLogger()
-
-        headers = {
-            'X_FORWARDED_FOR': '[2001:db8::1]',
-            'FORWARDED': 'For=198.51.100.2;host=example.com:8080;proto=https'
-        }
-        environ = {}
-        inst.parse_proxy_headers(
-            environ,
-            headers,
-            trusted_proxy_count=1,
-            trusted_proxy_headers={'forwarded'},
-            log_untrusted_proxy_headers=True
-        )
-
-        self.assertEqual(len(inst.logger.logged), 1)
-        self.assertNotIn('X_FORWARDED_FOR', headers)
-
-        self.assertEqual(environ['REMOTE_ADDR'], '198.51.100.2')
-        self.assertEqual(environ['SERVER_NAME'], 'example.com')
-        self.assertEqual(environ['HTTP_HOST'], 'example.com:8080')
-        self.assertEqual(environ['SERVER_PORT'], '8080')
-        self.assertEqual(environ['wsgi.url_scheme'], 'https')
-
     def test_parse_forwarded_empty_pair(self):
         inst = self._makeOne()
 
@@ -1235,50 +1298,6 @@ class TestWSGITask(unittest.TestCase):
         )
 
         self.assertEqual(environ, {})
-
-    def test_parse_headers_contains_only_trusted(self):
-        inst = self._makeOne()
-        inst.logger = DummyLogger()
-
-        headers = {
-            'X_FORWARDED_FOR': '198.51.100.2',
-            'X_FORWARDED_BY': 'Waitress',
-            'X_FORWARDED_PROTO': 'https',
-            'X_FORWARDED_HOST': 'example.org',
-        }
-        environ = {}
-        inst.parse_proxy_headers(
-            environ,
-            headers,
-            trusted_proxy_count=1,
-            trusted_proxy_headers={'x-forwarded-by'}
-        )
-
-        self.assertEqual(environ, {})
-        self.assertEqual(headers, {'X_FORWARDED_BY': 'Waitress'})
-
-    def test_parse_headers_contains_all_including_untrusted(self):
-        inst = self._makeOne()
-        inst.logger = DummyLogger()
-
-        headers = {
-            'X_FORWARDED_FOR': '198.51.100.2',
-            'X_FORWARDED_BY': 'Waitress',
-            'X_FORWARDED_PROTO': 'https',
-            'X_FORWARDED_HOST': 'example.org',
-        }
-        headers_orig = headers.copy()
-        environ = {}
-        inst.parse_proxy_headers(
-            environ,
-            headers,
-            trusted_proxy_count=1,
-            trusted_proxy_headers={'x-forwarded-by'},
-            clear_untrusted_proxy_headers=False
-        )
-
-        self.assertEqual(environ, {})
-        self.assertEqual(headers, headers_orig)
 
     def test_parse_multiple_x_forwarded_proto(self):
         inst = self._makeOne()
@@ -1472,7 +1491,7 @@ class DummyAdj(object):
     url_prefix = ''
     trusted_proxy = None
     trusted_proxy_count = 1
-    trusted_proxy_headers = {}
+    trusted_proxy_headers = set()
     log_untrusted_proxy_headers = True
     clear_untrusted_proxy_headers = True
 
