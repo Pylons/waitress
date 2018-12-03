@@ -4,7 +4,7 @@ Unreleased
 Features
 ~~~~~~~~
 
-- Waitress has increased it's support of the X-Forwarded-* headers and includes
+- Waitress has increased its support of the X-Forwarded-* headers and includes
   Forwarded (RFC7239) support. This may be used to allow proxy servers to
   influence the WSGI environment. See
   https://github.com/Pylons/waitress/pull/209

@@ -77,7 +77,7 @@ when using Apache, ``mod_proxy`` automatically forwards the following headers::
    X-Forwarded-Host
    X-Forwarded-Server
 
-You will also want to add for Apache::
+You will also want to add to Apache::
 
    RequestHeader set X-Forwarded-Proto https
 
@@ -86,7 +86,8 @@ Configure waitress's ``trusted_proxy_headers`` as appropriate::
     trusted_proxy_headers = "x-forwarded-for, x-forwarded-host, x-forwarded-proto, x-forwarded-port"
 
 At this point waitress will set up the WSGI environment using the information
-sent in the proxy headers. This will setup the following variables::
+specified in the trusted proxy headers. This will setup the following
+variables::
 
    HTTP_HOST
    SERVER_NAME
@@ -107,8 +108,8 @@ To configure waitress to use the ``Forwarded`` header, set::
 
 .. note::
 
-   You must also configure the Waitress server's ``trusted_proxy`` and
-   to contain the IP address of the proxy
+   You must also configure the Waitress server's ``trusted_proxy`` to
+   contain the IP address of the proxy.
 
 
 Using ``url_prefix`` to influence ``SCRIPT_NAME`` and ``PATH_INFO``
