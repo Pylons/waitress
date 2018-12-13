@@ -791,7 +791,7 @@ class WSGITask(Task):
         headers = dict(request.headers)
 
         untrusted_headers = PROXY_HEADERS
-        if remote_peer == server.adj.trusted_proxy:
+        if server.adj.trusted_proxy == '*' or remote_peer == server.adj.trusted_proxy:
             untrusted_headers = self.parse_proxy_headers(
                 environ,
                 headers,
