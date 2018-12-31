@@ -1,8 +1,19 @@
-Unreleased
-----------
+1.2.0b1 (2018-12-31)
+--------------------
+
+Happy New Year!
 
 Features
 ~~~~~~~~
+
+- Setting the ``trusted_proxy`` setting to ``'*'`` (wildcard) will allow all
+  upstreams to be considered trusted proxies, thereby allowing services behind
+  Cloudflare/ELBs to function correctly whereby there may not be a singular IP
+  address that requests are received from.
+
+  Using this setting is potentially dangerous if your server is also available
+  from anywhere on the internet, and further protections should be used to lock
+  down access to Waitress. See https://github.com/Pylons/waitress/pull/224
 
 - Waitress has increased its support of the X-Forwarded-* headers and includes
   Forwarded (RFC7239) support. This may be used to allow proxy servers to
