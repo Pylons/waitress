@@ -37,6 +37,9 @@ Features
   If you expect to need this behaviour please explicitly set these variables in
   your configuration, or pin this version of waitress.
 
+  Documentation:
+  https://docs.pylonsproject.org/projects/waitress/en/latest/reverse-proxy.html
+
 - Waitress can now accept a list of sockets that are already pre-bound rather
   than creating its own to allow for socket activation. Support for init
   systems/other systems that create said activated sockets is not included. See
