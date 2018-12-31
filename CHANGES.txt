@@ -42,7 +42,7 @@ Features
   systems/other systems that create said activated sockets is not included. See
   https://github.com/Pylons/waitress/pull/215
 
-- Server header can be omitted by specifying `ident=None` or `ident=''`.
+- Server header can be omitted by specifying ``ident=None`` or ``ident=''``.
   See https://github.com/Pylons/waitress/pull/187
 
 Bugfixes
