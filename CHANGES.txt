@@ -1,3 +1,14 @@
+1.2.0b2 (2019-02-02)
+--------------------
+
+Bugfixes
+~~~~~~~~
+
+- Fixed logic to no longer warn on writes where the output is required to have
+  a body but there may not be any data to be written. Solves issue posted on
+  the Pylons Project mailling list with 1.2.0b1.
+  
+
 1.2.0b1 (2018-12-31)
 --------------------
 
