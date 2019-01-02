@@ -342,7 +342,7 @@ class Task(object):
                     self.logged_write_excess = True
             if towrite:
                 channel.write_soon(towrite)
-        else:
+        elif data:
             # Cheat, and tell the application we have written all of the bytes,
             # even though the response shouldn't have a body and we are
             # ignoring it entirely.
