@@ -8,7 +8,7 @@ Glossary
 
     PasteDeploy
         A system for configuration of WSGI web components in declarative ``.ini`` format.
-        See https://web.archive.org/web/20161029233359/http://pythonpaste.org/deploy/.
+        See https://docs.pylonsproject.org/projects/pastedeploy/en/latest/.
 
     asyncore
         A Python standard library module for asynchronous communications.  See :mod:`asyncore`.
