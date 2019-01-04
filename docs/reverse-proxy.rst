@@ -83,7 +83,7 @@ You will also want to add to Apache::
 
 Configure waitress's ``trusted_proxy_headers`` as appropriate::
 
-    trusted_proxy_headers = "x-forwarded-for, x-forwarded-host, x-forwarded-proto, x-forwarded-port"
+    trusted_proxy_headers = "x-forwarded-for x-forwarded-host x-forwarded-proto x-forwarded-port"
 
 At this point waitress will set up the WSGI environment using the information
 specified in the trusted proxy headers. This will setup the following
