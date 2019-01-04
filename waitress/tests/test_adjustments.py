@@ -315,12 +315,21 @@ class TestAdjustments(unittest.TestCase):
             str(cm.exception)
         )
 
+    def test_trusted_proxy_count_no_trusted_proxy(self):
+        with self.assertRaises(ValueError) as cm:
+            self._makeOne(trusted_proxy_count=1)
+
+        self.assertIn(
+            'trusted_proxy_count has no meaning',
+            str(cm.exception)
+        )
+
     def test_trusted_proxy_headers_no_trusted_proxy(self):
         with self.assertRaises(ValueError) as cm:
             self._makeOne(trusted_proxy_headers={'forwarded'})
 
         self.assertIn(
-            'Cowardly refusing to continue.',
+            'trusted_proxy_headers has no meaning',
             str(cm.exception)
         )
 

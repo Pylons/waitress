@@ -271,7 +271,7 @@ def clear_untrusted_headers(
         if headers.pop(header, False) is not False
     ]
 
-    if any(untrusted_headers_removed) and log_warning:
+    if log_warning and untrusted_headers_removed:
         untrusted_headers_removed = [
             "-".join([x.capitalize() for x in header.split("_")])
             for header in untrusted_headers_removed

@@ -9,13 +9,13 @@ Using Behind a Reverse Proxy
 Often people will set up "pure Python" web servers behind reverse proxies,
 especially if they need TLS support (Waitress does not natively support TLS).
 Even if you don't need TLS support, it's not uncommon to see Waitress and
-other pure-Python web servers set up to "live" behind a reverse proxy; these
-proxies often have lots of useful deployment knobs.
+other pure-Python web servers set up to only handle requests behind a reverse proxy;
+these proxies often have lots of useful deployment knobs.
 
 If you're using Waitress behind a reverse proxy, you'll almost always want
 your reverse proxy to pass along the ``Host`` header sent by the client to
 Waitress, in either case, as it will be used by most applications to generate
-correct URLs. You may also use the proxy headers if passing the Host directly
+correct URLs. You may also use the proxy headers if passing ``Host`` directly
 is not possible, or there are multiple proxies involved.
 
 For example, when using nginx as a reverse proxy, you might add the following
@@ -83,7 +83,7 @@ You will also want to add to Apache::
 
 Configure waitress's ``trusted_proxy_headers`` as appropriate::
 
-    trusted_proxy_headers = "x-forwarded-for, x-forwarded-host, x-forwarded-proto, x-forwarded-port"
+    trusted_proxy_headers = "x-forwarded-for x-forwarded-host x-forwarded-proto x-forwarded-port"
 
 At this point waitress will set up the WSGI environment using the information
 specified in the trusted proxy headers. This will setup the following
