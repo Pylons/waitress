@@ -367,17 +367,10 @@ class Adjustments(object):
             except:
                 raise ValueError('Invalid host/port specified.')
 
-        if (
-            self.trusted_proxy is None and
-            (
-                self.trusted_proxy_headers or
-                (self.clear_untrusted_proxy_headers is not _bool_marker)
-            )
-        ):
+        if self.trusted_proxy_headers and self.trusted_proxy is None:
             raise ValueError(
-                "The values trusted_proxy_headers and clear_untrusted_proxy_headers "
-                "have no meaning without setting trusted_proxy. Cowardly refusing to "
-                "continue."
+                "trusted_proxy_headers has no meaning without setting "
+                "trusted_proxy"
             )
 
         if self.trusted_proxy_headers:

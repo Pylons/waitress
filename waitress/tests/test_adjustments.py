@@ -320,7 +320,7 @@ class TestAdjustments(unittest.TestCase):
             self._makeOne(trusted_proxy_headers={'forwarded'})
 
         self.assertIn(
-            'Cowardly refusing to continue.',
+            'trusted_proxy_headers has no meaning',
             str(cm.exception)
         )
 
