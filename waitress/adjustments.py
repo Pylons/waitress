@@ -156,7 +156,7 @@ class Adjustments(object):
     # only 1 valid proxy, then that initial IP address "192.0.2.1" is not
     # trusted and we completely ignore it. If there are two trusted proxies in
     # the path, this value should be set to a higher number.
-    trusted_proxy_count = 1
+    trusted_proxy_count = None
 
     # Which of the proxy headers should we trust, this is a set where you
     # either specify forwarded or one or more of forwarded-host, forwarded-for,
@@ -327,7 +327,8 @@ class Adjustments(object):
                 try:
                     # Try turning the port into an integer
                     port = int(port)
-                except:
+
+                except Exception:
                     raise ValueError(
                         'Windows does not support service names instead of port numbers'
                     )
@@ -364,8 +365,18 @@ class Adjustments(object):
                     ):
                         wanted_sockets.append((family, socktype, proto, sockaddr))
                         hp_pairs.append((sockaddr[0].split('%', 1)[0], sockaddr[1]))
-            except:
+
+            except Exception:
                 raise ValueError('Invalid host/port specified.')
+
+        if self.trusted_proxy_count is not None and self.trusted_proxy is None:
+            raise ValueError(
+                "trusted_proxy_count has no meaning without setting "
+                "trusted_proxy"
+            )
+
+        elif self.trusted_proxy_count is None:
+            self.trusted_proxy_count = 1
 
         if self.trusted_proxy_headers and self.trusted_proxy is None:
             raise ValueError(
@@ -374,7 +385,9 @@ class Adjustments(object):
             )
 
         if self.trusted_proxy_headers:
-            self.trusted_proxy_headers = {header.lower() for header in self.trusted_proxy_headers}
+            self.trusted_proxy_headers = {
+                header.lower() for header in self.trusted_proxy_headers
+            }
 
             unknown_values = self.trusted_proxy_headers - KNOWN_PROXY_HEADERS
             if unknown_values:
@@ -392,6 +405,7 @@ class Adjustments(object):
                     "X-Forwarded-{By,Host,Proto,Port,For} headers are mutually "
                     "exclusive. Can't trust both!"
                 )
+
         elif self.trusted_proxy is not None:
             warnings.warn(
                 'No proxy headers were marked as trusted, but trusted_proxy was set. '
@@ -401,7 +415,7 @@ class Adjustments(object):
             )
             self.trusted_proxy_headers = {'x-forwarded-proto'}
 
-        if self.trusted_proxy and self.clear_untrusted_proxy_headers is _bool_marker:
+        if self.clear_untrusted_proxy_headers is _bool_marker:
             warnings.warn(
                 'In future versions of Waitress clear_untrusted_proxy_headers will be '
                 'set to True by default. You may opt-out by setting this value to '
