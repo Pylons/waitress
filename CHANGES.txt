@@ -1,5 +1,5 @@
-unreleased
-----------
+1.2.0b3 (2019-01-07)
+--------------------
 
 - Modified ``clear_untrusted_proxy_headers`` to be usable without a
   ``trusted_proxy``.
