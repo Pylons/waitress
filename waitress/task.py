@@ -676,8 +676,6 @@ class WSGITask(Task):
                     forwarded_port = "443"
 
         if forwarded_host:
-            forwarded_host = forwarded_host.strip()
-
             if ":" in forwarded_host and forwarded_host[-1] != "]":
                 host, port = forwarded_host.rsplit(":", 1)
                 host, port = host.strip(), str(port)
