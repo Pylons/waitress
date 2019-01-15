@@ -1,5 +1,13 @@
+1.2.0 (2019-01-15)
+------------------
+
+No changes since the last beta release. Enjoy Waitress!
+
 1.2.0b3 (2019-01-07)
 --------------------
+
+Bugfixes
+~~~~~~~~
 
 - Modified ``clear_untrusted_proxy_headers`` to be usable without a
   ``trusted_proxy``.
