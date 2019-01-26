@@ -989,7 +989,7 @@ class TestWSGITask(unittest.TestCase):
             trusted_proxy_headers={'x-forwarded-for'}
         )
 
-        self.assertEqual(environ['REMOTE_ADDR'], '[2001:db8::0]')
+        self.assertEqual(environ['REMOTE_ADDR'], '2001:db8::0')
 
     def test_parse_proxy_headers_forwared_for_multiple(self):
         inst = self._makeOne()
@@ -1029,7 +1029,7 @@ class TestWSGITask(unittest.TestCase):
         inst = self._makeOne()
 
         headers = {
-            'FORWARDED': 'for="[2001:db8::1]";host="example.com:8443";proto="https", for=192.0.2.1;host="example.internal:8080"'
+            'FORWARDED': 'for="[2001:db8::1]:3821";host="example.com:8443";proto="https", for=192.0.2.1;host="example.internal:8080"'
         }
         environ = {}
         inst.parse_proxy_headers(
@@ -1039,7 +1039,8 @@ class TestWSGITask(unittest.TestCase):
             trusted_proxy_headers={'forwarded'}
         )
 
-        self.assertEqual(environ['REMOTE_ADDR'], '[2001:db8::1]')
+        self.assertEqual(environ['REMOTE_ADDR'], '2001:db8::1')
+        self.assertEqual(environ['REMOTE_PORT'], '3821')
         self.assertEqual(environ['SERVER_NAME'], 'example.com')
         self.assertEqual(environ['HTTP_HOST'], 'example.com:8443')
         self.assertEqual(environ['SERVER_PORT'], '8443')
@@ -1059,7 +1060,7 @@ class TestWSGITask(unittest.TestCase):
             trusted_proxy_headers={'forwarded'}
         )
 
-        self.assertEqual(environ['REMOTE_ADDR'], '[2001:db8::1]')
+        self.assertEqual(environ['REMOTE_ADDR'], '2001:db8::1')
         self.assertEqual(environ['SERVER_NAME'], 'example.org')
         self.assertEqual(environ['HTTP_HOST'], 'example.org')
         self.assertEqual(environ['SERVER_PORT'], '443')
