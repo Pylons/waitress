@@ -535,9 +535,13 @@ class WSGITask(Task):
                 forward_hop = forward_hop.strip()
                 forward_hop = undquote(forward_hop)
 
-                # Make sure that all IPv6 addresses are surrounded by brackets
+                # Make sure that all IPv6 addresses are surrounded by brackets,
+                # this is assuming that the IPv6 representation here does not
+                # include a port number.
 
-                if ":" in forward_hop and forward_hop[-1] != "]":
+                if "." not in forward_hop and (
+                    ":" in forward_hop and forward_hop[-1] != "]"
+                ):
                     forwarded_for.append("[{}]".format(forward_hop))
                 else:
                     forwarded_for.append(forward_hop)
