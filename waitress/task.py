@@ -722,12 +722,17 @@ class WSGITask(Task):
             environ["SERVER_PORT"] = str(forwarded_port)
 
         if client_addr:
+            def strip_brackets(addr):
+                if addr[0] == "[" and addr[-1] == "]":
+                    return addr[1:-1]
+                return addr
+
             if ":" in client_addr and client_addr[-1] != "]":
                 addr, port = client_addr.rsplit(":", 1)
-                environ["REMOTE_ADDR"] = addr.strip()
+                environ["REMOTE_ADDR"] = strip_brackets(addr.strip())
                 environ["REMOTE_PORT"] = port.strip()
             else:
-                environ["REMOTE_ADDR"] = client_addr.strip()
+                environ["REMOTE_ADDR"] = strip_brackets(client_addr.strip())
 
         return untrusted_headers
 
