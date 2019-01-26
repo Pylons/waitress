@@ -535,9 +535,13 @@ class WSGITask(Task):
                 forward_hop = forward_hop.strip()
                 forward_hop = undquote(forward_hop)
 
-                # Make sure that all IPv6 addresses are surrounded by brackets
+                # Make sure that all IPv6 addresses are surrounded by brackets,
+                # this is assuming that the IPv6 representation here does not
+                # include a port number.
 
-                if ":" in forward_hop and forward_hop[-1] != "]":
+                if "." not in forward_hop and (
+                    ":" in forward_hop and forward_hop[-1] != "]"
+                ):
                     forwarded_for.append("[{}]".format(forward_hop))
                 else:
                     forwarded_for.append(forward_hop)
@@ -718,12 +722,17 @@ class WSGITask(Task):
             environ["SERVER_PORT"] = str(forwarded_port)
 
         if client_addr:
+            def strip_brackets(addr):
+                if addr[0] == "[" and addr[-1] == "]":
+                    return addr[1:-1]
+                return addr
+
             if ":" in client_addr and client_addr[-1] != "]":
                 addr, port = client_addr.rsplit(":", 1)
-                environ["REMOTE_ADDR"] = addr.strip()
+                environ["REMOTE_ADDR"] = strip_brackets(addr.strip())
                 environ["REMOTE_PORT"] = port.strip()
             else:
-                environ["REMOTE_ADDR"] = client_addr.strip()
+                environ["REMOTE_ADDR"] = strip_brackets(client_addr.strip())
 
         return untrusted_headers
 
