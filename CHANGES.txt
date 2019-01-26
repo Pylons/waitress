@@ -1,3 +1,17 @@
+1.2.1 (2019-01-25)
+------------------
+
+Bugfixes
+~~~~~~~~
+
+- When given an IPv6 address in ``X-Forwarded-For`` or ``Forwarded for=``
+  waitress was placing the IP address in ``REMOTE_ADDR`` with brackets:
+  ``[2001:db8::0]``, this does not match the requirements in the CGI spec which
+  ``REMOTE_ADDR`` was lifted from. Waitress will now place the bare IPv6
+  address in ``REMOTE_ADDR``: ``2001:db8::0``. See
+  https://github.com/Pylons/waitress/pull/232 and
+  https://github.com/Pylons/waitress/issues/230
+
 1.2.0 (2019-01-15)
 ------------------
 
