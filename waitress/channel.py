@@ -311,8 +311,6 @@ class HTTPChannel(wasyncore.dispatcher, object):
         if not self.connected:
             # if the socket is closed then interrupt the task so that it
             # can cleanup possibly before the app_iter is exhausted
-            # XXX a simple boolean check should not require a lock since it's
-            # unidirectional (True -> False)
             raise ClientDisconnected
         if data:
             # the async mainloop might be popping data off outbuf; we can
