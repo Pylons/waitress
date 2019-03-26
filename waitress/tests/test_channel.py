@@ -225,6 +225,12 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(outbufs[1], wrapper)
         self.assertEqual(outbufs[2].__class__.__name__, 'OverflowableBuffer')
 
+    def test_write_soon_disconnected(self):
+        from waitress.channel import ClientDisconnected
+        inst, sock, map = self._makeOneWithMap()
+        inst.connected = False
+        self.assertRaises(ClientDisconnected, lambda: inst.write_soon(b'stuff'))
+
     def test__flush_some_empty_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
         result = inst._flush_some()
@@ -558,6 +564,27 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(inst.close_when_flushed)
         self.assertTrue(request.closed)
 
+    def test_service_with_request_raises_disconnect(self):
+        from waitress.channel import ClientDisconnected
+
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.expose_tracebacks = False
+        inst.server = DummyServer()
+        request = DummyRequest()
+        inst.requests = [request]
+        inst.task_class = DummyTaskClass(ClientDisconnected)
+        inst.error_task_class = DummyTaskClass()
+        inst.logger = DummyLogger()
+        inst.service()
+        self.assertTrue(request.serviced)
+        self.assertEqual(inst.requests, [])
+        self.assertEqual(len(inst.logger.warnings), 1)
+        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.last_activity)
+        self.assertFalse(inst.will_close)
+        self.assertEqual(inst.error_task_class.serviced, False)
+        self.assertTrue(request.closed)
+
     def test_cancel_no_requests(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = ()
@@ -699,6 +726,10 @@ class DummyLogger(object):
 
     def __init__(self):
         self.exceptions = []
+        self.warnings = []
+
+    def warn(self, msg):
+        self.warnings.append(msg)
 
     def exception(self, msg):
         self.exceptions.append(msg)
