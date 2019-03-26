@@ -451,25 +451,25 @@ class WSGITask(Task):
         # Call the application to handle the request and write a response
         app_iter = self.channel.server.application(env, start_response)
 
-        if app_iter.__class__ is ReadOnlyFileBasedBuffer:
-            # NB: do not put this inside the below try: finally: which closes
-            # the app_iter; we need to defer closing the underlying file.  It's
-            # intention that we don't want to call ``close`` here if the
-            # app_iter is a ROFBB; the buffer (and therefore the file) will
-            # eventually be closed within channel.py's _flush_some or
-            # handle_close instead.
-            cl = self.content_length
-            size = app_iter.prepare(cl)
-            if size:
-                if cl != size:
-                    if cl is not None:
-                        self.remove_content_length_header()
-                    self.content_length = size
-                self.write(b'') # generate headers
-                self.channel.write_soon(app_iter)
-                return
-
+        can_close_app_iter = True
         try:
+            if app_iter.__class__ is ReadOnlyFileBasedBuffer:
+                cl = self.content_length
+                size = app_iter.prepare(cl)
+                if size:
+                    if cl != size:
+                        if cl is not None:
+                            self.remove_content_length_header()
+                        self.content_length = size
+                    self.write(b'') # generate headers
+                    # if the write_soon below succeeds then the channel will
+                    # take over closing the underlying file via the channel's
+                    # _flush_some or handle_close so we intentionally avoid
+                    # calling close in the finally block
+                    self.channel.write_soon(app_iter)
+                    can_close_app_iter = False
+                    return
+
             first_chunk_len = None
             for chunk in app_iter:
                 if first_chunk_len is None:
@@ -503,7 +503,7 @@ class WSGITask(Task):
                                 self.content_bytes_written, cl),
                         )
         finally:
-            if hasattr(app_iter, 'close'):
+            if can_close_app_iter and hasattr(app_iter, 'close'):
                 app_iter.close()
 
     def parse_proxy_headers(
