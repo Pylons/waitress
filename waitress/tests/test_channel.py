@@ -228,6 +228,65 @@ class TestHTTPChannel(unittest.TestCase):
         inst.connected = False
         self.assertRaises(ClientDisconnected, lambda: inst.write_soon(b'stuff'))
 
+    def test_write_soon_disconnected_while_over_watermark(self):
+        from waitress.channel import ClientDisconnected
+        inst, sock, map = self._makeOneWithMap()
+        def dummy_flush():
+            inst.connected = False
+        inst._flush_outbufs_below_high_watermark = dummy_flush
+        self.assertRaises(ClientDisconnected, lambda: inst.write_soon(b'stuff'))
+
+    def test_write_soon_rotates_outbuf_on_overflow(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.outbuf_high_watermark = 3
+        inst.outbufs = [DummyBuffer(b'abcd')]
+        inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
+        class Lock(DummyLock):
+            def wait(self):
+                inst.outbufs[0].prune()
+                inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
+                super(Lock, self).wait()
+        inst.outbuf_lock = Lock()
+        wrote = inst.write_soon(b'xyz')
+        self.assertEqual(wrote, 3)
+        self.assertEqual(len(inst.outbufs), 2)
+        self.assertTrue(inst.outbufs[0].pruned)
+        self.assertEqual(inst.outbufs[1].get(), b'xyz')
+        self.assertTrue(inst.outbuf_lock.waited)
+
+    def test_handle_write_notify_after_flush(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.requests = [True]
+        inst.outbufs = [DummyBuffer(b'abc')]
+        inst.total_outbufs_len = len(inst.outbufs[0])
+        inst.adj.send_bytes = 1
+        inst.adj.outbuf_high_watermark = 5
+        inst.will_close = False
+        inst.last_activity = 0
+        result = inst.handle_write()
+        self.assertEqual(result, None)
+        self.assertEqual(inst.will_close, False)
+        self.assertTrue(inst.outbuf_lock.acquired)
+        self.assertTrue(inst.outbuf_lock.notified)
+        self.assertEqual(sock.sent, b'abc')
+
+    def test_handle_write_no_notify_after_flush(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.requests = [True]
+        inst.outbufs = [DummyBuffer(b'abc')]
+        inst.total_outbufs_len = len(inst.outbufs[0])
+        inst.adj.send_bytes = 1
+        inst.adj.outbuf_high_watermark = 2
+        sock.send = lambda x: False
+        inst.will_close = False
+        inst.last_activity = 0
+        result = inst.handle_write()
+        self.assertEqual(result, None)
+        self.assertEqual(inst.will_close, False)
+        self.assertTrue(inst.outbuf_lock.acquired)
+        self.assertFalse(inst.outbuf_lock.notified)
+        self.assertEqual(sock.sent, b'')
+
     def test__flush_some_empty_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
         result = inst._flush_some()
@@ -652,6 +711,7 @@ class DummySock(object):
         return len(data)
 
 class DummyLock(object):
+    notified = False
 
     def __init__(self, acquirable=True):
         self.acquirable = acquirable
@@ -663,6 +723,12 @@ class DummyLock(object):
 
     def release(self):
         self.released = True
+
+    def notify(self):
+        self.notified = True
+
+    def wait(self):
+        self.waited = True
 
     def __exit__(self, type, val, traceback):
         self.acquire(True)
@@ -687,6 +753,10 @@ class DummyBuffer(object):
     def skip(self, num, x):
         self.skipped = num
 
+    def prune(self):
+        self.pruned = True
+        self.data = b''
+
     def __len__(self):
         return len(self.data)
 
@@ -695,6 +765,7 @@ class DummyBuffer(object):
 
 class DummyAdjustments(object):
     outbuf_overflow = 1048576
+    outbuf_high_watermark = 1048576
     inbuf_overflow = 512000
     cleanup_interval = 900
     url_scheme = 'http'

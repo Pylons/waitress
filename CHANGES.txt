@@ -11,6 +11,15 @@ Deprecations
 Features
 ~~~~~~~~
 
+- Add a new ``outbuf_high_watermark`` adjustment which is used to apply
+  backpressure on the ``app_iter`` to avoid letting it spin faster than data
+  can be written to the socket. This stabilizes responses that iterate quickly
+  with a lot of data.
+  See https://github.com/Pylons/waitress/pull/242
+
+Bugfixes
+~~~~~~~~
+
 - Stop early and close the ``app_iter`` when attempting to write to a closed
   socket due to a client disconnect. This should notify a long-lived streaming
   response when a client hangs up.
@@ -26,9 +35,6 @@ Features
   still be flushed efficiently.
   See https://github.com/Pylons/waitress/pull/246
 
-Bugfixes
-~~~~~~~~
-
 - When a client closes a socket unexpectedly there was potential for memory
   leaks in which data was written to the buffers after they were closed,
   causing them to reopen.
@@ -42,6 +48,12 @@ Bugfixes
   noticeable for users of the internal server api. In more typical operations
   the server will die before benefiting from these changes.
   See https://github.com/Pylons/waitress/pull/245
+
+- Fix a bug in which an ``app_iter`` that emits data chunks quicker than can
+  be written to a socket may never cleanup data that has already been sent.
+  This would cause buffers in waitress to grow without bounds. These buffers
+  now properly reclaim their space as data is written to the socket.
+  See https://github.com/Pylons/waitress/pull/242
 
 1.2.1 (2019-01-25)
 ------------------

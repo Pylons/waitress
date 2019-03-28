@@ -75,8 +75,8 @@ class HTTPChannel(wasyncore.dispatcher, object):
 
         # task_lock used to push/pop requests
         self.task_lock = threading.Lock()
-        # outbuf_lock used to access any outbuf
-        self.outbuf_lock = threading.RLock()
+        # outbuf_lock used to access any outbuf (expected to use an RLock)
+        self.outbuf_lock = threading.Condition()
 
         wasyncore.dispatcher.__init__(self, sock, map=map)
 
@@ -205,6 +205,9 @@ class HTTPChannel(wasyncore.dispatcher, object):
         if self.outbuf_lock.acquire(False):
             try:
                 self._flush_some()
+
+                if self.total_outbufs_len < self.adj.outbuf_high_watermark:
+                    self.outbuf_lock.notify()
             finally:
                 self.outbuf_lock.release()
 
@@ -265,6 +268,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                         'Unknown exception while trying to close outbuf')
             self.total_outbufs_len = 0
             self.connected = False
+            self.outbuf_lock.notify()
         wasyncore.dispatcher.close(self)
 
     def add_channel(self, map=None):
@@ -299,9 +303,8 @@ class HTTPChannel(wasyncore.dispatcher, object):
             # the async mainloop might be popping data off outbuf; we can
             # block here waiting for it because we're in a task thread
             with self.outbuf_lock:
-                # check again after acquiring the lock to ensure we the
-                # outbufs are not closed
-                if not self.connected:  # pragma: no cover
+                overflowed = self._flush_outbufs_below_high_watermark()
+                if not self.connected:
                     raise ClientDisconnected
                 if data.__class__ is ReadOnlyFileBasedBuffer:
                     # they used wsgi.file_wrapper
@@ -309,6 +312,12 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
                     self.outbufs.append(nextbuf)
                 else:
+                    # if we overflowed then start a new buffer to ensure
+                    # the original eventually gets pruned otherwise it may
+                    # grow unbounded
+                    if overflowed:
+                        nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
+                        self.outbufs.append(nextbuf)
                     self.outbufs[-1].append(data)
                 num_bytes = len(data)
                 self.total_outbufs_len += num_bytes
@@ -318,6 +327,18 @@ class HTTPChannel(wasyncore.dispatcher, object):
             # unbusy systems may suffer.
             return num_bytes
         return 0
+
+    def _flush_outbufs_below_high_watermark(self):
+        overflowed = self.total_outbufs_len > self.adj.outbuf_high_watermark
+        # check first to avoid locking if possible
+        if overflowed:
+            with self.outbuf_lock:
+                while (
+                    self.connected and
+                    self.total_outbufs_len > self.adj.outbuf_high_watermark
+                ):
+                    self.outbuf_lock.wait()
+        return overflowed
 
     def service(self):
         """Execute all pending requests """
@@ -370,6 +391,15 @@ class HTTPChannel(wasyncore.dispatcher, object):
                         request.close()
                     self.requests = []
                 else:
+                    # before processing a new request, ensure there is not too
+                    # much data in the outbufs waiting to be flushed
+                    # NB: currently readable() returns False while we are
+                    # flushing data so we know no new requests will come in
+                    # that we need to account for, otherwise it'd be better
+                    # to do this check at the start of the request instead of
+                    # at the end to account for consecutive service() calls
+                    if len(self.requests) > 1:
+                        self._flush_outbufs_below_high_watermark()
                     request = self.requests.pop(0)
                     request.close()
 
