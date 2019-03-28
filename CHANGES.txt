@@ -1,3 +1,14 @@
+unreleased
+----------
+
+Bugfixes
+~~~~~~~~
+
+- Stop early and close the ``app_iter`` when attempting to write to a closed
+  socket due to a client disconnect. This should notify a long-lived streaming
+  response when a client hangs up.
+  See https://github.com/Pylons/waitress/pull/238
+
 1.2.1 (2019-01-25)
 ------------------
 

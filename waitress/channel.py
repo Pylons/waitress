@@ -32,6 +32,9 @@ from waitress.utilities import InternalServerError
 
 from . import wasyncore
 
+class ClientDisconnected(Exception):
+    """ Raised when attempting to write to a closed socket."""
+
 class HTTPChannel(wasyncore.dispatcher, object):
     """
     Setting self.requests = [somerequest] prevents more requests from being
@@ -305,6 +308,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
     #
 
     def write_soon(self, data):
+        if not self.connected:
+            # if the socket is closed then interrupt the task so that it
+            # can cleanup possibly before the app_iter is exhausted
+            raise ClientDisconnected
         if data:
             # the async mainloop might be popping data off outbuf; we can
             # block here waiting for it because we're in a task thread
@@ -334,6 +341,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     task = self.task_class(self, request)
                 try:
                     task.service()
+                except ClientDisconnected:
+                    self.logger.warn('Client disconnected when serving %s' %
+                                     task.request.path)
+                    task.close_on_finish = True
                 except:
                     self.logger.exception('Exception when serving %s' %
                                           task.request.path)
