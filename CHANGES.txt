@@ -9,6 +9,11 @@ Bugfixes
   response when a client hangs up.
   See https://github.com/Pylons/waitress/pull/238
 
+- When a client closes a socket unexpectedly there was potential for memory
+  leaks in which data was written to the buffers after they were closed,
+  causing them to reopen.
+  See https://github.com/Pylons/waitress/pull/239
+
 1.2.1 (2019-01-25)
 ------------------
 

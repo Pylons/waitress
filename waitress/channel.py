@@ -275,13 +275,16 @@ class HTTPChannel(wasyncore.dispatcher, object):
         return False
 
     def handle_close(self):
-        for outbuf in self.outbufs:
-            try:
-                outbuf.close()
-            except:
-                self.logger.exception(
-                    'Unknown exception while trying to close outbuf')
-        self.connected = False
+        # avoid closing the outbufs while a task is potentially adding data
+        # to them in write_soon
+        with self.outbuf_lock:
+            for outbuf in self.outbufs:
+                try:
+                    outbuf.close()
+                except:
+                    self.logger.exception(
+                        'Unknown exception while trying to close outbuf')
+            self.connected = False
         wasyncore.dispatcher.close(self)
 
     def add_channel(self, map=None):
@@ -316,6 +319,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
             # the async mainloop might be popping data off outbuf; we can
             # block here waiting for it because we're in a task thread
             with self.outbuf_lock:
+                # check again after acquiring the lock to ensure we the
+                # outbufs are not closed
+                if not self.connected:  # pragma: no cover
+                    raise ClientDisconnected
                 if data.__class__ is ReadOnlyFileBasedBuffer:
                     # they used wsgi.file_wrapper
                     self.outbufs.append(data)
