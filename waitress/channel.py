@@ -374,7 +374,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
                         except KeyError:
                             pass
                         task = self.error_task_class(self, request)
-                        task.service() # must not fail
+                        try:
+                            task.service() # must not fail
+                        except ClientDisconnected:
+                            task.close_on_finish = True
                     else:
                         task.close_on_finish = True
                 # we cannot allow self.requests to drop to empty til

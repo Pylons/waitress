@@ -585,6 +585,33 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.error_task_class.serviced, False)
         self.assertTrue(request.closed)
 
+    def test_service_with_request_error_raises_disconnect(self):
+        from waitress.channel import ClientDisconnected
+
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.expose_tracebacks = False
+        inst.server = DummyServer()
+        request = DummyRequest()
+        err_request = DummyRequest()
+        inst.requests = [request]
+        inst.parser_class = lambda x: err_request
+        inst.task_class = DummyTaskClass(RuntimeError)
+        inst.task_class.wrote_header = False
+        inst.error_task_class = DummyTaskClass(ClientDisconnected)
+        inst.logger = DummyLogger()
+        inst.service()
+        self.assertTrue(request.serviced)
+        self.assertTrue(err_request.serviced)
+        self.assertEqual(inst.requests, [])
+        self.assertEqual(len(inst.logger.exceptions), 1)
+        self.assertEqual(len(inst.logger.warnings), 0)
+        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.last_activity)
+        self.assertFalse(inst.will_close)
+        self.assertEqual(inst.task_class.serviced, True)
+        self.assertEqual(inst.error_task_class.serviced, True)
+        self.assertTrue(request.closed)
+
     def test_cancel_no_requests(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = ()
