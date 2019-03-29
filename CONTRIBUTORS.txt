@@ -107,6 +107,8 @@ Contributors
 
 - Chris McDonough, 2011/12/17
 
+- Michael Merickel, 2012/01/16
+
 - Damien Baty, 2012/10/25
 
 - Georges Dubus, 2012/11/24
