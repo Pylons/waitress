@@ -8,6 +8,7 @@ Bugfixes
   socket due to a client disconnect. This should notify a long-lived streaming
   response when a client hangs up.
   See https://github.com/Pylons/waitress/pull/238
+  and https://github.com/Pylons/waitress/pull/240
 
 - When a client closes a socket unexpectedly there was potential for memory
   leaks in which data was written to the buffers after they were closed,
