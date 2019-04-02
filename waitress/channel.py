@@ -75,7 +75,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         # task_lock used to push/pop requests
         self.task_lock = threading.Lock()
         # outbuf_lock used to access any outbuf
-        self.outbuf_lock = threading.Lock()
+        self.outbuf_lock = threading.RLock()
 
         wasyncore.dispatcher.__init__(self, sock, map=map)
 
@@ -151,7 +151,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             self.will_close = True
 
         if self.will_close:
-            self.handle_close(lock=False)
+            self.handle_close()
 
     def readable(self):
         # We might want to create a new task.  We can only do this if:
@@ -168,7 +168,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         except socket.error:
             if self.adj.log_socket_errors:
                 self.logger.exception('Socket error')
-            self.handle_close(lock=True)
+            self.handle_close()
             return
         if data:
             self.last_activity = time.time()
@@ -274,11 +274,9 @@ class HTTPChannel(wasyncore.dispatcher, object):
 
         return False
 
-    def handle_close(self, lock=True):
+    def handle_close(self):
         # NB: default to True for when asyncore calls this function directly
-        if lock:
-            self.outbuf_lock.acquire()
-        try:
+        with self.outbuf_lock:
             for outbuf in self.outbufs:
                 try:
                     outbuf.close()
@@ -286,9 +284,6 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.logger.exception(
                         'Unknown exception while trying to close outbuf')
             self.connected = False
-        finally:
-            if lock:
-                self.outbuf_lock.release()
         wasyncore.dispatcher.close(self)
 
     def add_channel(self, map=None):
