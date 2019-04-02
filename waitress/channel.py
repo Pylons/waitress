@@ -70,12 +70,13 @@ class HTTPChannel(wasyncore.dispatcher, object):
         self.server = server
         self.adj = adj
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
+        self.total_outbufs_len = 0
         self.creation_time = self.last_activity = time.time()
 
         # task_lock used to push/pop requests
         self.task_lock = threading.Lock()
         # outbuf_lock used to access any outbuf
-        self.outbuf_lock = threading.Lock()
+        self.outbuf_lock = threading.RLock()
 
         wasyncore.dispatcher.__init__(self, sock, map=map)
 
@@ -83,16 +84,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         self.addr = addr
 
     def any_outbuf_has_data(self):
-        for outbuf in self.outbufs:
-            if bool(outbuf):
-                return True
-        return False
-
-    def total_outbufs_len(self):
-        # genexpr == more funccalls
-        # use b.__len__ rather than len(b) FBO of not getting OverflowError
-        # on Python 2
-        return sum([b.__len__() for b in self.outbufs]) 
+        return self.total_outbufs_len > 0
 
     def writable(self):
         # if there's data in the out buffer or we've been instructed to close
@@ -124,7 +116,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             #    won't get done.
             flush = self._flush_some_if_lockable
             self.force_flush = False
-        elif (self.total_outbufs_len() >= self.adj.send_bytes):
+        elif (self.total_outbufs_len >= self.adj.send_bytes):
             # 1. There's a running task, so we need to try to lock
             #    the outbuf before sending
             # 2. Only try to send if the data in the out buffer is larger
@@ -196,7 +188,9 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 if not self.sent_continue:
                     # there's no current task, so we don't need to try to
                     # lock the outbuf to append to it.
-                    self.outbufs[-1].append(b'HTTP/1.1 100 Continue\r\n\r\n')
+                    outbuf_payload = b'HTTP/1.1 100 Continue\r\n\r\n'
+                    self.outbufs[-1].append(outbuf_payload)
+                    self.total_outbufs_len += len(outbuf_payload)
                     self.sent_continue = True
                     self._flush_some()
                     request.completed = False
@@ -261,6 +255,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     outbuf.skip(num_sent, True)
                     outbuflen -= num_sent
                     sent += num_sent
+                    self.total_outbufs_len -= num_sent
                 else:
                     dobreak = True
                     break
@@ -275,8 +270,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         return False
 
     def handle_close(self):
-        # avoid closing the outbufs while a task is potentially adding data
-        # to them in write_soon
+        # NB: default to True for when asyncore calls this function directly
         with self.outbuf_lock:
             for outbuf in self.outbufs:
                 try:
@@ -284,6 +278,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 except:
                     self.logger.exception(
                         'Unknown exception while trying to close outbuf')
+            self.total_outbufs_len = 0
             self.connected = False
         wasyncore.dispatcher.close(self)
 
@@ -330,11 +325,13 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.outbufs.append(nextbuf)
                 else:
                     self.outbufs[-1].append(data)
+                num_bytes = len(data)
+                self.total_outbufs_len += num_bytes
             # XXX We might eventually need to pull the trigger here (to
             # instruct select to stop blocking), but it slows things down so
             # much that I'll hold off for now; "server push" on otherwise
             # unbusy systems may suffer.
-            return len(data)
+            return num_bytes
         return 0
 
     def service(self):
