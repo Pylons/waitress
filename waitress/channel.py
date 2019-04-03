@@ -270,7 +270,6 @@ class HTTPChannel(wasyncore.dispatcher, object):
         return False
 
     def handle_close(self):
-        # NB: default to True for when asyncore calls this function directly
         with self.outbuf_lock:
             for outbuf in self.outbufs:
                 try:
