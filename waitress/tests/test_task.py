@@ -72,7 +72,6 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst = self._makeOne()
         inst.add_task(task)
         self.assertEqual(len(inst.queue), 1)
-        self.assertTrue(task.deferred)
 
     def test_log_queue_depth(self):
         task = DummyTask()
@@ -82,18 +81,6 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(len(inst.queue_logger.logged), 1)
         inst.add_task(task)
         self.assertEqual(len(inst.queue_logger.logged), 2)
-
-    def test_add_task_defer_raises(self):
-        class BadDummyTask(DummyTask):
-            def defer(self):
-                super(BadDummyTask, self).defer()
-                raise ValueError
-        task = BadDummyTask()
-        inst = self._makeOne()
-        self.assertRaises(ValueError, inst.add_task, task)
-        self.assertEqual(len(inst.queue), 0)
-        self.assertTrue(task.deferred)
-        self.assertTrue(task.cancelled)
 
     def test_shutdown_one_thread(self):
         inst = self._makeOne()
@@ -129,15 +116,6 @@ class TestTask(unittest.TestCase):
         request.version = '8.4'
         inst = self._makeOne(request=request)
         self.assertEqual(inst.version, '1.0')
-
-    def test_cancel(self):
-        inst = self._makeOne()
-        inst.cancel()
-        self.assertTrue(inst.close_on_finish)
-
-    def test_defer(self):
-        inst = self._makeOne()
-        self.assertEqual(inst.defer(), None)
 
     def test_build_response_header_bad_http_version(self):
         inst = self._makeOne()
@@ -1478,14 +1456,10 @@ class DummyError(object):
 
 class DummyTask(object):
     serviced = False
-    deferred = False
     cancelled = False
 
     def service(self):
         self.serviced = True
-
-    def defer(self):
-        self.deferred = True
 
     def cancel(self):
         self.cancelled = True

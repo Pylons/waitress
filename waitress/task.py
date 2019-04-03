@@ -122,11 +122,6 @@ class ThreadedTaskDispatcher(object):
                 self.queue_lock.notify(to_stop)
 
     def add_task(self, task):
-        try:
-            task.defer()
-        except:
-            task.cancel()
-            raise
         with self.queue_lock:
             self.queue.append(task)
             self.queue_lock.notify()
@@ -202,12 +197,6 @@ class Task(object):
                     self.status.startswith('204') or
                     self.status.startswith('304')
                     )
-
-    def cancel(self):
-        self.close_on_finish = True
-
-    def defer(self):
-        pass
 
     def build_response_header(self):
         version = self.version
