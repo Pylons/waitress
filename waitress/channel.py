@@ -53,7 +53,6 @@ class HTTPChannel(wasyncore.dispatcher, object):
     close_when_flushed = False   # set to True to close the socket when flushed
     requests = ()                # currently pending requests
     sent_continue = False        # used as a latch after sending 100 continue
-    force_flush = False          # indicates a need to flush the outbuf
 
     #
     # ASYNCHRONOUS METHODS (including __init__)
@@ -107,15 +106,6 @@ class HTTPChannel(wasyncore.dispatcher, object):
             #    because it's either data left over from task output
             #    or a 100 Continue line sent within "received".
             flush = self._flush_some
-        elif self.force_flush:
-            # 1. There's a running task, so we need to try to lock
-            #    the outbuf before sending
-            # 2. This is the last chunk sent by the Nth of M tasks in a
-            #    sequence on this channel, so flush it regardless of whether
-            #    it's >= self.adj.send_bytes.  We need to do this now, or it
-            #    won't get done.
-            flush = self._flush_some_if_lockable
-            self.force_flush = False
         elif (self.total_outbufs_len >= self.adj.send_bytes):
             # 1. There's a running task, so we need to try to lock
             #    the outbuf before sending
@@ -387,15 +377,13 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     request = self.requests.pop(0)
                     request.close()
 
-        self.force_flush = True
-        self.server.pull_trigger()
+        if self.connected:
+            self.server.pull_trigger()
         self.last_activity = time.time()
 
     def cancel(self):
-        """ Cancels all pending requests """
-        self.force_flush = True
+        """ Cancels all pending / active requests """
+        self.will_close = True
+        self.connected = False
         self.last_activity = time.time()
         self.requests = []
-
-    def defer(self):
-        pass

@@ -119,20 +119,6 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.last_activity, 0)
         self.assertTrue(outbuf.closed)
 
-    def test_handle_write_no_requests_force_flush(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.requests = [True]
-        inst.outbufs = [DummyBuffer(b'abc')]
-        inst.will_close = False
-        inst.force_flush = True
-        inst.last_activity = 0
-        result = inst.handle_write()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.will_close, False)
-        self.assertTrue(inst.outbuf_lock.acquired)
-        self.assertEqual(inst.force_flush, False)
-        self.assertEqual(sock.sent, b'abc')
-
     def test_handle_write_no_requests_outbuf_gt_send_bytes(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = [True]
@@ -456,7 +442,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.requests = []
         inst.service()
         self.assertEqual(inst.requests, [])
-        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
 
     def test_service_with_one_request(self):
@@ -507,7 +493,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(request.serviced)
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
-        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
         self.assertEqual(inst.error_task_class.serviced, True)
@@ -526,7 +512,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(request.serviced)
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
-        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertTrue(inst.close_when_flushed)
         self.assertEqual(inst.error_task_class.serviced, False)
@@ -547,7 +533,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertFalse(inst.will_close)
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
-        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertEqual(inst.error_task_class.serviced, True)
         self.assertTrue(request.closed)
@@ -565,7 +551,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(request.serviced)
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
-        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertTrue(inst.close_when_flushed)
         self.assertTrue(request.closed)
@@ -585,7 +571,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(request.serviced)
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.warnings), 1)
-        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
         self.assertEqual(inst.error_task_class.serviced, False)
@@ -611,7 +597,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertEqual(len(inst.logger.warnings), 0)
-        self.assertTrue(inst.force_flush)
+        self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
         self.assertEqual(inst.task_class.serviced, True)
@@ -629,10 +615,6 @@ class TestHTTPChannel(unittest.TestCase):
         inst.requests = [None]
         inst.cancel()
         self.assertEqual(inst.requests, [])
-
-    def test_defer(self):
-        inst, sock, map = self._makeOneWithMap()
-        self.assertEqual(inst.defer(), None)
 
 class DummySock(object):
     blocking = False
