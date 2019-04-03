@@ -19,6 +19,11 @@ Bugfixes
 - Fix the queue depth warnings to only show when all threads are busy.
   See https://github.com/Pylons/waitress/pull/243
 
+- Trigger the ``app_iter`` to close as part of shutdown. This will only be
+  noticeable for users of the internal server api. In more typical operations
+  the server will die before benefiting from these changes.
+  See https://github.com/Pylons/waitress/pull/245
+
 1.2.1 (2019-01-25)
 ------------------
 
