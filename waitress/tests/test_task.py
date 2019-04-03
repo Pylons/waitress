@@ -10,7 +10,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
     def test_handler_thread_task_is_None(self):
         inst = self._makeOne()
         inst.threads[0] = True
-        inst.queue.put(None)
+        inst.queue.append(None)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
         self.assertEqual(inst.threads, {})
@@ -22,11 +22,16 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.logger = DummyLogger()
         task = DummyTask(JustTesting)
         inst.logger = DummyLogger()
-        inst.queue.put(task)
+        inst.queue.append(task)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
         self.assertEqual(inst.threads, {})
         self.assertEqual(len(inst.logger.logged), 1)
+
+    def test_handler_thread_exits_if_threadno_cleared(self):
+        inst = self._makeOne()
+        inst.handler_thread(0)
+        self.assertEqual(inst.stop_count, -1)
 
     def test_set_thread_count_increase(self):
         inst = self._makeOne()
@@ -47,8 +52,8 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst = self._makeOne()
         inst.threads = {'a': 1, 'b': 2}
         inst.set_thread_count(1)
-        self.assertEqual(inst.queue.qsize(), 1)
-        self.assertEqual(inst.queue.get(), None)
+        self.assertEqual(len(inst.queue), 1)
+        self.assertEqual(inst.queue.popleft(), None)
 
     def test_set_thread_count_same(self):
         inst = self._makeOne()
@@ -62,7 +67,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         task = DummyTask()
         inst = self._makeOne()
         inst.add_task(task)
-        self.assertEqual(inst.queue.qsize(), 1)
+        self.assertEqual(len(inst.queue), 1)
         self.assertTrue(task.deferred)
 
     def test_log_queue_depth(self):
@@ -70,15 +75,15 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst = self._makeOne()
         inst.queue_logger = DummyLogger()
         inst.add_task(task)
-        self.assertEqual(len(inst.queue_logger.logged), 0)
-        inst.add_task(task)
         self.assertEqual(len(inst.queue_logger.logged), 1)
+        inst.add_task(task)
+        self.assertEqual(len(inst.queue_logger.logged), 2)
 
     def test_add_task_defer_raises(self):
         task = DummyTask(ValueError)
         inst = self._makeOne()
         self.assertRaises(ValueError, inst.add_task, task)
-        self.assertEqual(inst.queue.qsize(), 0)
+        self.assertEqual(len(inst.queue), 0)
         self.assertTrue(task.deferred)
         self.assertTrue(task.cancelled)
 
@@ -87,7 +92,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.threads[0] = 1
         inst.logger = DummyLogger()
         task = DummyTask()
-        inst.queue.put(task)
+        inst.queue.append(task)
         self.assertEqual(inst.shutdown(timeout=.01), True)
         self.assertEqual(inst.logger.logged, ['1 thread(s) still running'])
         self.assertEqual(task.cancelled, True)

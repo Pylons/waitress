@@ -16,6 +16,9 @@ Bugfixes
   causing them to reopen.
   See https://github.com/Pylons/waitress/pull/239
 
+- Fix the queue depth warnings to only show when all threads are busy.
+  See https://github.com/Pylons/waitress/pull/243
+
 1.2.1 (2019-01-25)
 ------------------
 
