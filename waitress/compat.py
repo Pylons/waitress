@@ -66,17 +66,6 @@ else:
     def tobytes(s):
         return s
 
-try:
-    from Queue import (
-        Queue,
-        Empty,
-    )
-except ImportError: # pragma: no cover
-    from queue import (
-        Queue,
-        Empty,
-    )
-
 if PY3: # pragma: no cover
     import builtins
     exec_ = getattr(builtins, "exec")

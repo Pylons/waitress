@@ -9,24 +9,33 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
 
     def test_handler_thread_task_is_None(self):
         inst = self._makeOne()
-        inst.threads[0] = True
-        inst.queue.put(None)
+        inst.threads.add(0)
+        inst.queue.append(None)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
-        self.assertEqual(inst.threads, {})
+        self.assertEqual(inst.threads, set())
 
     def test_handler_thread_task_raises(self):
-        from waitress.task import JustTesting
         inst = self._makeOne()
-        inst.threads[0] = True
+        inst.threads.add(0)
         inst.logger = DummyLogger()
-        task = DummyTask(JustTesting)
+        class BadDummyTask(DummyTask):
+            def service(self):
+                super(BadDummyTask, self).service()
+                inst.threads.clear()
+                raise Exception
+        task = BadDummyTask()
         inst.logger = DummyLogger()
-        inst.queue.put(task)
+        inst.queue.append(task)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
-        self.assertEqual(inst.threads, {})
+        self.assertEqual(inst.threads, set())
         self.assertEqual(len(inst.logger.logged), 1)
+
+    def test_handler_thread_exits_if_threadno_cleared(self):
+        inst = self._makeOne()
+        inst.handler_thread(0)
+        self.assertEqual(inst.stop_count, -1)
 
     def test_set_thread_count_increase(self):
         inst = self._makeOne()
@@ -38,23 +47,23 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
     def test_set_thread_count_increase_with_existing(self):
         inst = self._makeOne()
         L = []
-        inst.threads = {0: 1}
+        inst.threads = {0}
         inst.start_new_thread = lambda *x: L.append(x)
         inst.set_thread_count(2)
         self.assertEqual(L, [(inst.handler_thread, (1,))])
 
     def test_set_thread_count_decrease(self):
         inst = self._makeOne()
-        inst.threads = {'a': 1, 'b': 2}
+        inst.threads = {0, 1}
         inst.set_thread_count(1)
-        self.assertEqual(inst.queue.qsize(), 1)
-        self.assertEqual(inst.queue.get(), None)
+        self.assertEqual(len(inst.queue), 1)
+        self.assertEqual(inst.queue.popleft(), None)
 
     def test_set_thread_count_same(self):
         inst = self._makeOne()
         L = []
         inst.start_new_thread = lambda *x: L.append(x)
-        inst.threads = {0: 1}
+        inst.threads = {0}
         inst.set_thread_count(1)
         self.assertEqual(L, [])
 
@@ -62,7 +71,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         task = DummyTask()
         inst = self._makeOne()
         inst.add_task(task)
-        self.assertEqual(inst.queue.qsize(), 1)
+        self.assertEqual(len(inst.queue), 1)
         self.assertTrue(task.deferred)
 
     def test_log_queue_depth(self):
@@ -70,24 +79,28 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst = self._makeOne()
         inst.queue_logger = DummyLogger()
         inst.add_task(task)
-        self.assertEqual(len(inst.queue_logger.logged), 0)
-        inst.add_task(task)
         self.assertEqual(len(inst.queue_logger.logged), 1)
+        inst.add_task(task)
+        self.assertEqual(len(inst.queue_logger.logged), 2)
 
     def test_add_task_defer_raises(self):
-        task = DummyTask(ValueError)
+        class BadDummyTask(DummyTask):
+            def defer(self):
+                super(BadDummyTask, self).defer()
+                raise ValueError
+        task = BadDummyTask()
         inst = self._makeOne()
         self.assertRaises(ValueError, inst.add_task, task)
-        self.assertEqual(inst.queue.qsize(), 0)
+        self.assertEqual(len(inst.queue), 0)
         self.assertTrue(task.deferred)
         self.assertTrue(task.cancelled)
 
     def test_shutdown_one_thread(self):
         inst = self._makeOne()
-        inst.threads[0] = 1
+        inst.threads.add(0)
         inst.logger = DummyLogger()
         task = DummyTask()
-        inst.queue.put(task)
+        inst.queue.append(task)
         self.assertEqual(inst.shutdown(timeout=.01), True)
         self.assertEqual(inst.logger.logged, ['1 thread(s) still running'])
         self.assertEqual(task.cancelled, True)
@@ -1468,18 +1481,11 @@ class DummyTask(object):
     deferred = False
     cancelled = False
 
-    def __init__(self, toraise=None):
-        self.toraise = toraise
-
     def service(self):
         self.serviced = True
-        if self.toraise:
-            raise self.toraise
 
     def defer(self):
         self.deferred = True
-        if self.toraise:
-            raise self.toraise
 
     def cancel(self):
         self.cancelled = True
@@ -1549,5 +1555,5 @@ class DummyLogger(object):
     def warning(self, msg, *args):
         self.logged.append(msg % args)
 
-    def exception(self, msg):
-        self.logged.append(msg)
+    def exception(self, msg, *args):
+        self.logged.append(msg % args)
