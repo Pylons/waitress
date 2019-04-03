@@ -1555,5 +1555,5 @@ class DummyLogger(object):
     def warning(self, msg, *args):
         self.logged.append(msg % args)
 
-    def exception(self, msg):
-        self.logged.append(msg)
+    def exception(self, msg, *args):
+        self.logged.append(msg % args)
