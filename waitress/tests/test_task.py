@@ -9,18 +9,22 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
 
     def test_handler_thread_task_is_None(self):
         inst = self._makeOne()
-        inst.threads[0] = True
+        inst.threads[0] = 1
         inst.queue.append(None)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
         self.assertEqual(inst.threads, {})
 
     def test_handler_thread_task_raises(self):
-        from waitress.task import JustTesting
         inst = self._makeOne()
-        inst.threads[0] = True
+        inst.threads[0] = 1
         inst.logger = DummyLogger()
-        task = DummyTask(JustTesting)
+        class BadDummyTask(DummyTask):
+            def service(self):
+                super(BadDummyTask, self).service()
+                inst.threads.clear()
+                raise Exception
+        task = BadDummyTask()
         inst.logger = DummyLogger()
         inst.queue.append(task)
         inst.handler_thread(0)
@@ -80,7 +84,11 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(len(inst.queue_logger.logged), 2)
 
     def test_add_task_defer_raises(self):
-        task = DummyTask(ValueError)
+        class BadDummyTask(DummyTask):
+            def defer(self):
+                super(BadDummyTask, self).defer()
+                raise ValueError
+        task = BadDummyTask()
         inst = self._makeOne()
         self.assertRaises(ValueError, inst.add_task, task)
         self.assertEqual(len(inst.queue), 0)
@@ -1473,18 +1481,11 @@ class DummyTask(object):
     deferred = False
     cancelled = False
 
-    def __init__(self, toraise=None):
-        self.toraise = toraise
-
     def service(self):
         self.serviced = True
-        if self.toraise:
-            raise self.toraise
 
     def defer(self):
         self.deferred = True
-        if self.toraise:
-            raise self.toraise
 
     def cancel(self):
         self.cancelled = True

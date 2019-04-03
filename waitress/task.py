@@ -47,9 +47,6 @@ hop_by_hop = frozenset((
 ))
 
 
-class JustTesting(Exception):
-    pass
-
 ThreadIdle = 1
 ThreadBusy = 2
 
@@ -90,8 +87,6 @@ class ThreadedTaskDispatcher(object):
                 except Exception as e:
                     self.logger.exception(
                         'Exception when servicing %r' % task)
-                    if isinstance(e, JustTesting):
-                        break
         finally:
             with self.queue_lock:
                 self.stop_count -= 1
