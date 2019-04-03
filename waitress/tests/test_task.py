@@ -9,15 +9,15 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
 
     def test_handler_thread_task_is_None(self):
         inst = self._makeOne()
-        inst.threads[0] = 1
+        inst.threads.add(0)
         inst.queue.append(None)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
-        self.assertEqual(inst.threads, {})
+        self.assertEqual(inst.threads, set())
 
     def test_handler_thread_task_raises(self):
         inst = self._makeOne()
-        inst.threads[0] = 1
+        inst.threads.add(0)
         inst.logger = DummyLogger()
         class BadDummyTask(DummyTask):
             def service(self):
@@ -29,7 +29,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.queue.append(task)
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, -1)
-        self.assertEqual(inst.threads, {})
+        self.assertEqual(inst.threads, set())
         self.assertEqual(len(inst.logger.logged), 1)
 
     def test_handler_thread_exits_if_threadno_cleared(self):
@@ -47,14 +47,14 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
     def test_set_thread_count_increase_with_existing(self):
         inst = self._makeOne()
         L = []
-        inst.threads = {0: 1}
+        inst.threads = {0}
         inst.start_new_thread = lambda *x: L.append(x)
         inst.set_thread_count(2)
         self.assertEqual(L, [(inst.handler_thread, (1,))])
 
     def test_set_thread_count_decrease(self):
         inst = self._makeOne()
-        inst.threads = {'a': 1, 'b': 2}
+        inst.threads = {0, 1}
         inst.set_thread_count(1)
         self.assertEqual(len(inst.queue), 1)
         self.assertEqual(inst.queue.popleft(), None)
@@ -63,7 +63,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst = self._makeOne()
         L = []
         inst.start_new_thread = lambda *x: L.append(x)
-        inst.threads = {0: 1}
+        inst.threads = {0}
         inst.set_thread_count(1)
         self.assertEqual(L, [])
 
@@ -97,7 +97,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
 
     def test_shutdown_one_thread(self):
         inst = self._makeOne()
-        inst.threads[0] = 1
+        inst.threads.add(0)
         inst.logger = DummyLogger()
         task = DummyTask()
         inst.queue.append(task)
