@@ -570,7 +570,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.service()
         self.assertTrue(request.serviced)
         self.assertEqual(inst.requests, [])
-        self.assertEqual(len(inst.logger.warnings), 1)
+        self.assertEqual(len(inst.logger.infos), 1)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
@@ -596,7 +596,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(err_request.serviced)
         self.assertEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
-        self.assertEqual(len(inst.logger.warnings), 0)
+        self.assertEqual(len(inst.logger.infos), 0)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
@@ -741,10 +741,11 @@ class DummyLogger(object):
 
     def __init__(self):
         self.exceptions = []
+        self.infos = []
         self.warnings = []
 
-    def warn(self, msg):
-        self.warnings.append(msg)
+    def info(self, msg):
+        self.infos.append(msg)
 
     def exception(self, msg):
         self.exceptions.append(msg)

@@ -205,8 +205,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
     def _flush_some_if_lockable(self):
         # Since our task may be appending to the outbuf, we try to acquire
         # the lock, but we don't block if we can't.
-        locked = self.outbuf_lock.acquire(False)
-        if locked:
+        if self.outbuf_lock.acquire(False):
             try:
                 self._flush_some()
             finally:
@@ -335,11 +334,11 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 try:
                     task.service()
                 except ClientDisconnected:
-                    self.logger.warn('Client disconnected when serving %s' %
+                    self.logger.info('Client disconnected while serving %s' %
                                      task.request.path)
                     task.close_on_finish = True
                 except:
-                    self.logger.exception('Exception when serving %s' %
+                    self.logger.exception('Exception while serving %s' %
                                           task.request.path)
                     if not task.wrote_header:
                         if self.adj.expose_tracebacks:
