@@ -195,11 +195,9 @@ class Adjustments(object):
     # recv_bytes is the argument to pass to socket.recv().
     recv_bytes = 8192
 
-    # send_bytes is the number of bytes to send to socket.send().  Multiples
-    # of 9000 should avoid partly-filled packets, but don't set this larger
-    # than the TCP write buffer size.  In Linux, /proc/sys/net/ipv4/tcp_wmem
-    # controls the minimum, default, and maximum sizes of TCP write buffers.
-    send_bytes = 18000
+    # deprecated setting controls how many bytes will be buffered before
+    # being flushed to the socket
+    send_bytes = 1
 
     # A tempfile should be created if the pending output is larger than
     # outbuf_overflow, which is measured in bytes. The default is 1MB.  This
@@ -288,6 +286,12 @@ class Adjustments(object):
 
         if 'unix_socket' in kw and 'listen' in kw:
             raise ValueError('unix_socket may not be set if listen is set')
+
+        if 'send_bytes' in kw:
+            warnings.warn(
+                'send_bytes will be removed in a future release',
+                DeprecationWarning,
+            )
 
         for k, v in kw.items():
             if k not in self._param_map:

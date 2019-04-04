@@ -190,7 +190,9 @@ send_bytes
     Linux, ``/proc/sys/net/ipv4/tcp_wmem`` controls the minimum, default, and
     maximum sizes of TCP write buffers.
 
-    Default: ``18000``
+    Default: ``1``
+
+    .. deprecated:: 1.3
 
 outbuf_overflow
     A tempfile should be created if the pending output is larger than

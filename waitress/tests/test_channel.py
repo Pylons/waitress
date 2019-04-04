@@ -20,6 +20,7 @@ class TestHTTPChannel(unittest.TestCase):
     def test_ctor(self):
         inst, _, map = self._makeOneWithMap()
         self.assertEqual(inst.addr, '127.0.0.1')
+        self.assertEqual(inst.sendbuf_len, 2048)
         self.assertEqual(map[100], inst)
 
     def test_total_outbufs_len_an_outbuf_size_gt_sys_maxint(self):
@@ -70,6 +71,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = []
         inst.outbufs = [DummyBuffer(b'abc')]
+        inst.total_outbufs_len = len(inst.outbufs[0])
         inst.last_activity = 0
         result = inst.handle_write()
         self.assertEqual(result, None)
@@ -82,6 +84,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.requests = []
         outbuf = DummyBuffer(b'abc', socket.error)
         inst.outbufs = [outbuf]
+        inst.total_outbufs_len = len(outbuf)
         inst.last_activity = 0
         inst.logger = DummyLogger()
         result = inst.handle_write()
@@ -96,6 +99,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.requests = []
         outbuf = DummyBuffer(b'abc', IOError)
         inst.outbufs = [outbuf]
+        inst.total_outbufs_len = len(outbuf)
         inst.last_activity = 0
         inst.logger = DummyLogger()
         result = inst.handle_write()
@@ -123,7 +127,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = [True]
         inst.outbufs = [DummyBuffer(b'abc')]
-        inst.total_outbufs_len = 3
+        inst.total_outbufs_len = len(inst.outbufs[0])
         inst.adj.send_bytes = 2
         inst.will_close = False
         inst.last_activity = 0
@@ -137,6 +141,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         outbuf = DummyBuffer(b'abc')
         inst.outbufs = [outbuf]
+        inst.total_outbufs_len = len(outbuf)
         inst.will_close = False
         inst.close_when_flushed = True
         inst.last_activity = 0
@@ -231,6 +236,7 @@ class TestHTTPChannel(unittest.TestCase):
     def test__flush_some_full_outbuf_socket_returns_nonzero(self):
         inst, sock, map = self._makeOneWithMap()
         inst.outbufs[0].append(b'abc')
+        inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         result = inst._flush_some()
         self.assertEqual(result, True)
 
@@ -238,6 +244,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         sock.send = lambda x: False
         inst.outbufs[0].append(b'abc')
+        inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         result = inst._flush_some()
         self.assertEqual(result, False)
 
@@ -246,6 +253,7 @@ class TestHTTPChannel(unittest.TestCase):
         sock.send = lambda x: len(x)
         buffer = DummyBuffer(b'abc')
         inst.outbufs.append(buffer)
+        inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         result = inst._flush_some()
         self.assertEqual(result, True)
         self.assertEqual(buffer.skipped, 3)
@@ -256,6 +264,7 @@ class TestHTTPChannel(unittest.TestCase):
         sock.send = lambda x: len(x)
         buffer = DummyBuffer(b'abc')
         inst.outbufs.append(buffer)
+        inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         inst.logger = DummyLogger()
         def doraise():
             raise NotImplementedError
@@ -632,6 +641,9 @@ class DummySock(object):
     def getpeername(self):
         return '127.0.0.1'
 
+    def getsockopt(self, level, option):
+        return 2048
+
     def close(self):
         self.closed = True
 
@@ -685,11 +697,11 @@ class DummyAdjustments(object):
     outbuf_overflow = 1048576
     inbuf_overflow = 512000
     cleanup_interval = 900
-    send_bytes = 9000
     url_scheme = 'http'
     channel_timeout = 300
     log_socket_errors = True
     recv_bytes = 8192
+    send_bytes = 1
     expose_tracebacks = True
     ident = 'waitress'
     max_request_header_size = 10000
