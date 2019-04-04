@@ -1,7 +1,14 @@
 unreleased
 ----------
 
-Bugfixes
+Deprecations
+~~~~~~~~~~~~
+
+- The ``send_bytes`` adjustment now defaults to ``1`` and is deprecated
+  pending removal in a future release.
+  and https://github.com/Pylons/waitress/pull/246
+
+Features
 ~~~~~~~~
 
 - Stop early and close the ``app_iter`` when attempting to write to a closed
@@ -10,6 +17,17 @@ Bugfixes
   See https://github.com/Pylons/waitress/pull/238
   and https://github.com/Pylons/waitress/pull/240
   and https://github.com/Pylons/waitress/pull/241
+
+- Adjust the flush to output ``SO_SNDBUF`` bytes instead of whatever was
+  set in the ``send_bytes`` adjustment. ``send_bytes`` now only controls how
+  much waitress will buffer internally before flushing to the kernel, whereas
+  previously it used to also throttle how much data was sent to the kernel.
+  This change enables a streaming ``app_iter`` containing small chunks to
+  still be flushed efficiently.
+  See https://github.com/Pylons/waitress/pull/246
+
+Bugfixes
+~~~~~~~~
 
 - When a client closes a socket unexpectedly there was potential for memory
   leaks in which data was written to the buffers after they were closed,

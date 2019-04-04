@@ -143,8 +143,10 @@ Tuning options:
     8192.
 
 ``--send-bytes=INT``
-    Number of bytes to send to socket.send(). Default is 18000.
+    Number of bytes to send to socket.send(). Default is 1.
     Multiples of 9000 should avoid partly-filled TCP packets.
+
+    .. deprecated:: 1.3
 
 ``--outbuf-overflow=INT``
     A temporary file should be created if the pending output is larger than

@@ -361,6 +361,16 @@ class TestAdjustments(unittest.TestCase):
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
             self.assertIn("clear_untrusted_proxy_headers will be set to True", str(w[0]))
 
+    def test_deprecated_send_bytes(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.resetwarnings()
+            warnings.simplefilter("always")
+            self._makeOne(send_bytes=1)
+
+            self.assertGreaterEqual(len(w), 1)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+            self.assertIn("send_bytes", str(w[0]))
+
     def test_badvar(self):
         self.assertRaises(ValueError, self._makeOne, nope=True)
 

@@ -71,6 +71,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
         self.total_outbufs_len = 0
         self.creation_time = self.last_activity = time.time()
+        self.sendbuf_len = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
 
         # task_lock used to push/pop requests
         self.task_lock = threading.Lock()
@@ -82,14 +83,11 @@ class HTTPChannel(wasyncore.dispatcher, object):
         # Don't let wasyncore.dispatcher throttle self.addr on us.
         self.addr = addr
 
-    def any_outbuf_has_data(self):
-        return self.total_outbufs_len > 0
-
     def writable(self):
         # if there's data in the out buffer or we've been instructed to close
         # the channel (possibly by our server maintenance logic), run
         # handle_write
-        return self.any_outbuf_has_data() or self.will_close
+        return self.total_outbufs_len or self.will_close
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
@@ -106,7 +104,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             #    because it's either data left over from task output
             #    or a 100 Continue line sent within "received".
             flush = self._flush_some
-        elif (self.total_outbufs_len >= self.adj.send_bytes):
+        elif self.total_outbufs_len >= self.adj.send_bytes:
             # 1. There's a running task, so we need to try to lock
             #    the outbuf before sending
             # 2. Only try to send if the data in the out buffer is larger
@@ -128,7 +126,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 self.logger.exception('Unexpected exception when flushing')
                 self.will_close = True
 
-        if self.close_when_flushed and not self.any_outbuf_has_data():
+        if self.close_when_flushed and not self.total_outbufs_len:
             self.close_when_flushed = False
             self.will_close = True
 
@@ -141,8 +139,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         # 2. There's no already currently running task(s).
         # 3. There's no data in the output buffer that needs to be sent
         #    before we potentially create a new task.
-        return not (self.will_close or self.requests or
-                    self.any_outbuf_has_data())
+        return not (self.will_close or self.requests or self.total_outbufs_len)
 
     def handle_read(self):
         try:
@@ -238,7 +235,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     dobreak = True
 
             while outbuflen > 0:
-                chunk = outbuf.get(self.adj.send_bytes)
+                chunk = outbuf.get(self.sendbuf_len)
                 num_sent = self.send(chunk)
                 if num_sent:
                     outbuf.skip(num_sent, True)
