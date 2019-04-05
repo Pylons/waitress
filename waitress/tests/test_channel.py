@@ -239,18 +239,27 @@ class TestHTTPChannel(unittest.TestCase):
     def test_write_soon_rotates_outbuf_on_overflow(self):
         inst, sock, map = self._makeOneWithMap()
         inst.adj.outbuf_high_watermark = 3
-        inst.outbufs = [DummyBuffer(b'abcd')]
-        inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
+        inst.current_outbuf_count = 4
+        wrote = inst.write_soon(b'xyz')
+        self.assertEqual(wrote, 3)
+        self.assertEqual(len(inst.outbufs), 2)
+        self.assertEqual(inst.outbufs[0].get(), b'')
+        self.assertEqual(inst.outbufs[1].get(), b'xyz')
+
+    def test_write_soon_waits_on_backpressure(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.adj.outbuf_high_watermark = 3
+        inst.total_outbufs_len = 4
+        inst.current_outbuf_count = 4
         class Lock(DummyLock):
             def wait(self):
-                inst.outbufs[0].prune()
-                inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
+                inst.total_outbufs_len = 0
                 super(Lock, self).wait()
         inst.outbuf_lock = Lock()
         wrote = inst.write_soon(b'xyz')
         self.assertEqual(wrote, 3)
         self.assertEqual(len(inst.outbufs), 2)
-        self.assertTrue(inst.outbufs[0].pruned)
+        self.assertEqual(inst.outbufs[0].get(), b'')
         self.assertEqual(inst.outbufs[1].get(), b'xyz')
         self.assertTrue(inst.outbuf_lock.waited)
 
@@ -752,10 +761,6 @@ class DummyBuffer(object):
 
     def skip(self, num, x):
         self.skipped = num
-
-    def prune(self):
-        self.pruned = True
-        self.data = b''
 
     def __len__(self):
         return len(self.data)

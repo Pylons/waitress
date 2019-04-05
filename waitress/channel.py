@@ -222,7 +222,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         while True:
             outbuf = self.outbufs[0]
             # use outbuf.__len__ rather than len(outbuf) FBO of not getting
-             # OverflowError on 32-bit Python
+            # OverflowError on 32-bit Python
             outbuflen = outbuf.__len__()
             while outbuflen > 0:
                 chunk = outbuf.get(self.sendbuf_len)
@@ -303,7 +303,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             # the async mainloop might be popping data off outbuf; we can
             # block here waiting for it because we're in a task thread
             with self.outbuf_lock:
-                overflowed = self._flush_outbufs_below_high_watermark()
+                self._flush_outbufs_below_high_watermark()
                 if not self.connected:
                     raise ClientDisconnected
                 if data.__class__ is ReadOnlyFileBasedBuffer:
@@ -313,12 +313,9 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.outbufs.append(nextbuf)
                     self.current_outbuf_count = 0
                 else:
-                    # if we overflowed then start a new buffer to ensure
-                    # the original eventually gets pruned otherwise it may
-                    # grow unbounded
-                    if overflowed or (
-                        self.current_outbuf_count > self.adj.outbuf_high_watermark
-                    ):
+                    # if we overflowed then start a new buffer to ensure avoid
+                    # this buffer growing unbounded
+                    if self.current_outbuf_count > self.adj.outbuf_high_watermark:
                         nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
                         self.outbufs.append(nextbuf)
                         self.current_outbuf_count = 0
@@ -334,16 +331,14 @@ class HTTPChannel(wasyncore.dispatcher, object):
         return 0
 
     def _flush_outbufs_below_high_watermark(self):
-        overflowed = self.total_outbufs_len > self.adj.outbuf_high_watermark
         # check first to avoid locking if possible
-        if overflowed:
+        if self.total_outbufs_len > self.adj.outbuf_high_watermark:
             with self.outbuf_lock:
                 while (
                     self.connected and
                     self.total_outbufs_len > self.adj.outbuf_high_watermark
                 ):
                     self.outbuf_lock.wait()
-        return overflowed
 
     def service(self):
         """Execute all pending requests """
