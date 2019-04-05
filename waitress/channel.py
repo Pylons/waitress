@@ -53,6 +53,8 @@ class HTTPChannel(wasyncore.dispatcher, object):
     close_when_flushed = False   # set to True to close the socket when flushed
     requests = ()                # currently pending requests
     sent_continue = False        # used as a latch after sending 100 continue
+    total_outbufs_len = 0        # total bytes ready to send
+    current_outbuf_count = 0     # total bytes written to current outbuf
 
     #
     # ASYNCHRONOUS METHODS (including __init__)
@@ -69,7 +71,6 @@ class HTTPChannel(wasyncore.dispatcher, object):
         self.server = server
         self.adj = adj
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
-        self.total_outbufs_len = 0
         self.creation_time = self.last_activity = time.time()
         self.sendbuf_len = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
 
@@ -122,7 +123,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 if self.adj.log_socket_errors:
                     self.logger.exception('Socket error')
                 self.will_close = True
-            except:
+            except Exception:
                 self.logger.exception('Unexpected exception when flushing')
                 self.will_close = True
 
@@ -177,6 +178,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     # lock the outbuf to append to it.
                     outbuf_payload = b'HTTP/1.1 100 Continue\r\n\r\n'
                     self.outbufs[-1].append(outbuf_payload)
+                    self.current_outbuf_count += len(outbuf_payload)
                     self.total_outbufs_len += len(outbuf_payload)
                     self.sent_continue = True
                     self._flush_some()
@@ -222,21 +224,6 @@ class HTTPChannel(wasyncore.dispatcher, object):
             # use outbuf.__len__ rather than len(outbuf) FBO of not getting
             # OverflowError on Python 2
             outbuflen = outbuf.__len__()
-            if outbuflen <= 0:
-                # self.outbufs[-1] must always be a writable outbuf
-                if len(self.outbufs) > 1:
-                    toclose = self.outbufs.pop(0)
-                    try:
-                        toclose.close()
-                    except:
-                        self.logger.exception(
-                            'Unexpected error when closing an outbuf')
-                    continue # pragma: no cover (coverage bug, it is hit)
-                else:
-                    if hasattr(outbuf, 'prune'):
-                        outbuf.prune()
-                    dobreak = True
-
             while outbuflen > 0:
                 chunk = outbuf.get(self.sendbuf_len)
                 num_sent = self.send(chunk)
@@ -246,8 +233,21 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     sent += num_sent
                     self.total_outbufs_len -= num_sent
                 else:
+                    # failed to write anything, break out entirely
                     dobreak = True
                     break
+            else:
+                # self.outbufs[-1] must always be a writable outbuf
+                if len(self.outbufs) > 1:
+                    toclose = self.outbufs.pop(0)
+                    try:
+                        toclose.close()
+                    except Exception:
+                        self.logger.exception(
+                            'Unexpected error when closing an outbuf')
+                else:
+                    # caught up, done flushing for now
+                    dobreak = True
 
             if dobreak:
                 break
@@ -263,7 +263,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             for outbuf in self.outbufs:
                 try:
                     outbuf.close()
-                except:
+                except Exception:
                     self.logger.exception(
                         'Unknown exception while trying to close outbuf')
             self.total_outbufs_len = 0
@@ -311,15 +311,20 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.outbufs.append(data)
                     nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
                     self.outbufs.append(nextbuf)
+                    self.current_outbuf_count = 0
                 else:
                     # if we overflowed then start a new buffer to ensure
                     # the original eventually gets pruned otherwise it may
                     # grow unbounded
-                    if overflowed:
+                    if overflowed or (
+                        self.current_outbuf_count > self.adj.outbuf_high_watermark
+                    ):
                         nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
                         self.outbufs.append(nextbuf)
+                        self.current_outbuf_count = 0
                     self.outbufs[-1].append(data)
                 num_bytes = len(data)
+                self.current_outbuf_count += num_bytes
                 self.total_outbufs_len += num_bytes
             # XXX We might eventually need to pull the trigger here (to
             # instruct select to stop blocking), but it slows things down so
@@ -355,7 +360,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.logger.info('Client disconnected while serving %s' %
                                      task.request.path)
                     task.close_on_finish = True
-                except:
+                except Exception:
                     self.logger.exception('Exception while serving %s' %
                                           task.request.path)
                     if not task.wrote_header:
