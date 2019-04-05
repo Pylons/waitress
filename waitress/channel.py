@@ -222,7 +222,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         while True:
             outbuf = self.outbufs[0]
             # use outbuf.__len__ rather than len(outbuf) FBO of not getting
-            # OverflowError on Python 2
+             # OverflowError on 32-bit Python
             outbuflen = outbuf.__len__()
             while outbuflen > 0:
                 chunk = outbuf.get(self.sendbuf_len)
