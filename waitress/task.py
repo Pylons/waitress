@@ -51,14 +51,16 @@ class ThreadedTaskDispatcher(object):
     """A Task Dispatcher that creates a thread for each task.
     """
     stop_count = 0  # Number of threads that will stop soon.
-    active = 0  # Number of currently active threads
+    active_count = 0  # Number of currently active threads
     logger = logger
     queue_logger = queue_logger
 
     def __init__(self):
         self.threads = set()
         self.queue = deque()
-        self.queue_lock = threading.Condition(threading.Lock())
+        self.lock = threading.Lock()
+        self.queue_cv = threading.Condition(self.lock)
+        self.thread_exit_cv = threading.Condition(self.lock)
 
     def start_new_thread(self, target, args):
         t = threading.Thread(target=target, name='waitress', args=args)
@@ -66,41 +68,31 @@ class ThreadedTaskDispatcher(object):
         t.start()
 
     def handler_thread(self, thread_no):
-        try:
-            # Upon starting this thread, mark ourselves as active
-            with self.queue_lock:
-                self.active += 1
+        while True:
+            with self.lock:
+                while not self.queue and self.stop_count == 0:
+                    # Mark ourselves as idle before waiting to be
+                    # woken up, then we will once again be active
+                    self.active_count -= 1
+                    self.queue_cv.wait()
+                    self.active_count += 1
 
-            while True:
-                with self.queue_lock:
-                    while not self.queue and thread_no in self.threads:
-                        # Mark ourselves as not active before waiting to be
-                        # woken up, then we will once again be active
-                        self.active -= 1
-                        self.queue_lock.wait()
-                        self.active += 1
+                if self.stop_count > 0:
+                    self.active_count -= 1
+                    self.stop_count -= 1
+                    self.threads.discard(thread_no)
+                    self.thread_exit_cv.notify()
+                    break
 
-                    if thread_no not in self.threads:
-                        break
-
-                    task = self.queue.popleft()
-
-                    if task is None:
-                        # Special value: kill this thread.
-                        break
-                try:
-                    task.service()
-                except Exception:
-                    self.logger.exception(
-                        'Exception when servicing %r', task)
-        finally:
-            with self.queue_lock:
-                self.active -= 1
-                self.stop_count -= 1
-                self.threads.discard(thread_no)
+                task = self.queue.popleft()
+            try:
+                task.service()
+            except BaseException:
+                self.logger.exception(
+                    'Exception when servicing %r', task)
 
     def set_thread_count(self, count):
-        with self.queue_lock:
+        with self.lock:
             threads = self.threads
             thread_no = 0
             running = len(threads) - self.stop_count
@@ -111,48 +103,47 @@ class ThreadedTaskDispatcher(object):
                 threads.add(thread_no)
                 running += 1
                 self.start_new_thread(self.handler_thread, (thread_no,))
+                self.active_count += 1
                 thread_no = thread_no + 1
             if running > count:
                 # Stop threads.
-                to_stop = running - count
-                self.stop_count += to_stop
-                for n in range(to_stop):
-                    self.queue.append(None)
-                    running -= 1
-                self.queue_lock.notify(to_stop)
+                self.stop_count += running - count
+                self.queue_cv.notify_all()
 
     def add_task(self, task):
-        with self.queue_lock:
+        with self.lock:
             self.queue.append(task)
-            self.queue_lock.notify()
-            if self.active >= len(self.threads):
+            self.queue_cv.notify()
+            queue_size = len(self.queue)
+            idle_threads = (
+                len(self.threads) - self.stop_count - self.active_count)
+            if queue_size > idle_threads:
                 self.queue_logger.warning(
-                    "Task queue depth is %d",
-                    len(self.queue))
+                    "Task queue depth is %d", queue_size - idle_threads)
 
     def shutdown(self, cancel_pending=True, timeout=5):
         self.set_thread_count(0)
         # Ensure the threads shut down.
         threads = self.threads
         expiration = time.time() + timeout
-        while threads:
-            if time.time() >= expiration:
-                self.logger.warning(
-                    "%d thread(s) still running" %
-                    len(threads))
-                break
-            time.sleep(0.1)
-        if cancel_pending:
-            # Cancel remaining tasks.
-            with self.queue_lock:
+        with self.lock:
+            while threads:
+                if time.time() >= expiration:
+                    self.logger.warning(
+                        "%d thread(s) still running", len(threads))
+                    break
+                self.thread_exit_cv.wait(0.1)
+            if cancel_pending:
+                # Cancel remaining tasks.
                 queue = self.queue
+                if len(queue) > 0:
+                    self.logger.warning(
+                        "Canceling %d pending task(s)", len(queue))
                 while queue:
                     task = queue.popleft()
-                    if task is not None:
-                        task.cancel()
-                threads.clear()
-                self.queue_lock.notify_all()
-            return True
+                    task.cancel()
+                self.queue_cv.notify_all()
+                return True
         return False
 
 class Task(object):
