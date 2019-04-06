@@ -112,6 +112,7 @@ class Adjustments(object):
         ('recv_bytes', int),
         ('send_bytes', int),
         ('outbuf_overflow', int),
+        ('outbuf_high_watermark', int),
         ('inbuf_overflow', int),
         ('connection_limit', int),
         ('cleanup_interval', int),
@@ -203,6 +204,10 @@ class Adjustments(object):
     # outbuf_overflow, which is measured in bytes. The default is 1MB.  This
     # is conservative.
     outbuf_overflow = 1048576
+
+    # The app_iter will pause when pending output is larger than this value
+    # in bytes.
+    outbuf_high_watermark = 16777216
 
     # A tempfile should be created if the pending input is larger than
     # inbuf_overflow, which is measured in bytes. The default is 512K.  This

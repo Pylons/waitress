@@ -200,6 +200,13 @@ outbuf_overflow
 
     Default: ``1048576`` (1MB)
 
+outbuf_high_watermark
+    The app_iter will pause when pending output is larger than this value
+    and will resume once enough data is written to the socket to fall below
+    this threshold.
+
+    Default: ``16777216`` (16MB)
+
 inbuf_overflow
     A tempfile should be created if the pending input is larger than
     inbuf_overflow, which is measured in bytes. The default is conservative.

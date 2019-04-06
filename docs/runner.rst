@@ -152,6 +152,11 @@ Tuning options:
     A temporary file should be created if the pending output is larger than
     this. Default is 1048576 (1MB).
 
+``--outbuf-high-watermark=INT``
+    The app_iter will pause when pending output is larger than this value
+    and will resume once enough data is written to the socket to fall below
+    this threshold. Default is 16777216 (16MB).
+
 ``--inbuf-overflow=INT``
     A temporary file should be created if the pending input is larger than
     this. Default is 524288 (512KB).
