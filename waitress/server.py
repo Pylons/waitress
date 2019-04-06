@@ -349,7 +349,7 @@ class TcpWSGIServer(BaseWSGIServer):
                 self.socket.getsockname(),
                 self.socketmod.NI_NUMERICSERV
             )
-        except: # pragma: no cover
+        except Exception: # pragma: no cover
             # This only happens on Linux because a DNS issue is considered a
             # temporary failure that will raise (even when NI_NAMEREQD is not
             # set). Instead we try again, but this time we just ask for the

@@ -404,7 +404,7 @@ class WSGITask(Task):
 
             self.complete = True
 
-            if not status.__class__ is str:
+            if status.__class__ is not str:
                 raise AssertionError('status %s is not a string' % status)
             if '\n' in status or '\r' in status:
                 raise ValueError("carriage return/line "
@@ -414,11 +414,11 @@ class WSGITask(Task):
 
             # Prepare the headers for output
             for k, v in headers:
-                if not k.__class__ is str:
+                if k.__class__ is not str:
                     raise AssertionError(
                         'Header name %r is not a string in %r' % (k, (k, v))
                     )
-                if not v.__class__ is str:
+                if v.__class__ is not str:
                     raise AssertionError(
                         'Header value %r is not a string in %r' % (v, (k, v))
                     )
