@@ -313,9 +313,9 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.outbufs.append(nextbuf)
                     self.current_outbuf_count = 0
                 else:
-                    # if we overflowed then start a new buffer to ensure avoid
-                    # this buffer growing unbounded
                     if self.current_outbuf_count > self.adj.outbuf_high_watermark:
+                        # rotate to a new buffer if the current buffer has hit
+                        # the watermark to avoid it growing unbounded
                         nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
                         self.outbufs.append(nextbuf)
                         self.current_outbuf_count = 0
