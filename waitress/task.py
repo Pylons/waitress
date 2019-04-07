@@ -451,11 +451,11 @@ class WSGITask(Task):
             if app_iter.__class__ is ReadOnlyFileBasedBuffer:
                 cl = self.content_length
                 size = app_iter.prepare(cl)
-                if size:
-                    if cl != size:
-                        if cl is not None:
-                            self.remove_content_length_header()
-                        self.content_length = size
+                if size > 0 and cl != size:
+                    if cl is not None:
+                        self.remove_content_length_header()
+                    self.content_length = size
+                if size != 0:
                     self.write(b'') # generate headers
                     # if the write_soon below succeeds then the channel will
                     # take over closing the underlying file via the channel's

@@ -18,6 +18,7 @@ import time
 import traceback
 
 from waitress.buffers import (
+    BytesIOBasedBuffer,
     OverflowableBuffer,
     ReadOnlyFileBasedBuffer,
 )
@@ -220,28 +221,38 @@ class HTTPChannel(wasyncore.dispatcher, object):
 
         sent = 0
         dobreak = False
+        outbufs = self.outbufs
 
         while True:
-            outbuf = self.outbufs[0]
-            # use outbuf.__len__ rather than len(outbuf) FBO of not getting
-            # OverflowError on 32-bit Python
-            outbuflen = outbuf.__len__()
-            while outbuflen > 0:
-                chunk = outbuf.get(self.sendbuf_len)
+            outbuf = outbufs[0]
+            # remaining might be -1 if the ROFBB is not seekable
+            # so we perform a read and assume that the ROFBB will update
+            # remaining when it knows it's empty
+            while outbuf.remaining != 0:
+                chunk = outbuf.read(self.sendbuf_len)
+                num_tosend = len(chunk)
                 num_sent = self.send(chunk)
-                if num_sent:
-                    outbuf.skip(num_sent, True)
-                    outbuflen -= num_sent
-                    sent += num_sent
-                    self.total_outbufs_len -= num_sent
-                else:
+                # handle_close may have been called by send() so be careful
+                # about mutating state below if num_sent is 0
+                sent += num_sent
+                if num_sent < num_tosend and self.connected:
+                    # failed to write all of the data, so either put the
+                    # remaining amount into a new buffer to be used on the
+                    # next write or rollback the pointer to only skip what was
+                    # successfully written
+                    if outbuf.seekable:
+                        outbuf.rollback(num_tosend - num_sent)
+                    else:
+                        outbuf = BytesIOBasedBuffer(chunk[num_sent:])
+                        outbufs.appendleft(outbuf)
+                if not num_sent:
                     # failed to write anything, break out entirely
                     dobreak = True
                     break
             else:
                 # self.outbufs[-1] must always be a writable outbuf
-                if len(self.outbufs) > 1:
-                    toclose = self.outbufs.popleft()
+                if len(outbufs) > 1:
+                    toclose = outbufs.popleft()
                     try:
                         toclose.close()
                     except Exception:
@@ -254,6 +265,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             if dobreak:
                 break
 
+        self.total_outbufs_len = sum(o.remaining for o in outbufs)
         if sent:
             self.last_activity = time.time()
             return True
@@ -262,17 +274,19 @@ class HTTPChannel(wasyncore.dispatcher, object):
 
     def handle_close(self):
         with self.outbuf_lock:
-            while self.outbufs:
-                outbuf = self.outbufs.popleft()
+            outbufs = self.outbufs
+            while outbufs:
+                toclose = outbufs.popleft()
                 try:
-                    outbuf.close()
+                    toclose.close()
                 except Exception:
                     self.logger.exception(
                         'Unknown exception while trying to close outbuf')
             self.total_outbufs_len = 0
+            self.current_outbuf_count = 0
             self.connected = False
             self.outbuf_lock.notify()
-        wasyncore.dispatcher.close(self)
+        self.close()
 
     def add_channel(self, map=None):
         """See wasyncore.dispatcher
@@ -309,6 +323,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 self._flush_outbufs_below_high_watermark()
                 if not self.connected:
                     raise ClientDisconnected
+                num_bytes = len(data)
                 if data.__class__ is ReadOnlyFileBasedBuffer:
                     # they used wsgi.file_wrapper
                     self.outbufs.append(data)
@@ -323,8 +338,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                         self.outbufs.append(nextbuf)
                         self.current_outbuf_count = 0
                     self.outbufs[-1].append(data)
-                num_bytes = len(data)
-                self.current_outbuf_count += num_bytes
+                    self.current_outbuf_count += num_bytes
                 self.total_outbufs_len += num_bytes
             # XXX We might eventually need to pull the trigger here (to
             # instruct select to stop blocking), but it slows things down so

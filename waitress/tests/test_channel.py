@@ -354,7 +354,7 @@ class TestHTTPChannel(unittest.TestCase):
                 self.length = MAXINT + 1
             def __len__(self):
                 return self.length
-            def get(self, numbytes):
+            def get(self, numbytes, *args):
                 self.length = 0
                 return b'123'
             def skip(self, *args): pass
@@ -754,15 +754,14 @@ class DummyBuffer(object):
         self.data = data
         self.toraise = toraise
 
-    def get(self, *arg):
+    def get(self, numbytes, skip=False):
         if self.toraise:
             raise self.toraise
-        data = self.data
-        self.data = b''
+        data = self.data[:numbytes]
+        if skip:
+            self.data = data[numbytes:]
+            self.skipped = len(data)
         return data
-
-    def skip(self, num, x):
-        self.skipped = num
 
     def __len__(self):
         return len(self.data)

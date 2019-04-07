@@ -14,6 +14,7 @@
 """Buffers
 """
 from io import BytesIO
+from tempfile import TemporaryFile
 
 # copy_bytes controls the size of temp. strings for shuffling data around.
 COPY_BYTES = 1 << 18 # 256K
@@ -22,152 +23,99 @@ COPY_BYTES = 1 << 18 # 256K
 STRBUF_LIMIT = 8192
 
 class FileBasedBuffer(object):
-
-    remain = 0
-
-    def __init__(self, file, from_buffer=None):
-        self.file = file
-        if from_buffer is not None:
-            from_file = from_buffer.getfile()
-            read_pos = from_file.tell()
-            from_file.seek(0)
-            while True:
-                data = from_file.read(COPY_BYTES)
-                if not data:
-                    break
-                file.write(data)
-            self.remain = int(file.tell() - read_pos)
-            from_file.seek(read_pos)
-            file.seek(read_pos)
-
-    def __len__(self):
-        return self.remain
-
-    def __nonzero__(self):
-        return True
-
-    __bool__ = __nonzero__ # py3
+    seekable = True
+    remaining = 0  # -1 would indicate an infinite stream
 
     def append(self, s):
+        assert self.seekable
+        # unsupported for remaining == -1
         file = self.file
         read_pos = file.tell()
         file.seek(0, 2)
         file.write(s)
         file.seek(read_pos)
-        self.remain = self.remain + len(s)
+        self.remaining += len(s)
 
-    def get(self, numbytes=-1, skip=False):
+    def read(self, numbytes=-1):
         file = self.file
-        if not skip:
-            read_pos = file.tell()
         if numbytes < 0:
             # Read all
             res = file.read()
         else:
             res = file.read(numbytes)
-        if skip:
-            self.remain -= len(res)
+        numres = len(res)
+        if self.remaining == -1:
+            # keep remaining at -1 until EOF
+            if not numres and numbytes != 0:
+                self.remaining = 0
         else:
-            file.seek(read_pos)
+            self.remaining -= numres
         return res
 
-    def skip(self, numbytes, allow_prune=0):
-        if self.remain < numbytes:
-            raise ValueError("Can't skip %d bytes in buffer of %d bytes" % (
-                numbytes, self.remain)
-            )
-        self.file.seek(numbytes, 1)
-        self.remain = self.remain - numbytes
-
-    def newfile(self):
-        raise NotImplementedError()
-
-    def prune(self):
-        file = self.file
-        if self.remain == 0:
-            read_pos = file.tell()
-            file.seek(0, 2)
-            sz = file.tell()
-            file.seek(read_pos)
-            if sz == 0:
-                # Nothing to prune.
-                return
-        nf = self.newfile()
-        while True:
-            data = file.read(COPY_BYTES)
-            if not data:
-                break
-            nf.write(data)
-        self.file = nf
-
-    def getfile(self):
-        return self.file
+    def rollback(self, numbytes):
+        assert self.seekable
+        # unsupported for remaining == -1
+        self.file.seek(-numbytes, 1)
+        self.remaining += numbytes
 
     def close(self):
+        self.remaining = 0
         if hasattr(self.file, 'close'):
             self.file.close()
-        self.remain = 0
 
 class TempfileBasedBuffer(FileBasedBuffer):
 
     def __init__(self, from_buffer=None):
-        FileBasedBuffer.__init__(self, self.newfile(), from_buffer)
-
-    def newfile(self):
-        from tempfile import TemporaryFile
-        return TemporaryFile('w+b')
+        file = TemporaryFile('w+b')
+        if from_buffer is not None:
+            while True:
+                data = from_buffer.read(COPY_BYTES)
+                if not data:
+                    break
+                file.write(data)
+                self.remaining += len(data)
+            file.seek(0)
+        self.file = file
 
 class BytesIOBasedBuffer(FileBasedBuffer):
 
-    def __init__(self, from_buffer=None):
-        if from_buffer is not None:
-            FileBasedBuffer.__init__(self, BytesIO(), from_buffer)
-        else:
-            # Shortcut. :-)
-            self.file = BytesIO()
+    def __init__(self, value=None):
+        self.file = BytesIO(value)
+        if value is not None:
+            self.remaining = len(value)
 
-    def newfile(self):
-        return BytesIO()
+def _is_seekable(fp):
+    if hasattr(fp, 'seekable'):
+        return fp.seekable()
+    return hasattr(fp, 'seek') and hasattr(fp, 'tell')
 
 class ReadOnlyFileBasedBuffer(FileBasedBuffer):
     # used as wsgi.file_wrapper
+    remaining = -1
 
     def __init__(self, file, block_size=32768):
         self.file = file
         self.block_size = block_size # for __iter__
+        self.seekable = _is_seekable(file)
 
     def prepare(self, size=None):
-        if hasattr(self.file, 'seek') and hasattr(self.file, 'tell'):
+        if self.seekable:
             start_pos = self.file.tell()
             self.file.seek(0, 2)
             end_pos = self.file.tell()
             self.file.seek(start_pos)
             fsize = end_pos - start_pos
             if size is None:
-                self.remain = fsize
+                self.remaining = fsize
             else:
-                self.remain = min(fsize, size)
-        return self.remain
-
-    def get(self, numbytes=-1, skip=False):
-        # never read more than self.remain (it can be user-specified)
-        if numbytes == -1 or numbytes > self.remain:
-            numbytes = self.remain
-        file = self.file
-        if not skip:
-            read_pos = file.tell()
-        res = file.read(numbytes)
-        if skip:
-            self.remain -= len(res)
-        else:
-            file.seek(read_pos)
-        return res
+                self.remaining = min(fsize, size)
+        return self.remaining
 
     def __iter__(self): # called by task if self.filelike has no seek/tell
         return self
 
     def next(self):
-        val = self.file.read(self.block_size)
+        val = self.read(self.block_size)
         if not val:
             raise StopIteration
         return val
@@ -187,112 +135,61 @@ class OverflowableBuffer(object):
     The first two stages are fastest for simple transfers.
     """
 
+    seekable = True
+    remaining = 0
+
     overflowed = False
     buf = None
     strbuf = b'' # Bytes-based buffer.
 
     def __init__(self, overflow):
-        # overflow is the maximum to be stored in a StringIO buffer.
+        # overflow is the maximum to be stored in a BytesIO buffer.
         self.overflow = overflow
-
-    def __len__(self):
-        buf = self.buf
-        if buf is not None:
-            # use buf.__len__ rather than len(buf) FBO of not getting
-            # OverflowError on Python 2
-            return buf.__len__()
-        else:
-            return self.strbuf.__len__()
-
-    def __nonzero__(self):
-        # use self.__len__ rather than len(self) FBO of not getting
-        # OverflowError on Python 2
-        return self.__len__() > 0
-
-    __bool__ = __nonzero__ # py3
-
-    def _create_buffer(self):
-        strbuf = self.strbuf
-        if len(strbuf) >= self.overflow:
-            self._set_large_buffer()
-        else:
-            self._set_small_buffer()
-        buf = self.buf
-        if strbuf:
-            buf.append(self.strbuf)
-            self.strbuf = b''
-        return buf
-
-    def _set_small_buffer(self):
-        self.buf = BytesIOBasedBuffer(self.buf)
-        self.overflowed = False
-
-    def _set_large_buffer(self):
-        self.buf = TempfileBasedBuffer(self.buf)
-        self.overflowed = True
 
     def append(self, s):
         buf = self.buf
         if buf is None:
             strbuf = self.strbuf
             if len(strbuf) + len(s) < STRBUF_LIMIT:
-                self.strbuf = strbuf + s
+                self.strbuf += s
+                self.remaining += len(s)
                 return
-            buf = self._create_buffer()
-        buf.append(s)
-        # use buf.__len__ rather than len(buf) FBO of not getting
-        # OverflowError on Python 2
-        sz = buf.__len__()
-        if not self.overflowed:
-            if sz >= self.overflow:
-                self._set_large_buffer()
-
-    def get(self, numbytes=-1, skip=False):
-        buf = self.buf
-        if buf is None:
-            strbuf = self.strbuf
-            if not skip:
-                return strbuf
-            buf = self._create_buffer()
-        return buf.get(numbytes, skip)
-
-    def skip(self, numbytes, allow_prune=False):
-        buf = self.buf
-        if buf is None:
-            if allow_prune and numbytes == len(self.strbuf):
-                # We could slice instead of converting to
-                # a buffer, but that would eat up memory in
-                # large transfers.
+            else:
+                buf = BytesIOBasedBuffer(self.strbuf + s)
+                self.buf = buf
                 self.strbuf = b''
-                return
-            buf = self._create_buffer()
-        buf.skip(numbytes, allow_prune)
+        else:
+            buf.append(s)
+        remaining = buf.remaining
+        self.remaining = remaining
+        if not self.overflowed and remaining > self.overflow:
+            self.buf = TempfileBasedBuffer(buf)
+            self.overflowed = True
 
-    def prune(self):
-        """
-        A potentially expensive operation that removes all data
-        already retrieved from the buffer.
-        """
+    def read(self, numbytes=-1):
+        if self.buf is None:
+            if self.remaining < numbytes or numbytes == -1:
+                self.remaining = 0
+                return self.strbuf
+            self.buf = BytesIOBasedBuffer(self.strbuf)
+        buf = self.buf
+        data = buf.read(numbytes)
+        self.remaining = buf.remaining
+        return data
+
+    def rollback(self, numbytes):
+        # never called unless read returns something indicating we have a buf
         buf = self.buf
         if buf is None:
-            self.strbuf = b''
+            self.strbuf = self.strbuf[numbytes:]
+            self.remaining = len(self.strbuf)
             return
-        buf.prune()
-        if self.overflowed:
-            # use buf.__len__ rather than len(buf) FBO of not getting
-            # OverflowError on Python 2
-            sz = buf.__len__()
-            if sz < self.overflow:
-                # Revert to a faster buffer.
-                self._set_small_buffer()
-
-    def getfile(self):
-        buf = self.buf
-        if buf is None:
-            buf = self._create_buffer()
-        return buf.getfile()
+        buf.rollback(numbytes)
+        self.remaining = buf.remaining
 
     def close(self):
+        self.remaining = 0
+        self.strbuf = b''
         buf = self.buf
         if buf is not None:
             buf.close()
