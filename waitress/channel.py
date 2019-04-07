@@ -11,6 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
+from collections import deque
 import socket
 import threading
 import time
@@ -70,7 +71,8 @@ class HTTPChannel(wasyncore.dispatcher, object):
             ):
         self.server = server
         self.adj = adj
-        self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
+        self.outbufs = deque()
+        self.outbufs.append(OverflowableBuffer(adj.outbuf_overflow))
         self.creation_time = self.last_activity = time.time()
         self.sendbuf_len = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
 
@@ -239,7 +241,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             else:
                 # self.outbufs[-1] must always be a writable outbuf
                 if len(self.outbufs) > 1:
-                    toclose = self.outbufs.pop(0)
+                    toclose = self.outbufs.popleft()
                     try:
                         toclose.close()
                     except Exception:
@@ -260,7 +262,8 @@ class HTTPChannel(wasyncore.dispatcher, object):
 
     def handle_close(self):
         with self.outbuf_lock:
-            for outbuf in self.outbufs:
+            while self.outbufs:
+                outbuf = self.outbufs.popleft()
                 try:
                     outbuf.close()
                 except Exception:
