@@ -75,6 +75,7 @@ class SubprocessTests(object):
         self.sock.close()
         # This give us one FD back ...
         self.queue.close()
+        self.proc.join()
 
     def assertline(self, line, status, reason, version):
         v, s, r = (x.strip() for x in line.split(None, 2))
@@ -125,6 +126,7 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
         for proc in procs:
             if proc.returncode is not None: # pragma: no cover
                 proc.terminate()
+            proc.wait()
         # the notsleepy response should always be first returned (it sleeps
         # for 2 seconds, then returns; the notsleepy response should be
         # processed in the meantime)
@@ -193,16 +195,20 @@ class EchoTests(object):
         self.assertEqual(response_body, b'')
 
     def test_multiple_requests_with_body(self):
+        orig_sock = self.sock
         for x in range(3):
             self.sock = self.create_socket()
             self.test_send_with_body()
             self.sock.close()
+        self.sock = orig_sock
 
     def test_multiple_requests_without_body(self):
+        orig_sock = self.sock
         for x in range(3):
             self.sock = self.create_socket()
             self.test_send_empty_body()
             self.sock.close()
+        self.sock = orig_sock
 
     def test_without_crlf(self):
         data = "Echo\nthis\r\nplease"
@@ -252,6 +258,8 @@ class EchoTests(object):
             responses.append(response)
         for response in responses:
             response.read()
+        for h in conns:
+            h.close()
 
     def test_chunking_request_without_content(self):
         header = tobytes(

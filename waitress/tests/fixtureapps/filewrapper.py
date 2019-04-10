@@ -40,7 +40,8 @@ def app(environ, start_response): # pragma: no cover
                 ('Content-Type', 'image/jpeg'),
             ]
     else:
-        data = open(fn, 'rb').read()
+        with open(fn, 'rb') as fp:
+            data = fp.read()
         cl = len(data)
         f = KindaFilelike(data)
         if path_info == '/notfilelike':
