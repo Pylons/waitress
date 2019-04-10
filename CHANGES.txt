@@ -54,6 +54,10 @@ Bugfixes
   bounds. These buffers now properly rotate and release their data.
   See https://github.com/Pylons/waitress/pull/242
 
+- Fix a bug in which non-seekable subclasses of ``io.IOBase`` would trigger
+  an exception when passed to the ``wsgi.file_wrapper`` callback.
+  See https://github.com/Pylons/waitress/pull/249
+
 1.2.1 (2019-01-25)
 ------------------
 
