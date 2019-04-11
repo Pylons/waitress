@@ -1,3 +1,123 @@
+1.2.1 (2019-01-25)
+------------------
+
+Bugfixes
+~~~~~~~~
+
+- When given an IPv6 address in ``X-Forwarded-For`` or ``Forwarded for=``
+  waitress was placing the IP address in ``REMOTE_ADDR`` with brackets:
+  ``[2001:db8::0]``, this does not match the requirements in the CGI spec which
+  ``REMOTE_ADDR`` was lifted from. Waitress will now place the bare IPv6
+  address in ``REMOTE_ADDR``: ``2001:db8::0``. See
+  https://github.com/Pylons/waitress/pull/232 and
+  https://github.com/Pylons/waitress/issues/230
+
+1.2.0 (2019-01-15)
+------------------
+
+No changes since the last beta release. Enjoy Waitress!
+
+1.2.0b3 (2019-01-07)
+--------------------
+
+Bugfixes
+~~~~~~~~
+
+- Modified ``clear_untrusted_proxy_headers`` to be usable without a
+  ``trusted_proxy``.
+  https://github.com/Pylons/waitress/pull/228
+
+- Modified ``trusted_proxy_count`` to error when used without a
+  ``trusted_proxy``.
+  https://github.com/Pylons/waitress/pull/228
+
+1.2.0b2 (2019-02-02)
+--------------------
+
+Bugfixes
+~~~~~~~~
+
+- Fixed logic to no longer warn on writes where the output is required to have
+  a body but there may not be any data to be written. Solves issue posted on
+  the Pylons Project mailing list with 1.2.0b1.
+
+1.2.0b1 (2018-12-31)
+--------------------
+
+Happy New Year!
+
+Features
+~~~~~~~~
+
+- Setting the ``trusted_proxy`` setting to ``'*'`` (wildcard) will allow all
+  upstreams to be considered trusted proxies, thereby allowing services behind
+  Cloudflare/ELBs to function correctly whereby there may not be a singular IP
+  address that requests are received from.
+
+  Using this setting is potentially dangerous if your server is also available
+  from anywhere on the internet, and further protections should be used to lock
+  down access to Waitress. See https://github.com/Pylons/waitress/pull/224
+
+- Waitress has increased its support of the X-Forwarded-* headers and includes
+  Forwarded (RFC7239) support. This may be used to allow proxy servers to
+  influence the WSGI environment. See
+  https://github.com/Pylons/waitress/pull/209
+
+  This also provides a new security feature when using Waitress behind a proxy
+  in that it is possible to remove untrusted proxy headers thereby making sure
+  that downstream WSGI applications don't accidentally use those proxy headers
+  to make security decisions.
+
+  The documentation has more information, see the following new arguments:
+
+  - trusted_proxy_count
+  - trusted_proxy_headers
+  - clear_untrusted_proxy_headers
+  - log_untrusted_proxy_headers (useful for debugging)
+
+  Be aware that the defaults for these are currently backwards compatible with
+  older versions of Waitress, this will change in a future release of waitress.
+  If you expect to need this behaviour please explicitly set these variables in
+  your configuration, or pin this version of waitress.
+
+  Documentation:
+  https://docs.pylonsproject.org/projects/waitress/en/latest/reverse-proxy.html
+
+- Waitress can now accept a list of sockets that are already pre-bound rather
+  than creating its own to allow for socket activation. Support for init
+  systems/other systems that create said activated sockets is not included. See
+  https://github.com/Pylons/waitress/pull/215
+
+- Server header can be omitted by specifying ``ident=None`` or ``ident=''``.
+  See https://github.com/Pylons/waitress/pull/187
+
+Bugfixes
+~~~~~~~~
+
+- Waitress will no longer send Transfer-Encoding or Content-Length for 1xx,
+  204, or 304 responses, and will completely ignore any message body sent by
+  the WSGI application, making sure to follow the HTTP standard. See
+  https://github.com/Pylons/waitress/pull/166,
+  https://github.com/Pylons/waitress/issues/165,
+  https://github.com/Pylons/waitress/issues/152, and
+  https://github.com/Pylons/waitress/pull/202
+
+Compatibility
+~~~~~~~~~~~~~
+
+- Waitress has now "vendored" asyncore into itself as ``waitress.wasyncore``.
+  This is to cope with the eventuality that asyncore will be removed from
+  the Python standard library in 3.8 or so.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Bring in documentation of paste.translogger from Pyramid. Reorganize and
+  clean up documentation. See
+  https://github.com/Pylons/waitress/pull/205
+  https://github.com/Pylons/waitress/pull/70
+  https://github.com/Pylons/waitress/pull/206
+
 1.1.0 (2017-10-10)
 ------------------
 
