@@ -88,7 +88,11 @@ class HTTPChannel(wasyncore.dispatcher, object):
         # if there's data in the out buffer or we've been instructed to close
         # the channel (possibly by our server maintenance logic), run
         # handle_write
-        return self.total_outbufs_len or self.will_close
+        return (
+            self.total_outbufs_len
+            or self.will_close
+            or self.close_when_flushed
+        )
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
@@ -306,6 +310,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 self._flush_outbufs_below_high_watermark()
                 if not self.connected:
                     raise ClientDisconnected
+                num_bytes = len(data)
                 if data.__class__ is ReadOnlyFileBasedBuffer:
                     # they used wsgi.file_wrapper
                     self.outbufs.append(data)
@@ -320,13 +325,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
                         self.outbufs.append(nextbuf)
                         self.current_outbuf_count = 0
                     self.outbufs[-1].append(data)
-                num_bytes = len(data)
-                self.current_outbuf_count += num_bytes
+                    self.current_outbuf_count += num_bytes
                 self.total_outbufs_len += num_bytes
-            # XXX We might eventually need to pull the trigger here (to
-            # instruct select to stop blocking), but it slows things down so
-            # much that I'll hold off for now; "server push" on otherwise
-            # unbusy systems may suffer.
+                if self.total_outbufs_len >= self.adj.send_bytes:
+                    self.server.pull_trigger()
             return num_bytes
         return 0
 
@@ -338,6 +340,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.connected and
                     self.total_outbufs_len > self.adj.outbuf_high_watermark
                 ):
+                    self.server.pull_trigger()
                     self.outbuf_lock.wait()
 
     def service(self):
