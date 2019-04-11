@@ -1223,6 +1223,24 @@ class FileWrapperTests(object):
             self.assertTrue(b'\377\330\377' in response_body)
             # connection has not been closed
 
+    def test_notfilelike_iobase_http11(self):
+        to_send = "GET /notfilelike_iobase HTTP/1.1\n\n"
+        to_send = tobytes(to_send)
+
+        self.connect()
+
+        for t in range(0, 2):
+            self.sock.send(to_send)
+            fp = self.sock.makefile('rb', 0)
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, '200', 'OK', 'HTTP/1.1')
+            cl = int(headers['content-length'])
+            self.assertEqual(cl, len(response_body))
+            ct = headers['content-type']
+            self.assertEqual(ct, 'image/jpeg')
+            self.assertTrue(b'\377\330\377' in response_body)
+            # connection has not been closed
+
     def test_notfilelike_nocl_http11(self):
         to_send = "GET /notfilelike_nocl HTTP/1.1\n\n"
         to_send = tobytes(to_send)

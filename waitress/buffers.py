@@ -129,6 +129,11 @@ class BytesIOBasedBuffer(FileBasedBuffer):
     def newfile(self):
         return BytesIO()
 
+def _is_seekable(fp):
+    if hasattr(fp, 'seekable'):
+        return fp.seekable()
+    return hasattr(fp, 'seek') and hasattr(fp, 'tell')
+
 class ReadOnlyFileBasedBuffer(FileBasedBuffer):
     # used as wsgi.file_wrapper
 
@@ -137,7 +142,7 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
         self.block_size = block_size # for __iter__
 
     def prepare(self, size=None):
-        if hasattr(self.file, 'seek') and hasattr(self.file, 'tell'):
+        if _is_seekable(self.file):
             start_pos = self.file.tell()
             self.file.seek(0, 2)
             end_pos = self.file.tell()
