@@ -293,7 +293,7 @@ def crack_first_line(line):
         if m.group(3):
             version = m.group(5)
         else:
-            version = None
+            version = b''
         method = m.group(1)
 
         # the request methods that are currently defined are all uppercase:

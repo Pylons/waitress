@@ -309,9 +309,12 @@ class Test_crack_first_line(unittest.TestCase):
         result = self._callFUT(b'GET / bleh')
         self.assertEqual(result, (b'', b'', b''))
 
+        result = self._callFUT(b'GET /info?txtAirPlay&txtRAOP RTSP/1.0')
+        self.assertEqual(result, (b'', b'', b''))
+
     def test_crack_first_line_missing_version(self):
         result = self._callFUT(b'GET /')
-        self.assertEqual(result, (b'GET', b'/', None))
+        self.assertEqual(result, (b'GET', b'/', b''))
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
 
