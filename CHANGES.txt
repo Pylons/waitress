@@ -1,5 +1,5 @@
-1.3.0b0 (2019-04-11)
---------------------
+1.3.0 (2019-04-22)
+------------------
 
 Deprecations
 ~~~~~~~~~~~~
@@ -34,6 +34,11 @@ Features
 
 Bugfixes
 ~~~~~~~~
+
+- Upon receiving a request that does not include HTTP/1.0 or HTTP/1.1 we will
+  no longer set the version to the string value "None". See
+  https://github.com/Pylons/waitress/pull/252 and
+  https://github.com/Pylons/waitress/issues/110
 
 - When a client closes a socket unexpectedly there was potential for memory
   leaks in which data was written to the buffers after they were closed,
