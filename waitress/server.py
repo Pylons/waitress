@@ -139,7 +139,7 @@ class MultiSocketServer(object):
         self.task_dispatcher = dispatcher
 
     def print_listen(self, format_str): # pragma: nocover
-        for l in self.effective_listen:
+        for l in set(self.effective_listen):
             l = list(l)
 
             if ':' in l[0]:
