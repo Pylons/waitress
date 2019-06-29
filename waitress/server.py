@@ -28,6 +28,7 @@ from waitress.compat import (
     IPV6_V6ONLY,
     )
 from . import wasyncore
+from .proxy_headers import proxy_headers_middleware
 
 def create_server(application,
                   map=None,
@@ -178,10 +179,29 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
                  adj=None,         # adjustments
                  sockinfo=None,    # opaque object
                  bind_socket=True,
+                 logger=None,      # test shim
                  **kw
                  ):
         if adj is None:
             adj = Adjustments(**kw)
+
+        if logger is not None:
+            self.logger = logger
+
+        if adj.trusted_proxy or adj.clear_untrusted_proxy_headers:
+            # wrap the application to deal with proxy headers
+            # we wrap it here because webtest subclasses the TcpWSGIServer
+            # directly and thus doesn't run any code that's in create_server
+            application = proxy_headers_middleware(
+                application,
+                trusted_proxy=adj.trusted_proxy,
+                trusted_proxy_count=adj.trusted_proxy_count,
+                trusted_proxy_headers=adj.trusted_proxy_headers,
+                clear_untrusted=adj.clear_untrusted_proxy_headers,
+                log_untrusted=adj.log_untrusted_proxy_headers,
+                logger=self.logger,
+            )
+
         if map is None:
             # use a nonglobal socket map by default to hopefully prevent
             # conflicts with apps and libs that use the wasyncore global socket
