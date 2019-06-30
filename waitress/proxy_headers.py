@@ -15,6 +15,13 @@ PROXY_HEADERS = frozenset({
 Forwarded = namedtuple('Forwarded', ['by', 'for_', 'host', 'proto'])
 
 
+class MalformedProxyHeader(Exception):
+    def __init__(self, header, reason):
+        self.header = header
+        self.reason = reason
+        Exception.__init__(self, header, reason)
+
+
 def proxy_headers_middleware(
     app,
     trusted_proxy,
@@ -24,38 +31,40 @@ def proxy_headers_middleware(
     log_untrusted=False,
     logger=logger,
 ):
-    def translate_proxy_headers(environ, start_response):
-        try:
-            untrusted_headers = PROXY_HEADERS
-            remote_peer = environ['REMOTE_ADDR']
-            if trusted_proxy == '*' or remote_peer == trusted_proxy:
+    def consume_proxy_headers(environ, start_response):
+        untrusted_headers = PROXY_HEADERS
+        remote_peer = environ['REMOTE_ADDR']
+        if trusted_proxy == '*' or remote_peer == trusted_proxy:
+            try:
                 untrusted_headers = parse_proxy_headers(
                     environ,
                     trusted_proxy_count=trusted_proxy_count,
                     trusted_proxy_headers=trusted_proxy_headers,
                     logger=logger,
                 )
+            except MalformedProxyHeader as ex:
+                logger.warn('malformed proxy header "%s" from "%s": %s',
+                            ex.header, remote_peer, ex.reason)
+                error = BadRequest('Header "{0}" malformed.'.format(ex.header))
+                return error.wsgi_response(environ, start_response)
 
-            # Clear out the untrusted proxy headers
-            if clear_untrusted:
-                clear_untrusted_headers(
-                    environ,
-                    untrusted_headers,
-                    log_warning=log_untrusted,
-                    logger=logger,
-                )
-        except ValueError as ex:
-            error = BadRequest(str(ex))
-            return error.wsgi_response(environ, start_response)
+        # Clear out the untrusted proxy headers
+        if clear_untrusted:
+            clear_untrusted_headers(
+                environ,
+                untrusted_headers,
+                log_warning=log_untrusted,
+                logger=logger,
+            )
 
         return app(environ, start_response)
-    return translate_proxy_headers
+    return consume_proxy_headers
 
 
 def parse_proxy_headers(
     environ,
-    trusted_proxy_count=1,
-    trusted_proxy_headers=None,
+    trusted_proxy_count,
+    trusted_proxy_headers,
     logger=logger,
 ):
     if trusted_proxy_headers is None:
@@ -68,7 +77,7 @@ def parse_proxy_headers(
 
     def warn_unspecified_behavior(header):
         logger.warning(
-            "Found multiple values in %s, this has unspecified behaviour. "
+            "Found multiple values in \"%s\", this has unspecified behaviour. "
             "Ignoring header value.",
             header,
         )
@@ -77,55 +86,67 @@ def parse_proxy_headers(
         "x-forwarded-for" in trusted_proxy_headers
         and "HTTP_X_FORWARDED_FOR" in environ
     ):
-        forwarded_for = []
+        try:
+            forwarded_for = []
 
-        for forward_hop in environ["HTTP_X_FORWARDED_FOR"].split(","):
-            forward_hop = forward_hop.strip()
-            forward_hop = undquote(forward_hop)
+            for forward_hop in environ["HTTP_X_FORWARDED_FOR"].split(","):
+                forward_hop = forward_hop.strip()
+                forward_hop = undquote(forward_hop)
 
-            # Make sure that all IPv6 addresses are surrounded by brackets,
-            # this is assuming that the IPv6 representation here does not
-            # include a port number.
+                # Make sure that all IPv6 addresses are surrounded by brackets,
+                # this is assuming that the IPv6 representation here does not
+                # include a port number.
 
-            if "." not in forward_hop and (
-                ":" in forward_hop and forward_hop[-1] != "]"
-            ):
-                forwarded_for.append("[{}]".format(forward_hop))
-            else:
-                forwarded_for.append(forward_hop)
+                if "." not in forward_hop and (
+                    ":" in forward_hop and forward_hop[-1] != "]"
+                ):
+                    forwarded_for.append("[{}]".format(forward_hop))
+                else:
+                    forwarded_for.append(forward_hop)
 
-        forwarded_for = forwarded_for[-trusted_proxy_count:]
-        client_addr = forwarded_for[0]
+            forwarded_for = forwarded_for[-trusted_proxy_count:]
+            client_addr = forwarded_for[0]
 
-        untrusted_headers.remove("HTTP_X_FORWARDED_FOR")
+            untrusted_headers.remove("HTTP_X_FORWARDED_FOR")
+        except Exception as ex:
+            raise MalformedProxyHeader('X-Forwarded-For', str(ex))
 
     if (
         "x-forwarded-host" in trusted_proxy_headers
         and "HTTP_X_FORWARDED_HOST" in environ
     ):
-        forwarded_host_multiple = []
+        try:
+            forwarded_host_multiple = []
 
-        for forward_host in environ["HTTP_X_FORWARDED_HOST"].split(","):
-            forward_host = forward_host.strip()
-            forward_host = undquote(forward_host)
-            forwarded_host_multiple.append(forward_host)
+            for forward_host in environ["HTTP_X_FORWARDED_HOST"].split(","):
+                forward_host = forward_host.strip()
+                forward_host = undquote(forward_host)
+                forwarded_host_multiple.append(forward_host)
 
-        forwarded_host_multiple = forwarded_host_multiple[-trusted_proxy_count:]
-        forwarded_host = forwarded_host_multiple[0]
+            forwarded_host_multiple = forwarded_host_multiple[-trusted_proxy_count:]
+            forwarded_host = forwarded_host_multiple[0]
 
-        untrusted_headers.remove("HTTP_X_FORWARDED_HOST")
+            untrusted_headers.remove("HTTP_X_FORWARDED_HOST")
+        except Exception as ex:
+            raise MalformedProxyHeader('X-Forwarded-Host', str(ex))
 
     if "x-forwarded-proto" in trusted_proxy_headers:
-        forwarded_proto = undquote(environ.get("HTTP_X_FORWARDED_PROTO", ""))
-        untrusted_headers.remove("HTTP_X_FORWARDED_PROTO")
+        try:
+            forwarded_proto = undquote(environ.get("HTTP_X_FORWARDED_PROTO", ""))
+            untrusted_headers.remove("HTTP_X_FORWARDED_PROTO")
+        except Exception as ex:
+            raise MalformedProxyHeader('X-Forwarded-Proto', str(ex))
 
         if "," in forwarded_proto:
             forwarded_proto = ""
             warn_unspecified_behavior("X-Forwarded-Proto")
 
     if "x-forwarded-port" in trusted_proxy_headers:
-        forwarded_port = undquote(environ.get("HTTP_X_FORWARDED_PORT", ""))
-        untrusted_headers.remove("HTTP_X_FORWARDED_PORT")
+        try:
+            forwarded_port = undquote(environ.get("HTTP_X_FORWARDED_PORT", ""))
+            untrusted_headers.remove("HTTP_X_FORWARDED_PORT")
+        except Exception as ex:
+            raise MalformedProxyHeader('X-Forwarded-Port', str(ex))
 
         if "," in forwarded_port:
             forwarded_port = ""
@@ -143,52 +164,54 @@ def parse_proxy_headers(
     # If the Forwarded header exists, it gets priority
     if forwarded:
         proxies = []
+        try:
+            for forwarded_element in forwarded.split(","):
+                # Remove whitespace that may have been introduced when
+                # appending a new entry
+                forwarded_element = forwarded_element.strip()
 
-        for forwarded_element in forwarded.split(","):
-            # Remove whitespace that may have been introduced when
-            # appending a new entry
-            forwarded_element = forwarded_element.strip()
+                forwarded_for = forwarded_host = forwarded_proto = ""
+                forwarded_port = forwarded_by = ""
 
-            forwarded_for = forwarded_host = forwarded_proto = ""
-            forwarded_port = forwarded_by = ""
+                for pair in forwarded_element.split(";"):
+                    pair = pair.lower()
 
-            for pair in forwarded_element.split(";"):
-                pair = pair.lower()
+                    if not pair:
+                        continue
 
-                if not pair:
-                    continue
+                    token, equals, value = pair.partition("=")
 
-                token, equals, value = pair.partition("=")
+                    if equals != "=":
+                        raise ValueError('invalid forwarded-pair missing "="')
 
-                if equals != "=":
-                    raise ValueError("Invalid forwarded-pair in Forwarded element")
+                    if token.strip() != token:
+                        raise ValueError('token may not be surrounded by whitespace')
 
-                if token.strip() != token:
-                    raise ValueError("token may not be surrounded by whitespace")
+                    if value.strip() != value:
+                        raise ValueError('value may not be surrounded by whitespace')
 
-                if value.strip() != value:
-                    raise ValueError("value may not be surrounded by whitespace")
+                    if token == "by":
+                        forwarded_by = undquote(value)
 
-                if token == "by":
-                    forwarded_by = undquote(value)
+                    elif token == "for":
+                        forwarded_for = undquote(value)
 
-                elif token == "for":
-                    forwarded_for = undquote(value)
+                    elif token == "host":
+                        forwarded_host = undquote(value)
 
-                elif token == "host":
-                    forwarded_host = undquote(value)
+                    elif token == "proto":
+                        forwarded_proto = undquote(value)
 
-                elif token == "proto":
-                    forwarded_proto = undquote(value)
+                    else:
+                        logger.warning("Unknown Forwarded token: %s" % token)
 
-                else:
-                    logger.warning("Unknown Forwarded token: %s" % token)
-
-            proxies.append(
-                Forwarded(
-                    forwarded_by, forwarded_for, forwarded_host, forwarded_proto
+                proxies.append(
+                    Forwarded(
+                        forwarded_by, forwarded_for, forwarded_host, forwarded_proto
+                    )
                 )
-            )
+        except Exception as ex:
+            raise MalformedProxyHeader('Forwarded', str(ex))
 
         proxies = proxies[-trusted_proxy_count:]
 
@@ -215,9 +238,10 @@ def parse_proxy_headers(
     if forwarded_proto:
         forwarded_proto = forwarded_proto.lower()
 
-        if forwarded_proto not in {"http", "https"}:
-            raise ValueError(
-                'Invalid "Forwarded Proto=" or "X-Forwarded-Proto" value.'
+        if forwarded_proto not in {'http', 'https'}:
+            raise MalformedProxyHeader(
+                'Forwarded Proto=' if forwarded else 'X-Forwarded-Proto',
+                'unsupported proto value'
             )
 
         # Set the URL scheme to the proxy provided proto
@@ -256,7 +280,8 @@ def parse_proxy_headers(
                         forwarded_host, forwarded_port
                     )
                 elif (
-                    forwarded_port == "80" and environ["wsgi.url_scheme"] != "http"
+                    forwarded_port == "80"
+                    and environ["wsgi.url_scheme"] != "http"
                 ):
                     environ["HTTP_HOST"] = "{}:{}".format(
                         forwarded_host, forwarded_port
@@ -273,11 +298,6 @@ def parse_proxy_headers(
         environ["SERVER_PORT"] = str(forwarded_port)
 
     if client_addr:
-        def strip_brackets(addr):
-            if addr[0] == "[" and addr[-1] == "]":
-                return addr[1:-1]
-            return addr
-
         if ":" in client_addr and client_addr[-1] != "]":
             addr, port = client_addr.rsplit(":", 1)
             environ["REMOTE_ADDR"] = strip_brackets(addr.strip())
@@ -286,6 +306,12 @@ def parse_proxy_headers(
             environ["REMOTE_ADDR"] = strip_brackets(client_addr.strip())
 
     return untrusted_headers
+
+
+def strip_brackets(addr):
+    if addr[0] == "[" and addr[-1] == "]":
+        return addr[1:-1]
+    return addr
 
 
 def clear_untrusted_headers(
@@ -299,7 +325,7 @@ def clear_untrusted_headers(
 
     if log_warning and untrusted_headers_removed:
         untrusted_headers_removed = [
-            "-".join(x.lstrip('HTTP_').capitalize() for x in header.split("_"))
+            "-".join(x.capitalize() for x in header.lstrip('HTTP_').split("_"))
             for header in untrusted_headers_removed
         ]
         logger.warning(
