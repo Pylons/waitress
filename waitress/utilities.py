@@ -109,17 +109,19 @@ def unpack_rfc822(m):
 
 # rfc850 format
 rfc850_date = join(
-    [concat(long_day_reg, ','),
-     join(
-         [group('[0-9][0-9]?'),
-          months_reg,
-          group('[0-9]+')
-          ],
-         '-'
-     ),
-     hms_reg,
-     'gmt'
-     ],
+    [
+        concat(long_day_reg, ','),
+        join(
+            [
+                group('[0-9][0-9]?'),
+                months_reg,
+                group('[0-9]+')
+            ],
+            '-'
+        ),
+        hms_reg,
+        'gmt'
+    ],
     ' '
 )
 

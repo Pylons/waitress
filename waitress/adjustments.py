@@ -17,7 +17,7 @@ import getopt
 import socket
 import warnings
 
-from .utilities import PROXY_HEADERS
+from .proxy_headers import PROXY_HEADERS
 from .compat import (
     PY2,
     WIN,
@@ -27,7 +27,10 @@ from .compat import (
 
 truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
 
-KNOWN_PROXY_HEADERS = {header.lower().replace('_', '-') for header in PROXY_HEADERS}
+KNOWN_PROXY_HEADERS = frozenset(
+    header.lower().replace('_', '-')
+    for header in PROXY_HEADERS
+)
 
 def asbool(s):
     """ Return the boolean value ``True`` if the case-lowered value of string
