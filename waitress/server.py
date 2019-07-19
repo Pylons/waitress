@@ -179,14 +179,10 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
                  adj=None,         # adjustments
                  sockinfo=None,    # opaque object
                  bind_socket=True,
-                 logger=None,      # test shim
                  **kw
                  ):
         if adj is None:
             adj = Adjustments(**kw)
-
-        if logger is not None:
-            self.logger = logger
 
         if adj.trusted_proxy or adj.clear_untrusted_proxy_headers:
             # wrap the application to deal with proxy headers

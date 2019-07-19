@@ -622,15 +622,40 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ['SERVER_PORT'], '443')
         self.assertEqual(environ['wsgi.url_scheme'], 'http')
 
+    def test_parse_forwarded_for_bad_quote(self):
+        inner = DummyApp()
+        app = self._makeOne(
+            inner,
+            trusted_proxy='*',
+            trusted_proxy_count=1,
+            trusted_proxy_headers={'x-forwarded-for'},
+        )
+        response = self._callFUT(app, headers={
+            'X_FORWARDED_FOR': '"foo'
+        })
+        self.assertEqual(response.status, '400 Bad Request')
+        self.assertIn(b'Header "X-Forwarded-For" malformed', response.body)
+
+    def test_parse_forwarded_host_bad_quote(self):
+        inner = DummyApp()
+        app = self._makeOne(
+            inner,
+            trusted_proxy='*',
+            trusted_proxy_count=1,
+            trusted_proxy_headers={'x-forwarded-host'},
+        )
+        response = self._callFUT(app, headers={
+            'X_FORWARDED_HOST': '"foo'
+        })
+        self.assertEqual(response.status, '400 Bad Request')
+        self.assertIn(b'Header "X-Forwarded-Host" malformed', response.body)
+
 
 class DummyLogger(object):
     def __init__(self):
         self.logged = []
 
     def warning(self, msg, *args):
-        self.logged.append(msg % args)
-
-    def exception(self, msg, *args):
         self.logged.append(msg % args)
 
 
