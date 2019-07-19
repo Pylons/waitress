@@ -144,6 +144,11 @@ class EchoTests(object):
     def tearDown(self):
         self.stop_subprocess()
 
+    def _read_echo(self, fp):
+        from waitress.tests.fixtureapps import echo
+        line, headers, response_body = read_http(fp)
+        return line, headers, echo.parse_response(response_body)
+
     def test_date_and_server(self):
         to_send = ("GET / HTTP/1.0\n"
                    "Content-Length: 0\n\n")
@@ -151,7 +156,7 @@ class EchoTests(object):
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line, headers, response_body = read_http(fp)
+        line, headers, echo = self._read_echo(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.0')
         self.assertEqual(headers.get('server'), 'waitress')
         self.assertTrue(headers.get('date'))
@@ -177,10 +182,10 @@ class EchoTests(object):
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line, headers, response_body = read_http(fp)
+        line, headers, echo = self._read_echo(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.0')
-        self.assertEqual(headers.get('content-length'), '5')
-        self.assertEqual(response_body, b'hello')
+        self.assertEqual(echo.content_length, '5')
+        self.assertEqual(echo.body, b'hello')
 
     def test_send_empty_body(self):
         to_send = ("GET / HTTP/1.0\n"
@@ -189,10 +194,10 @@ class EchoTests(object):
         self.connect()
         self.sock.send(to_send)
         fp = self.sock.makefile('rb', 0)
-        line, headers, response_body = read_http(fp)
+        line, headers, echo = self._read_echo(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.0')
-        self.assertEqual(headers.get('content-length'), '0')
-        self.assertEqual(response_body, b'')
+        self.assertEqual(echo.content_length, '0')
+        self.assertEqual(echo.body, b'')
 
     def test_multiple_requests_with_body(self):
         orig_sock = self.sock
@@ -222,11 +227,11 @@ class EchoTests(object):
         self.connect()
         self.sock.send(s)
         fp = self.sock.makefile('rb', 0)
-        line, headers, response_body = read_http(fp)
+        line, headers, echo = self._read_echo(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.0')
-        self.assertEqual(int(headers['content-length']), len(data))
-        self.assertEqual(len(response_body), len(data))
-        self.assertEqual(response_body, tobytes(data))
+        self.assertEqual(int(echo.content_length), len(data))
+        self.assertEqual(len(echo.body), len(data))
+        self.assertEqual(echo.body, tobytes(data))
 
     def test_large_body(self):
         # 1024 characters.
@@ -240,10 +245,10 @@ class EchoTests(object):
         self.connect()
         self.sock.send(s)
         fp = self.sock.makefile('rb', 0)
-        line, headers, response_body = read_http(fp)
+        line, headers, echo = self._read_echo(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.0')
-        self.assertEqual(headers.get('content-length'), '1024')
-        self.assertEqual(response_body, tobytes(body))
+        self.assertEqual(echo.content_length, '1024')
+        self.assertEqual(echo.body, tobytes(body))
 
     def test_many_clients(self):
         conns = []
@@ -270,10 +275,10 @@ class EchoTests(object):
         self.sock.send(header)
         self.sock.send(b"0\r\n\r\n")
         fp = self.sock.makefile('rb', 0)
-        line, headers, response_body = read_http(fp)
+        line, headers, echo = self._read_echo(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
-        self.assertEqual(response_body, b'')
-        self.assertEqual(headers['content-length'], '0')
+        self.assertEqual(echo.body, b'')
+        self.assertEqual(echo.content_length, '0')
         self.assertFalse('transfer-encoding' in headers)
 
     def test_chunking_request_with_content(self):
@@ -291,10 +296,10 @@ class EchoTests(object):
             self.sock.send(control_line)
             self.sock.send(s)
         self.sock.send(b"0\r\n\r\n")
-        line, headers, response_body = read_http(fp)
+        line, headers, echo = self._read_echo(fp)
         self.assertline(line, '200', 'OK', 'HTTP/1.1')
-        self.assertEqual(response_body, expected)
-        self.assertEqual(headers['content-length'], str(len(expected)))
+        self.assertEqual(echo.body, expected)
+        self.assertEqual(echo.content_length, str(len(expected)))
         self.assertFalse('transfer-encoding' in headers)
 
     def test_broken_chunked_encoding(self):
