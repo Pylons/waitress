@@ -25,9 +25,9 @@ class MalformedProxyHeader(Exception):
 
 def proxy_headers_middleware(
     app,
-    trusted_proxy,
-    trusted_proxy_count,
-    trusted_proxy_headers,
+    trusted_proxy=None,
+    trusted_proxy_count=1,
+    trusted_proxy_headers=None,
     clear_untrusted=True,
     log_untrusted=False,
     logger=logger,
