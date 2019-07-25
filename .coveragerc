@@ -1,6 +1,8 @@
 [run]
 parallel = true
-concurrency = thread,multiprocessing
+concurrency =
+    thread
+    multiprocessing
 source =
     waitress
 
