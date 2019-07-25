@@ -1,0 +1,14 @@
+[run]
+parallel = true
+concurrency =
+    thread
+    multiprocessing
+source =
+    waitress
+
+omit =
+    waitress/tests/fixtureapps/getline.py
+
+[report]
+show_missing = true
+precision = 2
