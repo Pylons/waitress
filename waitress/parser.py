@@ -256,6 +256,13 @@ def split_uri(uri):
 
     scheme = netloc = path = query = fragment = b''
 
+    # urlsplit below will treat this as a scheme-less netloc, thereby losing
+    # the original intent of the request. Here we shamelessly stole 4 lines of
+    # code from the CPython stdlib to parse out the fragment and query but
+    # leave the path alone. See
+    # https://github.com/python/cpython/blob/8c9e9b0cd5b24dfbf1424d1f253d02de80e8f5ef/Lib/urllib/parse.py#L465-L468
+    # and https://github.com/Pylons/waitress/issues/260
+
     if uri[:2] == b'//':
         path = uri
 
