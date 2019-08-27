@@ -259,6 +259,30 @@ class Test_split_uri(unittest.TestCase):
         except ParsingError:
             pass
 
+    def test_split_uri_path(self):
+        self._callFUT(b'//testing/whatever')
+        self.assertEqual(self.path, '//testing/whatever')
+        self.assertEqual(self.proxy_scheme, '')
+        self.assertEqual(self.proxy_netloc, '')
+        self.assertEqual(self.query, '')
+        self.assertEqual(self.fragment, '')
+
+    def test_split_uri_path_query(self):
+        self._callFUT(b'//testing/whatever?a=1&b=2')
+        self.assertEqual(self.path, '//testing/whatever')
+        self.assertEqual(self.proxy_scheme, '')
+        self.assertEqual(self.proxy_netloc, '')
+        self.assertEqual(self.query, 'a=1&b=2')
+        self.assertEqual(self.fragment, '')
+
+    def test_split_uri_path_query_fragment(self):
+        self._callFUT(b'//testing/whatever?a=1&b=2#fragment')
+        self.assertEqual(self.path, '//testing/whatever')
+        self.assertEqual(self.proxy_scheme, '')
+        self.assertEqual(self.proxy_netloc, '')
+        self.assertEqual(self.query, 'a=1&b=2')
+        self.assertEqual(self.fragment, 'fragment')
+
 class Test_get_header_lines(unittest.TestCase):
 
     def _callFUT(self, data):

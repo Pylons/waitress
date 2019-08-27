@@ -253,10 +253,30 @@ class HTTPRequestParser(object):
 def split_uri(uri):
     # urlsplit handles byte input by returning bytes on py3, so
     # scheme, netloc, path, query, and fragment are bytes
-    try:
-        scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
-    except UnicodeError:
-        raise ParsingError('Bad URI')
+
+    scheme = netloc = path = query = fragment = b''
+
+    # urlsplit below will treat this as a scheme-less netloc, thereby losing
+    # the original intent of the request. Here we shamelessly stole 4 lines of
+    # code from the CPython stdlib to parse out the fragment and query but
+    # leave the path alone. See
+    # https://github.com/python/cpython/blob/8c9e9b0cd5b24dfbf1424d1f253d02de80e8f5ef/Lib/urllib/parse.py#L465-L468
+    # and https://github.com/Pylons/waitress/issues/260
+
+    if uri[:2] == b'//':
+        path = uri
+
+        if b'#' in path:
+            path, fragment = path.split(b'#', 1)
+
+        if b'?' in path:
+            path, query = path.split(b'?', 1)
+    else:
+        try:
+            scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
+        except UnicodeError:
+            raise ParsingError('Bad URI')
+
     return (
         tostr(scheme),
         tostr(netloc),
