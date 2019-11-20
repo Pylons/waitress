@@ -14,6 +14,7 @@
 
 import os
 import os.path
+import signal
 import socket
 import time
 
@@ -148,7 +149,11 @@ class MultiSocketServer(object):
 
             print(format_str.format(*l))
 
+    def handle_sigterm(self, signum, frame):
+        raise SystemExit
+
     def run(self):
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
         try:
             self.asyncore.loop(
                 timeout=self.adj.asyncore_loop_timeout,
@@ -315,7 +320,11 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
         addr = self.fix_addr(addr)
         self.channel_class(self, conn, addr, self.adj, map=self._map)
 
+    def handle_sigterm(self, signum, frame):
+        raise SystemExit
+
     def run(self):
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
         try:
             self.asyncore.loop(
                 timeout=self.adj.asyncore_loop_timeout,

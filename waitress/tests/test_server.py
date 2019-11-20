@@ -1,5 +1,9 @@
 import errno
+import os
+import signal
 import socket
+import threading
+import time
 import unittest
 
 dummy_app = object()
@@ -125,6 +129,25 @@ class TestWSGIServer(unittest.TestCase):
         inst.asyncore = DummyAsyncore()
         inst.task_dispatcher = DummyTaskDispatcher()
         inst.run()
+        self.assertTrue(inst.task_dispatcher.was_shutdown)
+
+    def test_sigterm_exits_gracefully(self):
+        inst = self._makeOneWithMap(_start=False)
+        inst.asyncore = DummyBlockingAsyncore()
+        inst.task_dispatcher = DummyTaskDispatcher()
+
+        pid = os.getpid()
+
+        def trigger_signal():
+            time.sleep(1)
+            os.kill(pid, signal.SIGTERM)
+
+        thread = threading.Thread(target=trigger_signal)
+        thread.daemon = True
+        thread.start()
+
+        inst.run()
+
         self.assertTrue(inst.task_dispatcher.was_shutdown)
 
     def test_run_base_server(self):
@@ -464,6 +487,11 @@ class DummyAsyncore(object):
 
     def loop(self, timeout=30.0, use_poll=False, map=None, count=None):
         raise SystemExit
+
+class DummyBlockingAsyncore(object):
+    def loop(self, timeout=30.0, use_poll=False, map=None, count=None):
+        while True:
+            pass
 
 class DummyTrigger(object):
 
