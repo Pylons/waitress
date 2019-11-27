@@ -238,6 +238,8 @@ class OverflowableBuffer(object):
 
     def append(self, s):
         buf = self.buf
+        if isinstance(s, str):
+            s = s.encode()  # convert to bytes
         if buf is None:
             strbuf = self.strbuf
             if len(strbuf) + len(s) < STRBUF_LIMIT:
