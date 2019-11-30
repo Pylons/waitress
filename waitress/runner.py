@@ -58,7 +58,7 @@ Standard options:
             --listen=[::1]:8080
             --listen=*:8080
 
-        This option may be used multiple times to listen on multipe sockets.
+        This option may be used multiple times to listen on multiple sockets.
         A wildcard for the hostname is also supported and will bind to both
         IPv4/IPv6 depending on whether they are enabled or disabled.
 
@@ -136,7 +136,7 @@ Tuning options:
         than this. Default is 524288 (512KB).
 
     --connection-limit=INT
-        Stop creating new channelse if too many are already active.
+        Stop creating new channels if too many are already active.
         Default is 100.
 
     --cleanup-interval=INT
@@ -145,11 +145,11 @@ Tuning options:
 
     --channel-timeout=INT
         Maximum number of seconds to leave inactive connections open.
-        Default is 120. 'Inactive' is defined as 'has recieved no data
+        Default is 120. 'Inactive' is defined as 'has received no data
         from the client and has sent no data to the client'.
 
     --[no-]log-socket-errors
-        Toggle whether premature client disconnect tracepacks ought to be
+        Toggle whether premature client disconnect tracebacks ought to be
         logged. On by default.
 
     --max-request-header-size=INT
