@@ -378,9 +378,6 @@ class TestHTTPChannel(unittest.TestCase):
                 self.length = 0
                 return b"123"
 
-            def skip(self, *args):
-                pass
-
         buf = DummyHugeOutbuffer()
         inst.outbufs = [buf]
         inst.send = lambda *arg: 0
