@@ -28,20 +28,12 @@ queue_logger = logging.getLogger("waitress.queue")
 
 def find_double_newline(s):
     """Returns the position just after a double newline in the given string."""
-    pos1 = s.find(b"\n\r\n")  # One kind of double newline
-    if pos1 >= 0:
-        pos1 += 3
-    pos2 = s.find(b"\n\n")  # Another kind of double newline
-    if pos2 >= 0:
-        pos2 += 2
+    pos = s.find(b"\r\n\r\n")
 
-    if pos1 >= 0:
-        if pos2 >= 0:
-            return min(pos1, pos2)
-        else:
-            return pos1
-    else:
-        return pos2
+    if pos >= 0:
+        pos += 4
+
+    return pos
 
 
 def concat(*args):

@@ -423,7 +423,7 @@ class TestHTTPChannel(unittest.TestCase):
     def test_received(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
-        inst.received(b"GET / HTTP/1.1\n\n")
+        inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.server.tasks, [inst])
         self.assertTrue(inst.requests)
 
@@ -438,7 +438,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.request = preq
         preq.completed = False
         preq.empty = True
-        inst.received(b"GET / HTTP/1.1\n\n")
+        inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.requests, ())
         self.assertEqual(inst.server.tasks, [])
 
@@ -449,7 +449,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.request = preq
         preq.completed = True
         preq.empty = True
-        inst.received(b"GET / HTTP/1.1\n\n")
+        inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, None)
         self.assertEqual(inst.server.tasks, [])
 
@@ -460,7 +460,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.request = preq
         preq.completed = True
         preq.error = True
-        inst.received(b"GET / HTTP/1.1\n\n")
+        inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, None)
         self.assertEqual(len(inst.server.tasks), 1)
         self.assertTrue(inst.requests)
@@ -473,23 +473,9 @@ class TestHTTPChannel(unittest.TestCase):
         preq.completed = True
         preq.empty = True
         preq.connection_close = True
-        inst.received(b"GET / HTTP/1.1\n\n" + b"a" * 50000)
+        inst.received(b"GET / HTTP/1.1\r\n\r\n" + b"a" * 50000)
         self.assertEqual(inst.request, None)
         self.assertEqual(inst.server.tasks, [])
-
-    def test_received_preq_completed_n_lt_data(self):
-        inst, sock, map = self._makeOneWithMap()
-        inst.server = DummyServer()
-        preq = DummyParser()
-        inst.request = preq
-        preq.completed = True
-        preq.empty = False
-        line = b"GET / HTTP/1.1\n\n"
-        preq.retval = len(line)
-        inst.received(line + line)
-        self.assertEqual(inst.request, None)
-        self.assertEqual(len(inst.requests), 2)
-        self.assertEqual(len(inst.server.tasks), 1)
 
     def test_received_headers_finished_expect_continue_false(self):
         inst, sock, map = self._makeOneWithMap()
@@ -501,7 +487,7 @@ class TestHTTPChannel(unittest.TestCase):
         preq.completed = False
         preq.empty = False
         preq.retval = 1
-        inst.received(b"GET / HTTP/1.1\n\n")
+        inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, preq)
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(inst.outbufs[0].get(100), b"")
@@ -515,7 +501,7 @@ class TestHTTPChannel(unittest.TestCase):
         preq.headers_finished = True
         preq.completed = False
         preq.empty = False
-        inst.received(b"GET / HTTP/1.1\n\n")
+        inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, preq)
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(sock.sent, b"HTTP/1.1 100 Continue\r\n\r\n")
@@ -532,7 +518,7 @@ class TestHTTPChannel(unittest.TestCase):
         preq.completed = False
         preq.empty = False
         inst.sent_continue = True
-        inst.received(b"GET / HTTP/1.1\n\n")
+        inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, preq)
         self.assertEqual(inst.server.tasks, [])
         self.assertEqual(sock.sent, b"")

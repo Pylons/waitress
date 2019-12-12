@@ -15,10 +15,7 @@
 """
 import unittest
 
-from waitress.compat import (
-    text_,
-    tobytes,
-)
+from waitress.compat import text_, tobytes
 
 
 class TestHTTPRequestParser(unittest.TestCase):
@@ -40,47 +37,33 @@ class TestHTTPRequestParser(unittest.TestCase):
         result = self.parser.get_body_stream()
         self.assertEqual(result, body_rcv)
 
-    def test_received_nonsense_with_double_cr(self):
-        data = b"""\
-HTTP/1.0 GET /foobar
-
-
-"""
+    def test_received_get_no_headers(self):
+        data = b"HTTP/1.0 GET /foobar\r\n\r\n"
         result = self.parser.received(data)
-        self.assertEqual(result, 22)
+        self.assertEqual(result, 24)
         self.assertTrue(self.parser.completed)
         self.assertEqual(self.parser.headers, {})
 
     def test_received_bad_host_header(self):
         from waitress.utilities import BadRequest
 
-        data = b"""\
-HTTP/1.0 GET /foobar
- Host: foo
-
-
-"""
+        data = b"HTTP/1.0 GET /foobar\r\n Host: foo\r\n\r\n"
         result = self.parser.received(data)
-        self.assertEqual(result, 33)
+        self.assertEqual(result, 36)
         self.assertTrue(self.parser.completed)
         self.assertEqual(self.parser.error.__class__, BadRequest)
 
     def test_received_nonsense_nothing(self):
-        data = b"""\
-
-
-"""
+        data = b"\r\n\r\n"
         result = self.parser.received(data)
-        self.assertEqual(result, 2)
+        self.assertEqual(result, 4)
         self.assertTrue(self.parser.completed)
         self.assertEqual(self.parser.headers, {})
 
     def test_received_no_doublecr(self):
-        data = b"""\
-GET /foobar HTTP/8.4
-"""
+        data = b"GET /foobar HTTP/8.4\r\n"
         result = self.parser.received(data)
-        self.assertEqual(result, 21)
+        self.assertEqual(result, 22)
         self.assertFalse(self.parser.completed)
         self.assertEqual(self.parser.headers, {})
 
@@ -93,13 +76,9 @@ GET /foobar HTTP/8.4
         from waitress.utilities import RequestEntityTooLarge
 
         self.parser.adj.max_request_body_size = 2
-        data = b"""\
-GET /foobar HTTP/8.4
-Content-Length: 10
-
-"""
+        data = b"GET /foobar HTTP/8.4\r\nContent-Length: 10\r\n\r\n"
         result = self.parser.received(data)
-        self.assertEqual(result, 41)
+        self.assertEqual(result, 44)
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
 
@@ -107,12 +86,9 @@ Content-Length: 10
         from waitress.utilities import RequestHeaderFieldsTooLarge
 
         self.parser.adj.max_request_header_size = 2
-        data = b"""\
-GET /foobar HTTP/8.4
-X-Foo: 1
-"""
+        data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n\r\n"
         result = self.parser.received(data)
-        self.assertEqual(result, 30)
+        self.assertEqual(result, 34)
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error, RequestHeaderFieldsTooLarge))
 
@@ -120,16 +96,18 @@ X-Foo: 1
         from waitress.utilities import RequestEntityTooLarge
 
         self.parser.adj.max_request_body_size = 2
-        data = b"""\
-GET /foobar HTTP/1.1
-Transfer-Encoding: chunked
-X-Foo: 1
+        data = (
+            b"GET /foobar HTTP/1.1\r\n"
+            b"Transfer-Encoding: chunked\r\n"
+            b"X-Foo: 1\r\n"
+            b"\r\n"
+            b"1d;\r\n"
+            b"This string has 29 characters\r\n"
+            b"0\r\n\r\n"
+        )
 
-20;\r\n
-This string has 32 characters\r\n
-0\r\n\r\n"""
         result = self.parser.received(data)
-        self.assertEqual(result, 58)
+        self.assertEqual(result, 62)
         self.parser.received(data[result:])
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
@@ -137,69 +115,75 @@ This string has 32 characters\r\n
     def test_received_error_from_parser(self):
         from waitress.utilities import BadRequest
 
-        data = b"""\
-GET /foobar HTTP/1.1
-Transfer-Encoding: chunked
-X-Foo: 1
-
-garbage
-"""
+        data = (
+            b"GET /foobar HTTP/1.1\r\n"
+            b"Transfer-Encoding: chunked\r\n"
+            b"X-Foo: 1\r\n"
+            b"\r\n"
+            b"garbage\r\n"
+        )
         # header
         result = self.parser.received(data)
         # body
         result = self.parser.received(data[result:])
-        self.assertEqual(result, 8)
+        self.assertEqual(result, 9)
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error, BadRequest))
 
     def test_received_chunked_completed_sets_content_length(self):
-        data = b"""\
-GET /foobar HTTP/1.1
-Transfer-Encoding: chunked
-X-Foo: 1
-
-20;\r\n
-This string has 32 characters\r\n
-0\r\n\r\n"""
+        data = (
+            b"GET /foobar HTTP/1.1\r\n"
+            b"Transfer-Encoding: chunked\r\n"
+            b"X-Foo: 1\r\n"
+            b"\r\n"
+            b"1d;\r\n"
+            b"This string has 29 characters\r\n"
+            b"0\r\n\r\n"
+        )
         result = self.parser.received(data)
-        self.assertEqual(result, 58)
+        self.assertEqual(result, 62)
         data = data[result:]
         result = self.parser.received(data)
         self.assertTrue(self.parser.completed)
         self.assertTrue(self.parser.error is None)
-        self.assertEqual(self.parser.headers["CONTENT_LENGTH"], "32")
+        self.assertEqual(self.parser.headers["CONTENT_LENGTH"], "29")
 
     def test_parse_header_gardenpath(self):
-        data = b"""\
-GET /foobar HTTP/8.4
-foo: bar"""
+        data = b"GET /foobar HTTP/8.4\r\nfoo: bar\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.first_line, b"GET /foobar HTTP/8.4")
         self.assertEqual(self.parser.headers["FOO"], "bar")
 
     def test_parse_header_no_cr_in_headerplus(self):
+        from waitress.parser import ParsingError
+
         data = b"GET /foobar HTTP/8.4"
-        self.parser.parse_header(data)
-        self.assertEqual(self.parser.first_line, data)
+
+        try:
+            self.parser.parse_header(data)
+        except ParsingError:
+            pass
+        else:  # pragma: nocover
+            self.assertTrue(False)
 
     def test_parse_header_bad_content_length(self):
-        data = b"GET /foobar HTTP/8.4\ncontent-length: abc"
+        data = b"GET /foobar HTTP/8.4\r\ncontent-length: abc\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv, None)
 
     def test_parse_header_11_te_chunked(self):
         # NB: test that capitalization of header value is unimportant
-        data = b"GET /foobar HTTP/1.1\ntransfer-encoding: ChUnKed"
+        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: ChUnKed\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
 
     def test_parse_header_11_expect_continue(self):
-        data = b"GET /foobar HTTP/1.1\nexpect: 100-continue"
+        data = b"GET /foobar HTTP/1.1\r\nexpect: 100-continue\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.expect_continue, True)
 
     def test_parse_header_connection_close(self):
-        data = b"GET /foobar HTTP/1.1\nConnection: close\n\n"
+        data = b"GET /foobar HTTP/1.1\r\nConnection: close\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.connection_close, True)
 
@@ -213,6 +197,50 @@ foo: bar"""
         self.parser.body_rcv = None
         self.parser.close()  # doesn't raise
 
+    def test_parse_header_lf_only(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/8.4\nfoo: bar"
+
+        try:
+            self.parser.parse_header(data)
+        except ParsingError:
+            pass
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_cr_only(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/8.4\rfoo: bar"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError:
+            pass
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_extra_lf_in_header(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/8.4\r\nfoo: \nbar\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Bare CR or LF found in header line", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_extra_lf_in_first_line(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar\n HTTP/8.4\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Bare CR or LF found in HTTP message", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
 
 class Test_split_uri(unittest.TestCase):
     def _callFUT(self, uri):
@@ -298,7 +326,7 @@ class Test_get_header_lines(unittest.TestCase):
         return get_header_lines(data)
 
     def test_get_header_lines(self):
-        result = self._callFUT(b"slam\nslim")
+        result = self._callFUT(b"slam\r\nslim")
         self.assertEqual(result, [b"slam", b"slim"])
 
     def test_get_header_lines_folded(self):
@@ -310,11 +338,11 @@ class Test_get_header_lines(unittest.TestCase):
         # interpreting the field value or forwarding the message downstream.
 
         # We are just preserving the whitespace that indicates folding.
-        result = self._callFUT(b"slim\n slam")
+        result = self._callFUT(b"slim\r\n slam")
         self.assertEqual(result, [b"slim slam"])
 
     def test_get_header_lines_tabbed(self):
-        result = self._callFUT(b"slam\n\tslim")
+        result = self._callFUT(b"slam\r\n\tslim")
         self.assertEqual(result, [b"slam\tslim"])
 
     def test_get_header_lines_malformed(self):
@@ -361,22 +389,24 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
 
     def feed(self, data):
         parser = self.parser
+
         for n in range(100):  # make sure we never loop forever
             consumed = parser.received(data)
             data = data[consumed:]
+
             if parser.completed:
                 return
         raise ValueError("Looping")  # pragma: no cover
 
     def testSimpleGET(self):
-        data = b"""\
-GET /foobar HTTP/8.4
-FirstName: mickey
-lastname: Mouse
-content-length: 7
-
-Hello.
-"""
+        data = (
+            b"GET /foobar HTTP/8.4\r\n"
+            b"FirstName: mickey\r\n"
+            b"lastname: Mouse\r\n"
+            b"content-length: 6\r\n"
+            b"\r\n"
+            b"Hello."
+        )
         parser = self.parser
         self.feed(data)
         self.assertTrue(parser.completed)
@@ -384,24 +414,24 @@ Hello.
         self.assertFalse(parser.empty)
         self.assertEqual(
             parser.headers,
-            {"FIRSTNAME": "mickey", "LASTNAME": "Mouse", "CONTENT_LENGTH": "7",},
+            {"FIRSTNAME": "mickey", "LASTNAME": "Mouse", "CONTENT_LENGTH": "6",},
         )
         self.assertEqual(parser.path, "/foobar")
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.query, "")
         self.assertEqual(parser.proxy_scheme, "")
         self.assertEqual(parser.proxy_netloc, "")
-        self.assertEqual(parser.get_body_stream().getvalue(), b"Hello.\n")
+        self.assertEqual(parser.get_body_stream().getvalue(), b"Hello.")
 
     def testComplexGET(self):
-        data = b"""\
-GET /foo/a+%2B%2F%C3%A4%3D%26a%3Aint?d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6 HTTP/8.4
-FirstName: mickey
-lastname: Mouse
-content-length: 10
-
-Hello mickey.
-"""
+        data = (
+            b"GET /foo/a+%2B%2F%C3%A4%3D%26a%3Aint?d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6 HTTP/8.4\r\n"
+            b"FirstName: mickey\r\n"
+            b"lastname: Mouse\r\n"
+            b"content-length: 10\r\n"
+            b"\r\n"
+            b"Hello mickey."
+        )
         parser = self.parser
         self.feed(data)
         self.assertEqual(parser.command, "GET")
@@ -409,7 +439,7 @@ Hello mickey.
         self.assertFalse(parser.empty)
         self.assertEqual(
             parser.headers,
-            {"FIRSTNAME": "mickey", "LASTNAME": "Mouse", "CONTENT_LENGTH": "10",},
+            {"FIRSTNAME": "mickey", "LASTNAME": "Mouse", "CONTENT_LENGTH": "10"},
         )
         # path should be utf-8 encoded
         self.assertEqual(
@@ -422,59 +452,59 @@ Hello mickey.
         self.assertEqual(parser.get_body_stream().getvalue(), b"Hello mick")
 
     def testProxyGET(self):
-        data = b"""\
-GET https://example.com:8080/foobar HTTP/8.4
-content-length: 7
-
-Hello.
-"""
+        data = (
+            b"GET https://example.com:8080/foobar HTTP/8.4\r\n"
+            b"content-length: 6\r\n"
+            b"\r\n"
+            b"Hello."
+        )
         parser = self.parser
         self.feed(data)
         self.assertTrue(parser.completed)
         self.assertEqual(parser.version, "8.4")
         self.assertFalse(parser.empty)
-        self.assertEqual(parser.headers, {"CONTENT_LENGTH": "7",})
+        self.assertEqual(parser.headers, {"CONTENT_LENGTH": "6"})
         self.assertEqual(parser.path, "/foobar")
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.proxy_scheme, "https")
         self.assertEqual(parser.proxy_netloc, "example.com:8080")
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.query, "")
-        self.assertEqual(parser.get_body_stream().getvalue(), b"Hello.\n")
+        self.assertEqual(parser.get_body_stream().getvalue(), b"Hello.")
 
     def testDuplicateHeaders(self):
         # Ensure that headers with the same key get concatenated as per
         # RFC2616.
-        data = b"""\
-GET /foobar HTTP/8.4
-x-forwarded-for: 10.11.12.13
-x-forwarded-for: unknown,127.0.0.1
-X-Forwarded_for: 255.255.255.255
-content-length: 7
-
-Hello.
-"""
+        data = (
+            b"GET /foobar HTTP/8.4\r\n"
+            b"x-forwarded-for: 10.11.12.13\r\n"
+            b"x-forwarded-for: unknown,127.0.0.1\r\n"
+            b"X-Forwarded_for: 255.255.255.255\r\n"
+            b"content-length: 6\r\n"
+            b"\r\n"
+            b"Hello."
+        )
         self.feed(data)
         self.assertTrue(self.parser.completed)
         self.assertEqual(
             self.parser.headers,
             {
-                "CONTENT_LENGTH": "7",
+                "CONTENT_LENGTH": "6",
                 "X_FORWARDED_FOR": "10.11.12.13, unknown,127.0.0.1",
             },
         )
 
     def testSpoofedHeadersDropped(self):
-        data = b"""\
-GET /foobar HTTP/8.4
-x-auth_user: bob
-content-length: 7
-
-Hello.
-"""
+        data = (
+            b"GET /foobar HTTP/8.4\r\n"
+            b"x-auth_user: bob\r\n"
+            b"content-length: 6\r\n"
+            b"\r\n"
+            b"Hello."
+        )
         self.feed(data)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(self.parser.headers, {"CONTENT_LENGTH": "7",})
+        self.assertEqual(self.parser.headers, {"CONTENT_LENGTH": "6",})
 
 
 class DummyBodyStream(object):

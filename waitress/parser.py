@@ -19,24 +19,14 @@ processing but threads to do work.
 import re
 from io import BytesIO
 
-from waitress.compat import (
-    tostr,
-    urlparse,
-    unquote_bytes_to_wsgi,
-)
-
 from waitress.buffers import OverflowableBuffer
-
-from waitress.receiver import (
-    FixedStreamReceiver,
-    ChunkedReceiver,
-)
-
+from waitress.compat import tostr, unquote_bytes_to_wsgi, urlparse
+from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
 from waitress.utilities import (
-    find_double_newline,
+    BadRequest,
     RequestEntityTooLarge,
     RequestHeaderFieldsTooLarge,
-    BadRequest,
+    find_double_newline,
 )
 
 
@@ -95,8 +85,13 @@ class HTTPRequestParser(object):
                 # Header finished.
                 header_plus = s[:index]
                 consumed = len(data) - (len(s) - index)
-                # Remove preceeding blank lines.
+
+                # Remove preceeding blank lines. This is suggested by
+                # https://tools.ietf.org/html/rfc7230#section-3.5 to support
+                # clients sending an extra CR LF after another request when
+                # using HTTP pipelining
                 header_plus = header_plus.lstrip()
+
                 if not header_plus:
                     self.empty = True
                     self.completed = True
@@ -169,13 +164,15 @@ class HTTPRequestParser(object):
         Parses the header_plus block of text (the headers plus the
         first line of the request).
         """
-        index = header_plus.find(b"\n")
+        index = header_plus.find(b"\r\n")
         if index >= 0:
             first_line = header_plus[:index].rstrip()
-            header = header_plus[index + 1 :]
+            header = header_plus[index + 2 :]
         else:
-            first_line = header_plus.rstrip()
-            header = b""
+            raise ParsingError("HTTP message header invalid")
+
+        if b"\r" in first_line or b"\n" in first_line:
+            raise ParsingError("Bare CR or LF found in HTTP message")
 
         self.first_line = first_line  # for testing
 
@@ -299,8 +296,11 @@ def get_header_lines(header):
     Splits the header into lines, putting multi-line headers together.
     """
     r = []
-    lines = header.split(b"\n")
+    lines = header.split(b"\r\n")
     for line in lines:
+        if b"\r" in line or b"\n" in line:
+            raise ParsingError('Bare CR or LF found in header line "%s"' % tostr(line))
+
         if line.startswith((b" ", b"\t")):
             if not r:
                 # https://corte.si/posts/code/pathod/pythonservers/index.html
