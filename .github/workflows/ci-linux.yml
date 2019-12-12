@@ -1,0 +1,57 @@
+name: Build/test on Linux
+# This workflow is triggered on pushes to the repository.
+on: [push, pull_request]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                tox: [
+                    {'py': '2.7', 'env': 'py27'},
+                    {'py': '3.5', 'env': 'py35'},
+                    {'py': '3.6', 'env': 'py36'},
+                    {'py': '3.7', 'env': 'py37'},
+                    {'py': 'pypy2', 'env': 'pypy'},
+                    {'py': 'pypy3', 'env': 'pypy3'}
+                ]
+        name: "Python: ${{ matrix.tox.py }}"
+        steps:
+            - uses: actions/checkout@master
+            - name: Setup python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: ${{ matrix.tox.py }}
+                  architecture: x64
+            - run: pip install tox
+            - name: Running tox
+              run: tox -e ${{ matrix.tox.env }}
+    coverage:
+        runs-on: ubuntu-latest
+        name: Validate coverage for Python 2/3
+        steps:
+            - uses: actions/checkout@master
+            - name: Setup python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: 2.7
+                  architecture: x64
+            - name: Setup python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: 3.5
+                  architecture: x64
+            - run: pip install tox
+            - run: tox -e py35-cover,py27-cover,coverage
+    docs:
+        runs-on: ubuntu-latest
+        name: Build the documentation
+        steps:
+            - uses: actions/checkout@master
+            - name: Setup python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: 3.5
+                  architecture: x64
+            - run: pip install tox
+            - run: tox -e docs
