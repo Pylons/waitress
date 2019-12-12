@@ -336,7 +336,7 @@ class EchoTests(object):
         cl = int(headers["content-length"])
         self.assertEqual(cl, len(response_body))
         self.assertEqual(
-            sorted(headers.keys()), ["content-length", "content-type", "date", "server"]
+            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
         )
         self.assertEqual(headers["content-type"], "text/plain")
         # connection has been closed
@@ -1069,7 +1069,7 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b"Internal Server Error"))
         self.assertEqual(
-            sorted(headers.keys()), ["content-length", "content-type", "date", "server"]
+            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
         )
         # connection has been closed
         self.send_check_error(to_send)
@@ -1128,7 +1128,7 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b"Internal Server Error"))
         self.assertEqual(
-            sorted(headers.keys()), ["content-length", "content-type", "date", "server"]
+            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
         )
         # connection has been closed
         self.send_check_error(to_send)
