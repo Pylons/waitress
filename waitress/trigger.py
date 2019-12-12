@@ -49,10 +49,11 @@ from . import wasyncore
 # new data onto a channel's outgoing data queue at the same time that
 # the main thread is trying to remove some]
 
+
 class _triggerbase(object):
     """OS-independent base class for OS-dependent trigger class."""
 
-    kind = None # subclass must set to "pipe" or "loopback"; used by repr
+    kind = None  # subclass must set to "pipe" or "loopback"; used by repr
 
     def __init__(self):
         self._closed = False
@@ -86,7 +87,7 @@ class _triggerbase(object):
         if not self._closed:
             self._closed = True
             self.del_channel()
-            self._close() # subclass does OS-specific stuff
+            self._close()  # subclass does OS-specific stuff
 
     def pull_trigger(self, thunk=None):
         if thunk:
@@ -106,11 +107,12 @@ class _triggerbase(object):
                 except:
                     nil, t, v, tbinfo = wasyncore.compact_traceback()
                     self.log_info(
-                        'exception in trigger thunk: (%s:%s %s)' %
-                        (t, v, tbinfo))
+                        "exception in trigger thunk: (%s:%s %s)" % (t, v, tbinfo)
+                    )
             self.thunks = []
 
-if os.name == 'posix':
+
+if os.name == "posix":
 
     class trigger(_triggerbase, wasyncore.file_dispatcher):
         kind = "pipe"
@@ -127,9 +129,10 @@ if os.name == 'posix':
             wasyncore.file_dispatcher.close(self)
 
         def _physical_pull(self):
-            os.write(self.trigger, b'x')
+            os.write(self.trigger, b"x")
 
-else: # pragma: no cover
+
+else:  # pragma: no cover
     # Windows version; uses just sockets, because a pipe isn't select'able
     # on Windows.
 
@@ -165,11 +168,11 @@ else: # pragma: no cover
                 # for hideous details.
                 a = socket.socket()
                 a.bind(("127.0.0.1", 0))
-                connect_address = a.getsockname() # assigned (host, port) pair
+                connect_address = a.getsockname()  # assigned (host, port) pair
                 a.listen(1)
                 try:
                     w.connect(connect_address)
-                    break # success
+                    break  # success
                 except socket.error as detail:
                     if detail[0] != errno.WSAEADDRINUSE:
                         # "Address already in use" is the only error
@@ -178,7 +181,7 @@ else: # pragma: no cover
                         raise
                     # (10048, 'Address already in use')
                     # assert count <= 2 # never triggered in Tim's tests
-                    if count >= 10: # I've never seen it go above 2
+                    if count >= 10:  # I've never seen it go above 2
                         a.close()
                         w.close()
                         raise RuntimeError("Cannot bind trigger!")
@@ -186,7 +189,7 @@ else: # pragma: no cover
                     # sleep() here, but it didn't appear to help or hurt.
                     a.close()
 
-            r, addr = a.accept() # r becomes wasyncore's (self.)socket
+            r, addr = a.accept()  # r becomes wasyncore's (self.)socket
             a.close()
             self.trigger = w
             wasyncore.dispatcher.__init__(self, r, map=map)
@@ -197,4 +200,4 @@ else: # pragma: no cover
             self.trigger.close()
 
         def _physical_pull(self):
-            self.trigger.send(b'x')
+            self.trigger.send(b"x")

@@ -172,7 +172,8 @@ Tuning options:
 
 """
 
-RUNNER_PATTERN = re.compile(r"""
+RUNNER_PATTERN = re.compile(
+    r"""
     ^
     (?P<module>
         [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
@@ -182,13 +183,17 @@ RUNNER_PATTERN = re.compile(r"""
         [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
     )
     $
-    """, re.I | re.X)
+    """,
+    re.I | re.X,
+)
+
 
 def match(obj_name):
     matches = RUNNER_PATTERN.match(obj_name)
     if not matches:
         raise ValueError("Malformed application '{0}'".format(obj_name))
-    return matches.group('module'), matches.group('object')
+    return matches.group("module"), matches.group("object")
+
 
 def resolve(module_name, object_name):
     """Resolve a named object in a module."""
@@ -202,34 +207,35 @@ def resolve(module_name, object_name):
     # but I've yet to go over the commits. I know, however, that the NEWS
     # file makes no mention of such a change to the behaviour of
     # ``__import__``.
-    segments = [str(segment) for segment in object_name.split('.')]
+    segments = [str(segment) for segment in object_name.split(".")]
     obj = __import__(module_name, fromlist=segments[:1])
     for segment in segments:
         obj = getattr(obj, segment)
     return obj
 
-def show_help(stream, name, error=None): # pragma: no cover
+
+def show_help(stream, name, error=None):  # pragma: no cover
     if error is not None:
-        print('Error: {0}\n'.format(error), file=stream)
+        print("Error: {0}\n".format(error), file=stream)
     print(HELP.format(name), file=stream)
+
 
 def show_exception(stream):
     exc_type, exc_value = sys.exc_info()[:2]
-    args = getattr(exc_value, 'args', None)
+    args = getattr(exc_value, "args", None)
     print(
-        (
-            'There was an exception ({0}) importing your module.\n'
-        ).format(
+        ("There was an exception ({0}) importing your module.\n").format(
             exc_type.__name__,
         ),
-        file=stream
+        file=stream,
     )
     if args:
-        print('It had these arguments: ', file=stream)
+        print("It had these arguments: ", file=stream)
         for idx, arg in enumerate(args, start=1):
-            print('{0}. {1}\n'.format(idx, arg), file=stream)
+            print("{0}. {1}\n".format(idx, arg), file=stream)
     else:
-        print('It had no arguments.', file=stream)
+        print("It had no arguments.", file=stream)
+
 
 def run(argv=sys.argv, _serve=serve):
     """Command line runner."""
@@ -241,12 +247,12 @@ def run(argv=sys.argv, _serve=serve):
         show_help(sys.stderr, name, str(exc))
         return 1
 
-    if kw['help']:
+    if kw["help"]:
         show_help(sys.stdout, name)
         return 0
 
     if len(args) != 1:
-        show_help(sys.stderr, name, 'Specify one application only')
+        show_help(sys.stderr, name, "Specify one application only")
         return 1
 
     try:
@@ -270,11 +276,11 @@ def run(argv=sys.argv, _serve=serve):
         show_help(sys.stderr, name, "Bad object name '{0}'".format(obj_name))
         show_exception(sys.stderr)
         return 1
-    if kw['call']:
+    if kw["call"]:
         app = app()
 
     # These arguments are specific to the runner, not waitress itself.
-    del kw['call'], kw['help']
+    del kw["call"], kw["help"]
 
     _serve(app, **kw)
     return 0

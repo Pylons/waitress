@@ -39,8 +39,10 @@ from waitress.utilities import (
     BadRequest,
 )
 
+
 class ParsingError(Exception):
     pass
+
 
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
@@ -48,17 +50,18 @@ class HTTPRequestParser(object):
     Once the stream is completed, the instance is passed to
     a server task constructor.
     """
-    completed = False        # Set once request is completed.
-    empty = False            # Set if no request was made.
+
+    completed = False  # Set once request is completed.
+    empty = False  # Set if no request was made.
     expect_continue = False  # client sent "Expect: 100-continue" header
-    headers_finished = False # True when headers have been read
-    header_plus = b''
+    headers_finished = False  # True when headers have been read
+    header_plus = b""
     chunked = False
     content_length = 0
     header_bytes_received = 0
     body_bytes_received = 0
     body_rcv = None
-    version = '1.0'
+    version = "1.0"
     error = None
     connection_close = False
 
@@ -81,7 +84,7 @@ class HTTPRequestParser(object):
         body have been received.
         """
         if self.completed:
-            return 0 # Can't consume any more.
+            return 0  # Can't consume any more.
         datalen = len(data)
         br = self.body_rcv
         if br is None:
@@ -114,7 +117,8 @@ class HTTPRequestParser(object):
                             # is too large
                             if self.content_length >= max_body:
                                 self.error = RequestEntityTooLarge(
-                                    'exceeds max_body of %s' % max_body)
+                                    "exceeds max_body of %s" % max_body
+                                )
                                 self.completed = True
                 self.headers_finished = True
                 return consumed
@@ -127,9 +131,10 @@ class HTTPRequestParser(object):
                     # on our own. we disregard the incoming(?) requests HTTP
                     # version and just use 1.0. IOW someone just sent garbage
                     # over the wire
-                    self.parse_header(b'GET / HTTP/1.0\n')
+                    self.parse_header(b"GET / HTTP/1.0\n")
                     self.error = RequestHeaderFieldsTooLarge(
-                        'exceeds max_header of %s' % max_header)
+                        "exceeds max_header of %s" % max_header
+                    )
                     self.completed = True
                 self.header_plus = s
                 return datalen
@@ -140,8 +145,7 @@ class HTTPRequestParser(object):
             max_body = self.adj.max_request_body_size
             if self.body_bytes_received >= max_body:
                 # this will only be raised during t-e: chunked requests
-                self.error = RequestEntityTooLarge(
-                    'exceeds max_body of %s' % max_body)
+                self.error = RequestEntityTooLarge("exceeds max_body of %s" % max_body)
                 self.completed = True
             elif br.error:
                 # garbage in chunked encoding input probably
@@ -157,7 +161,7 @@ class HTTPRequestParser(object):
                     # TRANSFER_ENCODING header in parse_header, so this will
                     # appear to the client to be an entirely non-chunked HTTP
                     # request with a valid content-length.
-                    self.headers['CONTENT_LENGTH'] = str(br.__len__())
+                    self.headers["CONTENT_LENGTH"] = str(br.__len__())
             return consumed
 
     def parse_header(self, header_plus):
@@ -165,33 +169,33 @@ class HTTPRequestParser(object):
         Parses the header_plus block of text (the headers plus the
         first line of the request).
         """
-        index = header_plus.find(b'\n')
+        index = header_plus.find(b"\n")
         if index >= 0:
             first_line = header_plus[:index].rstrip()
-            header = header_plus[index + 1:]
+            header = header_plus[index + 1 :]
         else:
             first_line = header_plus.rstrip()
-            header = b''
+            header = b""
 
-        self.first_line = first_line # for testing
+        self.first_line = first_line  # for testing
 
         lines = get_header_lines(header)
 
         headers = self.headers
         for line in lines:
-            index = line.find(b':')
+            index = line.find(b":")
             if index > 0:
                 key = line[:index]
-                if b'_' in key:
+                if b"_" in key:
                     continue
-                value = line[index + 1:].strip()
-                key1 = tostr(key.upper().replace(b'-', b'_'))
+                value = line[index + 1 :].strip()
+                key1 = tostr(key.upper().replace(b"-", b"_"))
                 # If a header already exists, we append subsequent values
                 # seperated by a comma. Applications already need to handle
                 # the comma seperated values, as HTTP front ends might do
                 # the concatenation for you (behavior specified in RFC2616).
                 try:
-                    headers[key1] += tostr(b', ' + value)
+                    headers[key1] += tostr(b", " + value)
                 except KeyError:
                     headers[key1] = tostr(value)
             # else there's garbage in the headers?
@@ -202,35 +206,38 @@ class HTTPRequestParser(object):
         command = tostr(command)
         self.command = command
         self.version = version
-        (self.proxy_scheme,
-         self.proxy_netloc,
-         self.path,
-         self.query, self.fragment) = split_uri(uri)
+        (
+            self.proxy_scheme,
+            self.proxy_netloc,
+            self.path,
+            self.query,
+            self.fragment,
+        ) = split_uri(uri)
         self.url_scheme = self.adj.url_scheme
-        connection = headers.get('CONNECTION', '')
+        connection = headers.get("CONNECTION", "")
 
-        if version == '1.0':
-            if connection.lower() != 'keep-alive':
+        if version == "1.0":
+            if connection.lower() != "keep-alive":
                 self.connection_close = True
 
-        if version == '1.1':
+        if version == "1.1":
             # since the server buffers data from chunked transfers and clients
             # never need to deal with chunked requests, downstream clients
             # should not see the HTTP_TRANSFER_ENCODING header; we pop it
             # here
-            te = headers.pop('TRANSFER_ENCODING', '')
-            if te.lower() == 'chunked':
+            te = headers.pop("TRANSFER_ENCODING", "")
+            if te.lower() == "chunked":
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
-            expect = headers.get('EXPECT', '').lower()
-            self.expect_continue = expect == '100-continue'
-            if connection.lower() == 'close':
+            expect = headers.get("EXPECT", "").lower()
+            self.expect_continue = expect == "100-continue"
+            if connection.lower() == "close":
                 self.connection_close = True
 
         if not self.chunked:
             try:
-                cl = int(headers.get('CONTENT_LENGTH', 0))
+                cl = int(headers.get("CONTENT_LENGTH", 0))
             except ValueError:
                 cl = 0
             self.content_length = cl
@@ -250,11 +257,12 @@ class HTTPRequestParser(object):
         if body_rcv is not None:
             body_rcv.getbuf().close()
 
+
 def split_uri(uri):
     # urlsplit handles byte input by returning bytes on py3, so
     # scheme, netloc, path, query, and fragment are bytes
 
-    scheme = netloc = path = query = fragment = b''
+    scheme = netloc = path = query = fragment = b""
 
     # urlsplit below will treat this as a scheme-less netloc, thereby losing
     # the original intent of the request. Here we shamelessly stole 4 lines of
@@ -263,19 +271,19 @@ def split_uri(uri):
     # https://github.com/python/cpython/blob/8c9e9b0cd5b24dfbf1424d1f253d02de80e8f5ef/Lib/urllib/parse.py#L465-L468
     # and https://github.com/Pylons/waitress/issues/260
 
-    if uri[:2] == b'//':
+    if uri[:2] == b"//":
         path = uri
 
-        if b'#' in path:
-            path, fragment = path.split(b'#', 1)
+        if b"#" in path:
+            path, fragment = path.split(b"#", 1)
 
-        if b'?' in path:
-            path, query = path.split(b'?', 1)
+        if b"?" in path:
+            path, query = path.split(b"?", 1)
     else:
         try:
             scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
         except UnicodeError:
-            raise ParsingError('Bad URI')
+            raise ParsingError("Bad URI")
 
     return (
         tostr(scheme),
@@ -285,14 +293,15 @@ def split_uri(uri):
         tostr(fragment),
     )
 
+
 def get_header_lines(header):
     """
     Splits the header into lines, putting multi-line headers together.
     """
     r = []
-    lines = header.split(b'\n')
+    lines = header.split(b"\n")
     for line in lines:
-        if line.startswith((b' ', b'\t')):
+        if line.startswith((b" ", b"\t")):
             if not r:
                 # https://corte.si/posts/code/pathod/pythonservers/index.html
                 raise ParsingError('Malformed header line "%s"' % tostr(line))
@@ -301,11 +310,13 @@ def get_header_lines(header):
             r.append(line)
     return r
 
+
 first_line_re = re.compile(
-    b'([^ ]+) '
-    b'((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)'
-    b'(( HTTP/([0-9.]+))$|$)'
+    b"([^ ]+) "
+    b"((?:[^ :?#]+://[^ ?#/]*(?:[0-9]{1,5})?)?[^ ]+)"
+    b"(( HTTP/([0-9.]+))$|$)"
 )
+
 
 def crack_first_line(line):
     m = first_line_re.match(line)
@@ -313,7 +324,7 @@ def crack_first_line(line):
         if m.group(3):
             version = m.group(5)
         else:
-            version = b''
+            version = b""
         method = m.group(1)
 
         # the request methods that are currently defined are all uppercase:
@@ -330,4 +341,4 @@ def crack_first_line(line):
         uri = m.group(2)
         return method, uri, version
     else:
-        return b'', b'', b''
+        return b"", b"", b""

@@ -5,14 +5,14 @@ import sys
 if not sys.platform.startswith("win"):
 
     class Test_trigger(unittest.TestCase):
-
         def _makeOne(self, map):
             from waitress.trigger import trigger
+
             self.inst = trigger(map)
             return self.inst
 
         def tearDown(self):
-            self.inst.close() # prevent __del__ warning from file_dispatcher
+            self.inst.close()  # prevent __del__ warning from file_dispatcher
 
         def test__close(self):
             map = {}
@@ -27,7 +27,7 @@ if not sys.platform.startswith("win"):
             inst = self._makeOne(map)
             inst._physical_pull()
             r = os.read(inst._fds[0], 1)
-            self.assertEqual(r, b'x')
+            self.assertEqual(r, b"x")
 
         def test_readable(self):
             map = {}
@@ -61,7 +61,7 @@ if not sys.platform.startswith("win"):
             inst = self._makeOne(map)
             self.assertEqual(inst.pull_trigger(), None)
             r = os.read(inst._fds[0], 1)
-            self.assertEqual(r, b'x')
+            self.assertEqual(r, b"x")
 
         def test_pull_trigger_thunk(self):
             map = {}
@@ -69,7 +69,7 @@ if not sys.platform.startswith("win"):
             self.assertEqual(inst.pull_trigger(True), None)
             self.assertEqual(len(inst.thunks), 1)
             r = os.read(inst._fds[0], 1)
-            self.assertEqual(r, b'x')
+            self.assertEqual(r, b"x")
 
         def test_handle_read_socket_error(self):
             map = {}
@@ -98,8 +98,10 @@ if not sys.platform.startswith("win"):
         def test_handle_read_thunk_error(self):
             map = {}
             inst = self._makeOne(map)
+
             def errorthunk():
                 raise ValueError
+
             inst.pull_trigger(errorthunk)
             L = []
             inst.log_info = lambda *arg: L.append(arg)

@@ -23,14 +23,14 @@ from .compat import (
     WIN,
     string_types,
     HAS_IPV6,
-    )
+)
 
-truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
+truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
 
 KNOWN_PROXY_HEADERS = frozenset(
-    header.lower().replace('_', '-')
-    for header in PROXY_HEADERS
+    header.lower().replace("_", "-") for header in PROXY_HEADERS
 )
+
 
 def asbool(s):
     """ Return the boolean value ``True`` if the case-lowered value of string
@@ -45,14 +45,17 @@ def asbool(s):
     s = str(s).strip()
     return s.lower() in truthy
 
+
 def asoctal(s):
     """Convert the given octal string to an actual number."""
     return int(s, 8)
+
 
 def aslist_cronly(value):
     if isinstance(value, string_types):
         value = filter(None, [x.strip() for x in value.splitlines()])
     return list(value)
+
 
 def aslist(value):
     """ Return a list of strings, separating the input based on newlines
@@ -65,82 +68,90 @@ def aslist(value):
         result.extend(subvalues)
     return result
 
+
 def asset(value):
     return set(aslist(value))
+
 
 def slash_fixed_str(s):
     s = s.strip()
     if s:
         # always have a leading slash, replace any number of leading slashes
         # with a single slash, and strip any trailing slashes
-        s = '/' + s.lstrip('/').rstrip('/')
+        s = "/" + s.lstrip("/").rstrip("/")
     return s
+
 
 def str_iftruthy(s):
     return str(s) if s else None
+
 
 def as_socket_list(sockets):
     """Checks if the elements in the list are of type socket and
     removes them if not."""
     return [sock for sock in sockets if isinstance(sock, socket.socket)]
 
+
 class _str_marker(str):
     pass
+
 
 class _int_marker(int):
     pass
 
+
 class _bool_marker(object):
     pass
+
 
 class Adjustments(object):
     """This class contains tunable parameters.
     """
 
     _params = (
-        ('host', str),
-        ('port', int),
-        ('ipv4', asbool),
-        ('ipv6', asbool),
-        ('listen', aslist),
-        ('threads', int),
-        ('trusted_proxy', str_iftruthy),
-        ('trusted_proxy_count', int),
-        ('trusted_proxy_headers', asset),
-        ('log_untrusted_proxy_headers', asbool),
-        ('clear_untrusted_proxy_headers', asbool),
-        ('url_scheme', str),
-        ('url_prefix', slash_fixed_str),
-        ('backlog', int),
-        ('recv_bytes', int),
-        ('send_bytes', int),
-        ('outbuf_overflow', int),
-        ('outbuf_high_watermark', int),
-        ('inbuf_overflow', int),
-        ('connection_limit', int),
-        ('cleanup_interval', int),
-        ('channel_timeout', int),
-        ('log_socket_errors', asbool),
-        ('max_request_header_size', int),
-        ('max_request_body_size', int),
-        ('expose_tracebacks', asbool),
-        ('ident', str_iftruthy),
-        ('asyncore_loop_timeout', int),
-        ('asyncore_use_poll', asbool),
-        ('unix_socket', str),
-        ('unix_socket_perms', asoctal),
-        ('sockets', as_socket_list),
+        ("host", str),
+        ("port", int),
+        ("ipv4", asbool),
+        ("ipv6", asbool),
+        ("listen", aslist),
+        ("threads", int),
+        ("trusted_proxy", str_iftruthy),
+        ("trusted_proxy_count", int),
+        ("trusted_proxy_headers", asset),
+        ("log_untrusted_proxy_headers", asbool),
+        ("clear_untrusted_proxy_headers", asbool),
+        ("url_scheme", str),
+        ("url_prefix", slash_fixed_str),
+        ("backlog", int),
+        ("recv_bytes", int),
+        ("send_bytes", int),
+        ("outbuf_overflow", int),
+        ("outbuf_high_watermark", int),
+        ("inbuf_overflow", int),
+        ("connection_limit", int),
+        ("cleanup_interval", int),
+        ("channel_timeout", int),
+        ("log_socket_errors", asbool),
+        ("max_request_header_size", int),
+        ("max_request_body_size", int),
+        ("expose_tracebacks", asbool),
+        ("ident", str_iftruthy),
+        ("asyncore_loop_timeout", int),
+        ("asyncore_use_poll", asbool),
+        ("unix_socket", str),
+        ("unix_socket_perms", asoctal),
+        ("sockets", as_socket_list),
     )
 
     _param_map = dict(_params)
 
     # hostname or IP address to listen on
-    host = _str_marker('0.0.0.0')
+    host = _str_marker("0.0.0.0")
 
     # TCP port to listen on
     port = _int_marker(8080)
 
-    listen = ['{}:{}'.format(host, port)]
+    listen = ["{}:{}".format(host, port)]
 
     # number of threads available for tasks
     threads = 4
@@ -178,14 +189,14 @@ class Adjustments(object):
     clear_untrusted_proxy_headers = _bool_marker
 
     # default ``wsgi.url_scheme`` value
-    url_scheme = 'http'
+    url_scheme = "http"
 
     # default ``SCRIPT_NAME`` value, also helps reset ``PATH_INFO``
     # when nonempty
-    url_prefix = ''
+    url_prefix = ""
 
     # server identity (sent in Server: header)
-    ident = 'waitress'
+    ident = "waitress"
 
     # backlog is the value waitress passes to pass to socket.listen() This is
     # the maximum number of incoming TCP connections that will wait in an OS
@@ -277,44 +288,44 @@ class Adjustments(object):
 
     def __init__(self, **kw):
 
-        if 'listen' in kw and ('host' in kw or 'port' in kw):
-            raise ValueError('host or port may not be set if listen is set.')
+        if "listen" in kw and ("host" in kw or "port" in kw):
+            raise ValueError("host or port may not be set if listen is set.")
 
-        if 'listen' in kw and 'sockets' in kw:
-            raise ValueError('socket may not be set if listen is set.')
+        if "listen" in kw and "sockets" in kw:
+            raise ValueError("socket may not be set if listen is set.")
 
-        if 'sockets' in kw and ('host' in kw or 'port' in kw):
-            raise ValueError('host or port may not be set if sockets is set.')
+        if "sockets" in kw and ("host" in kw or "port" in kw):
+            raise ValueError("host or port may not be set if sockets is set.")
 
-        if 'sockets' in kw and 'unix_socket' in kw:
-            raise ValueError('unix_socket may not be set if sockets is set')
+        if "sockets" in kw and "unix_socket" in kw:
+            raise ValueError("unix_socket may not be set if sockets is set")
 
-        if 'unix_socket' in kw and ('host' in kw or 'port' in kw):
-            raise ValueError('unix_socket may not be set if host or port is set')
+        if "unix_socket" in kw and ("host" in kw or "port" in kw):
+            raise ValueError("unix_socket may not be set if host or port is set")
 
-        if 'unix_socket' in kw and 'listen' in kw:
-            raise ValueError('unix_socket may not be set if listen is set')
+        if "unix_socket" in kw and "listen" in kw:
+            raise ValueError("unix_socket may not be set if listen is set")
 
-        if 'send_bytes' in kw:
+        if "send_bytes" in kw:
             warnings.warn(
-                'send_bytes will be removed in a future release',
-                DeprecationWarning,
+                "send_bytes will be removed in a future release", DeprecationWarning,
             )
 
         for k, v in kw.items():
             if k not in self._param_map:
-                raise ValueError('Unknown adjustment %r' % k)
+                raise ValueError("Unknown adjustment %r" % k)
             setattr(self, k, self._param_map[k](v))
 
-        if (not isinstance(self.host, _str_marker) or
-           not isinstance(self.port, _int_marker)):
-            self.listen = ['{}:{}'.format(self.host, self.port)]
+        if not isinstance(self.host, _str_marker) or not isinstance(
+            self.port, _int_marker
+        ):
+            self.listen = ["{}:{}".format(self.host, self.port)]
 
         enabled_families = socket.AF_UNSPEC
 
-        if not self.ipv4 and not HAS_IPV6: # pragma: no cover
+        if not self.ipv4 and not HAS_IPV6:  # pragma: no cover
             raise ValueError(
-                'IPv4 is disabled but IPv6 is not available. Cowardly refusing to start.'
+                "IPv4 is disabled but IPv6 is not available. Cowardly refusing to start."
             )
 
         if self.ipv4 and not self.ipv6:
@@ -326,30 +337,30 @@ class Adjustments(object):
         wanted_sockets = []
         hp_pairs = []
         for i in self.listen:
-            if ':' in i:
+            if ":" in i:
                 (host, port) = i.rsplit(":", 1)
 
                 # IPv6 we need to make sure that we didn't split on the address
-                if ']' in port: # pragma: nocover
+                if "]" in port:  # pragma: nocover
                     (host, port) = (i, str(self.port))
             else:
                 (host, port) = (i, str(self.port))
 
-            if WIN and PY2: # pragma: no cover
+            if WIN and PY2:  # pragma: no cover
                 try:
                     # Try turning the port into an integer
                     port = int(port)
 
                 except Exception:
                     raise ValueError(
-                        'Windows does not support service names instead of port numbers'
+                        "Windows does not support service names instead of port numbers"
                     )
 
             try:
-                if '[' in host and ']' in host: # pragma: nocover
-                    host = host.strip('[').rstrip(']')
+                if "[" in host and "]" in host:  # pragma: nocover
+                    host = host.strip("[").rstrip("]")
 
-                if host == '*':
+                if host == "*":
                     host = None
 
                 for s in socket.getaddrinfo(
@@ -358,7 +369,7 @@ class Adjustments(object):
                     enabled_families,
                     socket.SOCK_STREAM,
                     socket.IPPROTO_TCP,
-                    socket.AI_PASSIVE
+                    socket.AI_PASSIVE,
                 ):
                     (family, socktype, proto, _, sockaddr) = s
 
@@ -372,19 +383,18 @@ class Adjustments(object):
                     # two different zone-indices (which makes no sense what so
                     # ever...) yet treats them equally when we attempt to bind().
                     if (
-                        sockaddr[1] == 0 or
-                        (sockaddr[0].split('%', 1)[0], sockaddr[1]) not in hp_pairs
+                        sockaddr[1] == 0
+                        or (sockaddr[0].split("%", 1)[0], sockaddr[1]) not in hp_pairs
                     ):
                         wanted_sockets.append((family, socktype, proto, sockaddr))
-                        hp_pairs.append((sockaddr[0].split('%', 1)[0], sockaddr[1]))
+                        hp_pairs.append((sockaddr[0].split("%", 1)[0], sockaddr[1]))
 
             except Exception:
-                raise ValueError('Invalid host/port specified.')
+                raise ValueError("Invalid host/port specified.")
 
         if self.trusted_proxy_count is not None and self.trusted_proxy is None:
             raise ValueError(
-                "trusted_proxy_count has no meaning without setting "
-                "trusted_proxy"
+                "trusted_proxy_count has no meaning without setting " "trusted_proxy"
             )
 
         elif self.trusted_proxy_count is None:
@@ -392,8 +402,7 @@ class Adjustments(object):
 
         if self.trusted_proxy_headers and self.trusted_proxy is None:
             raise ValueError(
-                "trusted_proxy_headers has no meaning without setting "
-                "trusted_proxy"
+                "trusted_proxy_headers has no meaning without setting " "trusted_proxy"
             )
 
         if self.trusted_proxy_headers:
@@ -405,12 +414,13 @@ class Adjustments(object):
             if unknown_values:
                 raise ValueError(
                     "Received unknown trusted_proxy_headers value (%s) expected one "
-                    "of %s" % (", ".join(unknown_values), ", ".join(KNOWN_PROXY_HEADERS))
+                    "of %s"
+                    % (", ".join(unknown_values), ", ".join(KNOWN_PROXY_HEADERS))
                 )
 
             if (
-                'forwarded' in self.trusted_proxy_headers and
-                self.trusted_proxy_headers - {'forwarded'}
+                "forwarded" in self.trusted_proxy_headers
+                and self.trusted_proxy_headers - {"forwarded"}
             ):
                 raise ValueError(
                     "The Forwarded proxy header and the "
@@ -420,19 +430,19 @@ class Adjustments(object):
 
         elif self.trusted_proxy is not None:
             warnings.warn(
-                'No proxy headers were marked as trusted, but trusted_proxy was set. '
-                'Implicitly trusting X-Forwarded-Proto for backwards compatibility. '
-                'This will be removed in future versions of waitress.',
-                DeprecationWarning
+                "No proxy headers were marked as trusted, but trusted_proxy was set. "
+                "Implicitly trusting X-Forwarded-Proto for backwards compatibility. "
+                "This will be removed in future versions of waitress.",
+                DeprecationWarning,
             )
-            self.trusted_proxy_headers = {'x-forwarded-proto'}
+            self.trusted_proxy_headers = {"x-forwarded-proto"}
 
         if self.clear_untrusted_proxy_headers is _bool_marker:
             warnings.warn(
-                'In future versions of Waitress clear_untrusted_proxy_headers will be '
-                'set to True by default. You may opt-out by setting this value to '
-                'False, or opt-in explicitly by setting this to True.',
-                DeprecationWarning
+                "In future versions of Waitress clear_untrusted_proxy_headers will be "
+                "set to True by default. You may opt-out by setting this value to "
+                "False, or opt-in explicitly by setting this to True.",
+                DeprecationWarning,
             )
             self.clear_untrusted_proxy_headers = False
 
@@ -447,35 +457,35 @@ class Adjustments(object):
         dictionary suitable for passing into __init__, where __init__ does the
         casting.
         """
-        long_opts = ['help', 'call']
+        long_opts = ["help", "call"]
         for opt, cast in cls._params:
-            opt = opt.replace('_', '-')
+            opt = opt.replace("_", "-")
             if cast is asbool:
                 long_opts.append(opt)
-                long_opts.append('no-' + opt)
+                long_opts.append("no-" + opt)
             else:
-                long_opts.append(opt + '=')
+                long_opts.append(opt + "=")
 
         kw = {
-            'help': False,
-            'call': False,
+            "help": False,
+            "call": False,
         }
 
-        opts, args = getopt.getopt(argv, '', long_opts)
+        opts, args = getopt.getopt(argv, "", long_opts)
         for opt, value in opts:
-            param = opt.lstrip('-').replace('-', '_')
+            param = opt.lstrip("-").replace("-", "_")
 
-            if param == 'listen':
-                kw['listen'] = '{} {}'.format(kw.get('listen', ''), value)
+            if param == "listen":
+                kw["listen"] = "{} {}".format(kw.get("listen", ""), value)
                 continue
 
-            if param.startswith('no_'):
+            if param.startswith("no_"):
                 param = param[3:]
-                kw[param] = 'false'
-            elif param in ('help', 'call'):
+                kw[param] = "false"
+            elif param in ("help", "call"):
                 kw[param] = True
             elif cls._param_map[param] is asbool:
-                kw[param] = 'true'
+                kw[param] = "true"
             else:
                 kw[param] = value
 
@@ -487,16 +497,19 @@ class Adjustments(object):
         has_inet_socket = False
         has_unsupported_socket = False
         for sock in sockets:
-            if (sock.family == socket.AF_INET or sock.family == socket.AF_INET6) and \
-                    sock.type == socket.SOCK_STREAM:
+            if (
+                sock.family == socket.AF_INET or sock.family == socket.AF_INET6
+            ) and sock.type == socket.SOCK_STREAM:
                 has_inet_socket = True
-            elif hasattr(socket, 'AF_UNIX') and \
-                    sock.family == socket.AF_UNIX and \
-                    sock.type == socket.SOCK_STREAM:
+            elif (
+                hasattr(socket, "AF_UNIX")
+                and sock.family == socket.AF_UNIX
+                and sock.type == socket.SOCK_STREAM
+            ):
                 has_unix_socket = True
             else:
                 has_unsupported_socket = True
         if has_unix_socket and has_inet_socket:
-            raise ValueError('Internet and UNIX sockets may not be mixed.')
+            raise ValueError("Internet and UNIX sockets may not be mixed.")
         if has_unsupported_socket:
-            raise ValueError('Only Internet or UNIX stream sockets may be used.')
+            raise ValueError("Only Internet or UNIX stream sockets may be used.")

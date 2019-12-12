@@ -1,9 +1,10 @@
 import unittest
 
-class Test_serve(unittest.TestCase):
 
+class Test_serve(unittest.TestCase):
     def _callFUT(self, app, **kw):
         from waitress import serve
+
         return serve(app, **kw)
 
     def test_it(self):
@@ -16,9 +17,9 @@ class Test_serve(unittest.TestCase):
 
 
 class Test_serve_paste(unittest.TestCase):
-
     def _callFUT(self, app, **kw):
         from waitress import serve_paste
+
         return serve_paste(app, None, **kw)
 
     def test_it(self):
@@ -28,6 +29,7 @@ class Test_serve_paste(unittest.TestCase):
         self.assertEqual(server.app, app)
         self.assertEqual(result, 0)
         self.assertEqual(server.ran, True)
+
 
 class DummyServerFactory(object):
     ran = False
@@ -40,6 +42,7 @@ class DummyServerFactory(object):
 
     def run(self):
         self.ran = True
+
 
 class DummyAdj(object):
     verbose = False

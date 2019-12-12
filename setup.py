@@ -16,66 +16,63 @@ from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
-    README = open(os.path.join(here, 'README.rst')).read()
-    CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
+    README = open(os.path.join(here, "README.rst")).read()
+    CHANGES = open(os.path.join(here, "CHANGES.txt")).read()
 except IOError:
-    README = CHANGES = ''
+    README = CHANGES = ""
 
 docs_extras = [
-    'Sphinx>=1.8.1',
-    'docutils',
-    'pylons-sphinx-themes>=1.0.9',
+    "Sphinx>=1.8.1",
+    "docutils",
+    "pylons-sphinx-themes>=1.0.9",
 ]
 
 testing_extras = [
-    'nose',
-    'coverage',
+    "nose",
+    "coverage",
 ]
 
 setup(
-    name='waitress',
-    version='1.3.1',
-    author='Zope Foundation and Contributors',
-    author_email='zope-dev@zope.org',
+    name="waitress",
+    version="1.3.1",
+    author="Zope Foundation and Contributors",
+    author_email="zope-dev@zope.org",
     maintainer="Pylons Project",
     maintainer_email="pylons-discuss@googlegroups.com",
-    description='Waitress WSGI server',
-    long_description=README + '\n\n' + CHANGES,
-    license='ZPL 2.1',
-    keywords='waitress wsgi server http',
+    description="Waitress WSGI server",
+    long_description=README + "\n\n" + CHANGES,
+    license="ZPL 2.1",
+    keywords="waitress wsgi server http",
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Environment :: Web Environment',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: Zope Public License',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
-        'Natural Language :: English',
-        'Operating System :: OS Independent',
-        'Topic :: Internet :: WWW/HTTP',
-        'Topic :: Internet :: WWW/HTTP :: WSGI',
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Web Environment",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Zope Public License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "Natural Language :: English",
+        "Operating System :: OS Independent",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: WSGI",
     ],
-    url='https://github.com/Pylons/waitress',
+    url="https://github.com/Pylons/waitress",
     packages=find_packages(),
-    extras_require={
-        'testing': testing_extras,
-        'docs': docs_extras,
-    },
+    extras_require={"testing": testing_extras, "docs": docs_extras,},
     include_package_data=True,
-    test_suite='waitress',
+    test_suite="waitress",
     zip_safe=False,
     entry_points="""
     [paste.server_runner]
     main = waitress:serve_paste
     [console_scripts]
     waitress-serve = waitress.runner:run
-    """
+    """,
 )

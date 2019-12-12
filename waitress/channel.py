@@ -32,8 +32,10 @@ from waitress.utilities import InternalServerError
 
 from . import wasyncore
 
+
 class ClientDisconnected(Exception):
     """ Raised when attempting to write to a closed socket."""
+
 
 class HTTPChannel(wasyncore.dispatcher, object):
     """
@@ -47,27 +49,22 @@ class HTTPChannel(wasyncore.dispatcher, object):
     error_task_class = ErrorTask
     parser_class = HTTPRequestParser
 
-    request = None               # A request parser instance
-    last_activity = 0            # Time of last activity
-    will_close = False           # set to True to close the socket.
-    close_when_flushed = False   # set to True to close the socket when flushed
-    requests = ()                # currently pending requests
-    sent_continue = False        # used as a latch after sending 100 continue
-    total_outbufs_len = 0        # total bytes ready to send
-    current_outbuf_count = 0     # total bytes written to current outbuf
+    request = None  # A request parser instance
+    last_activity = 0  # Time of last activity
+    will_close = False  # set to True to close the socket.
+    close_when_flushed = False  # set to True to close the socket when flushed
+    requests = ()  # currently pending requests
+    sent_continue = False  # used as a latch after sending 100 continue
+    total_outbufs_len = 0  # total bytes ready to send
+    current_outbuf_count = 0  # total bytes written to current outbuf
 
     #
     # ASYNCHRONOUS METHODS (including __init__)
     #
 
     def __init__(
-            self,
-            server,
-            sock,
-            addr,
-            adj,
-            map=None,
-            ):
+        self, server, sock, addr, adj, map=None,
+    ):
         self.server = server
         self.adj = adj
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]
@@ -88,11 +85,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         # if there's data in the out buffer or we've been instructed to close
         # the channel (possibly by our server maintenance logic), run
         # handle_write
-        return (
-            self.total_outbufs_len
-            or self.will_close
-            or self.close_when_flushed
-        )
+        return self.total_outbufs_len or self.will_close or self.close_when_flushed
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
@@ -125,10 +118,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 flush()
             except socket.error:
                 if self.adj.log_socket_errors:
-                    self.logger.exception('Socket error')
+                    self.logger.exception("Socket error")
                 self.will_close = True
             except Exception:
-                self.logger.exception('Unexpected exception when flushing')
+                self.logger.exception("Unexpected exception when flushing")
                 self.will_close = True
 
         if self.close_when_flushed and not self.total_outbufs_len:
@@ -151,7 +144,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
             data = self.recv(self.adj.recv_bytes)
         except socket.error:
             if self.adj.log_socket_errors:
-                self.logger.exception('Socket error')
+                self.logger.exception("Socket error")
             self.handle_close()
             return
         if data:
@@ -180,7 +173,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 if not self.sent_continue:
                     # there's no current task, so we don't need to try to
                     # lock the outbuf to append to it.
-                    outbuf_payload = b'HTTP/1.1 100 Continue\r\n\r\n'
+                    outbuf_payload = b"HTTP/1.1 100 Continue\r\n\r\n"
                     self.outbufs[-1].append(outbuf_payload)
                     self.current_outbuf_count += len(outbuf_payload)
                     self.total_outbufs_len += len(outbuf_payload)
@@ -247,8 +240,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     try:
                         toclose.close()
                     except Exception:
-                        self.logger.exception(
-                            'Unexpected error when closing an outbuf')
+                        self.logger.exception("Unexpected error when closing an outbuf")
                 else:
                     # caught up, done flushing for now
                     dobreak = True
@@ -269,7 +261,8 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     outbuf.close()
                 except Exception:
                     self.logger.exception(
-                        'Unknown exception while trying to close outbuf')
+                        "Unknown exception while trying to close outbuf"
+                    )
             self.total_outbufs_len = 0
             self.connected = False
             self.outbuf_lock.notify()
@@ -288,7 +281,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
 
         This hook keeps track of closed channels.
         """
-        fd = self._fileno # next line sets this to None
+        fd = self._fileno  # next line sets this to None
         wasyncore.dispatcher.del_channel(self, map)
         ac = self.server.active_channels
         if fd in ac:
@@ -337,8 +330,8 @@ class HTTPChannel(wasyncore.dispatcher, object):
         if self.total_outbufs_len > self.adj.outbuf_high_watermark:
             with self.outbuf_lock:
                 while (
-                    self.connected and
-                    self.total_outbufs_len > self.adj.outbuf_high_watermark
+                    self.connected
+                    and self.total_outbufs_len > self.adj.outbuf_high_watermark
                 ):
                     self.server.pull_trigger()
                     self.outbuf_lock.wait()
@@ -355,18 +348,22 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 try:
                     task.service()
                 except ClientDisconnected:
-                    self.logger.info('Client disconnected while serving %s' %
-                                     task.request.path)
+                    self.logger.info(
+                        "Client disconnected while serving %s" % task.request.path
+                    )
                     task.close_on_finish = True
                 except Exception:
-                    self.logger.exception('Exception while serving %s' %
-                                          task.request.path)
+                    self.logger.exception(
+                        "Exception while serving %s" % task.request.path
+                    )
                     if not task.wrote_header:
                         if self.adj.expose_tracebacks:
                             body = traceback.format_exc()
                         else:
-                            body = ('The server encountered an unexpected '
-                                    'internal server error')
+                            body = (
+                                "The server encountered an unexpected "
+                                "internal server error"
+                            )
                         req_version = request.version
                         req_headers = request.headers
                         request = self.parser_class(self.adj)
@@ -375,13 +372,12 @@ class HTTPChannel(wasyncore.dispatcher, object):
                         # HTTP 1.1 requirements
                         request.version = req_version
                         try:
-                            request.headers['CONNECTION'] = req_headers[
-                                'CONNECTION']
+                            request.headers["CONNECTION"] = req_headers["CONNECTION"]
                         except KeyError:
                             pass
                         task = self.error_task_class(self, request)
                         try:
-                            task.service() # must not fail
+                            task.service()  # must not fail
                         except ClientDisconnected:
                             task.close_on_finish = True
                     else:

@@ -15,8 +15,9 @@
 """
 import doctest
 
-class FakeSocket: # pragma: no cover
-    data = ''
+
+class FakeSocket:  # pragma: no cover
+    data = ""
     setblocking = lambda *_: None
     close = lambda *_: None
 
@@ -27,14 +28,15 @@ class FakeSocket: # pragma: no cover
         return self.no
 
     def getpeername(self):
-        return ('localhost', self.no)
+        return ("localhost", self.no)
 
     def send(self, data):
         self.data += data
         return len(data)
 
     def recv(self, data):
-        return 'data'
+        return "data"
+
 
 def zombies_test():
     """Regression test for HTTPChannel.maintenance method
@@ -139,6 +141,7 @@ def zombies_test():
     True
 
 """
+
 
 def test_suite():
     return doctest.DocTestSuite()

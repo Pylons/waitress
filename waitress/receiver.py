@@ -18,6 +18,7 @@ from waitress.utilities import find_double_newline
 
 from waitress.utilities import BadRequest
 
+
 class FixedStreamReceiver(object):
 
     # See IStreamConsumer
@@ -30,12 +31,12 @@ class FixedStreamReceiver(object):
 
     def __len__(self):
         return self.buf.__len__()
-    
+
     def received(self, data):
-        'See IStreamConsumer'
+        "See IStreamConsumer"
         rm = self.remain
         if rm < 1:
-            self.completed = True # Avoid any chance of spinning
+            self.completed = True  # Avoid any chance of spinning
             return 0
         datalen = len(data)
         if rm <= datalen:
@@ -54,12 +55,13 @@ class FixedStreamReceiver(object):
     def getbuf(self):
         return self.buf
 
+
 class ChunkedReceiver(object):
 
     chunk_remainder = 0
-    control_line = b''
+    control_line = b""
     all_chunks_received = False
-    trailer = b''
+    trailer = b""
     completed = False
     error = None
 
@@ -89,28 +91,27 @@ class ChunkedReceiver(object):
             elif not self.all_chunks_received:
                 # Receive a control line.
                 s = self.control_line + s
-                pos = s.find(b'\n')
+                pos = s.find(b"\n")
                 if pos < 0:
                     # Control line not finished.
                     self.control_line = s
-                    s = ''
+                    s = ""
                 else:
                     # Control line finished.
                     line = s[:pos]
-                    s = s[pos + 1:]
-                    self.control_line = b''
+                    s = s[pos + 1 :]
+                    self.control_line = b""
                     line = line.strip()
                     if line:
                         # Begin a new chunk.
-                        semi = line.find(b';')
+                        semi = line.find(b";")
                         if semi >= 0:
                             # discard extension info.
                             line = line[:semi]
                         try:
-                            sz = int(line.strip(), 16) # hexadecimal
-                        except ValueError: # garbage in input
-                            self.error = BadRequest(
-                                'garbage in chunked encoding input')
+                            sz = int(line.strip(), 16)  # hexadecimal
+                        except ValueError:  # garbage in input
+                            self.error = BadRequest("garbage in chunked encoding input")
                             sz = 0
                         if sz > 0:
                             # Start a new chunk.
@@ -122,11 +123,11 @@ class ChunkedReceiver(object):
             else:
                 # Receive the trailer.
                 trailer = self.trailer + s
-                if trailer.startswith(b'\r\n'):
+                if trailer.startswith(b"\r\n"):
                     # No trailer.
                     self.completed = True
                     return orig_size - (len(trailer) - 2)
-                elif trailer.startswith(b'\n'):
+                elif trailer.startswith(b"\n"):
                     # No trailer.
                     self.completed = True
                     return orig_size - (len(trailer) - 1)
@@ -134,7 +135,7 @@ class ChunkedReceiver(object):
                 if pos < 0:
                     # Trailer not finished.
                     self.trailer = trailer
-                    s = b''
+                    s = b""
                 else:
                     # Finished the trailer.
                     self.completed = True
