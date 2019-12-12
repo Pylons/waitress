@@ -12,19 +12,15 @@
 #
 ##############################################################################
 
-from collections import deque
 import socket
 import sys
 import threading
 import time
+from collections import deque
 
 from .buffers import ReadOnlyFileBasedBuffer
 from .compat import reraise, tobytes
-from .utilities import (
-    build_http_date,
-    logger,
-    queue_logger,
-)
+from .utilities import build_http_date, logger, queue_logger
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
     "CONTENT_LENGTH": "CONTENT_LENGTH",
@@ -307,7 +303,7 @@ class Task(object):
 
     def write(self, data):
         if not self.complete:
-            raise RuntimeError("start_response was not called before body " "written")
+            raise RuntimeError("start_response was not called before body written")
         channel = self.channel
         if not self.wrote_header:
             rh = self.build_response_header()
@@ -382,7 +378,7 @@ class WSGITask(Task):
         def start_response(status, headers, exc_info=None):
             if self.complete and not exc_info:
                 raise AssertionError(
-                    "start_response called a second time " "without providing exc_info."
+                    "start_response called a second time without providing exc_info."
                 )
             if exc_info:
                 try:
@@ -404,7 +400,7 @@ class WSGITask(Task):
                 raise AssertionError("status %s is not a string" % status)
             if "\n" in status or "\r" in status:
                 raise ValueError(
-                    "carriage return/line " "feed character present in status"
+                    "carriage return/line feed character present in status"
                 )
 
             self.status = status
@@ -422,11 +418,11 @@ class WSGITask(Task):
 
                 if "\n" in v or "\r" in v:
                     raise ValueError(
-                        "carriage return/line " "feed character present in header value"
+                        "carriage return/line feed character present in header value"
                     )
                 if "\n" in k or "\r" in k:
                     raise ValueError(
-                        "carriage return/line " "feed character present in header name"
+                        "carriage return/line feed character present in header name"
                     )
 
                 kl = k.lower()
