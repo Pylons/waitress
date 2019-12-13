@@ -254,7 +254,8 @@ class HTTPRequestParser(object):
             try:
                 cl = int(headers.get("CONTENT_LENGTH", 0))
             except ValueError:
-                cl = 0
+                raise ParsingError("Content-Length is invalid")
+
             self.content_length = cl
             if cl > 0:
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
