@@ -242,6 +242,18 @@ class TestHTTPRequestParser(unittest.TestCase):
         else:  # pragma: nocover
             self.assertTrue(False)
 
+    def test_parse_header_invalid_whitespace(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/8.4\r\nfoo : bar\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Invalid whitespace after field-name", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+
 class Test_split_uri(unittest.TestCase):
     def _callFUT(self, uri):
         from waitress.parser import split_uri

@@ -197,6 +197,10 @@ class HTTPRequestParser(object):
             index = line.find(b":")
             if index > 0:
                 key = line[:index]
+
+                if key != key.strip():
+                    raise ParsingError("Invalid whitespace after field-name")
+
                 if b"_" in key:
                     continue
                 value = line[index + 1 :].strip()
