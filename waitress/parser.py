@@ -75,16 +75,41 @@ class HTTPRequestParser(object):
         """
         if self.completed:
             return 0  # Can't consume any more.
+
         datalen = len(data)
         br = self.body_rcv
         if br is None:
             # In header.
+            max_header = self.adj.max_request_header_size
+
             s = self.header_plus + data
             index = find_double_newline(s)
+            consumed = 0
+
+            if index >= 0:
+                # If the headers have ended, and we also have part of the body
+                # message in data we still want to validate we aren't going
+                # over our limit for received headers.
+                self.header_bytes_received += index
+                consumed = datalen - (len(s) - index)
+            else:
+                self.header_bytes_received += datalen
+                consumed = datalen
+
+            # If the first line + headers is over the max length, we return a
+            # RequestHeaderFieldsTooLarge error rather than continuing to
+            # attempt to parse the headers.
+            if self.header_bytes_received >= max_header:
+                self.parse_header(b"GET / HTTP/1.0\r\n")
+                self.error = RequestHeaderFieldsTooLarge(
+                    "exceeds max_header of %s" % max_header
+                )
+                self.completed = True
+                return consumed
+
             if index >= 0:
                 # Header finished.
                 header_plus = s[:index]
-                consumed = len(data) - (len(s) - index)
 
                 # Remove preceeding blank lines. This is suggested by
                 # https://tools.ietf.org/html/rfc7230#section-3.5 to support
@@ -117,22 +142,10 @@ class HTTPRequestParser(object):
                                 self.completed = True
                 self.headers_finished = True
                 return consumed
-            else:
-                # Header not finished yet.
-                self.header_bytes_received += datalen
-                max_header = self.adj.max_request_header_size
-                if self.header_bytes_received >= max_header:
-                    # malformed header, we need to construct some request
-                    # on our own. we disregard the incoming(?) requests HTTP
-                    # version and just use 1.0. IOW someone just sent garbage
-                    # over the wire
-                    self.parse_header(b"GET / HTTP/1.0\n")
-                    self.error = RequestHeaderFieldsTooLarge(
-                        "exceeds max_header of %s" % max_header
-                    )
-                    self.completed = True
-                self.header_plus = s
-                return datalen
+
+            # Header not finished yet.
+            self.header_plus = s
+            return datalen
         else:
             # In body.
             consumed = br.received(data)
@@ -157,6 +170,7 @@ class HTTPRequestParser(object):
                     # appear to the client to be an entirely non-chunked HTTP
                     # request with a valid content-length.
                     self.headers["CONTENT_LENGTH"] = str(br.__len__())
+
             return consumed
 
     def parse_header(self, header_plus):
