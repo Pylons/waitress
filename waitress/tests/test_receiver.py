@@ -198,6 +198,33 @@ class TestChunkedReceiver(unittest.TestCase):
         self.assertEqual(b"".join(buf.data), b"Wikipedia in\r\n\r\nchunks.")
         self.assertEqual(inst.error, None)
 
+    def test_received_multiple_chunks_split(self):
+        from waitress.utilities import BadRequest
+
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        data1 = b"4\r\nWiki\r"
+        result = inst.received(data1)
+        self.assertEqual(result, len(data1))
+
+        data2 = (
+            b"\n5\r\n"
+            b"pedia\r\n"
+            b"E\r\n"
+            b" in\r\n"
+            b"\r\n"
+            b"chunks.\r\n"
+            b"0\r\n"
+            b"\r\n"
+        )
+
+        result = inst.received(data2)
+        self.assertEqual(result, len(data2))
+
+        self.assertEqual(inst.completed, True)
+        self.assertEqual(b"".join(buf.data), b"Wikipedia in\r\n\r\nchunks.")
+        self.assertEqual(inst.error, None)
+
 
 class DummyBuffer(object):
     def __init__(self, data=None):

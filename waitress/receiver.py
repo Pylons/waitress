@@ -64,6 +64,7 @@ class ChunkedReceiver(object):
     chunk_remainder = 0
     validate_chunk_end = False
     control_line = b""
+    chunk_end = b""
     all_chunks_received = False
     trailer = b""
     completed = False
@@ -100,17 +101,24 @@ class ChunkedReceiver(object):
                 if self.chunk_remainder == 0:
                     self.validate_chunk_end = True
             elif self.validate_chunk_end:
+                s = self.chunk_end + s
+
                 pos = s.find(b"\r\n")
 
-                if pos == 0:
-                    # Chop off the terminating CR LF from the chunk
-                    s = s[2:]
+                if pos < 0 and len(s) < 2:
+                    self.chunk_end = s
+                    s = b""
                 else:
-                    self.error = BadRequest("Chunk not properly terminated")
-                    self.all_chunks_received = True
+                    self.chunk_end = b""
+                    if pos == 0:
+                        # Chop off the terminating CR LF from the chunk
+                        s = s[2:]
+                    else:
+                        self.error = BadRequest("Chunk not properly terminated")
+                        self.all_chunks_received = True
 
-                # Always exit this loop
-                self.validate_chunk_end = False
+                    # Always exit this loop
+                    self.validate_chunk_end = False
             elif not self.all_chunks_received:
                 # Receive a control line.
                 s = self.control_line + s
@@ -119,7 +127,7 @@ class ChunkedReceiver(object):
                 if pos < 0:
                     # Control line not finished.
                     self.control_line = s
-                    s = ""
+                    s = b""
                 else:
                     # Control line finished.
                     line = s[:pos]
