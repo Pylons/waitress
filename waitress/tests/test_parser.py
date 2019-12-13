@@ -53,6 +53,21 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(self.parser.completed)
         self.assertEqual(self.parser.error.__class__, BadRequest)
 
+    def test_received_bad_transfer_encoding(self):
+        from waitress.utilities import ServerNotImplemented
+        data = (
+            b"GET /foobar HTTP/1.1\r\n"
+            b"Transfer-Encoding: foo\r\n"
+            b"\r\n"
+            b"1d;\r\n"
+            b"This string has 29 characters\r\n"
+            b"0\r\n\r\n"
+        )
+        result = self.parser.received(data)
+        self.assertEqual(result, 48)
+        self.assertTrue(self.parser.completed)
+        self.assertEqual(self.parser.error.__class__, ServerNotImplemented)
+
     def test_received_nonsense_nothing(self):
         data = b"\r\n\r\n"
         result = self.parser.received(data)
@@ -195,6 +210,31 @@ class TestHTTPRequestParser(unittest.TestCase):
         data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: ChUnKed\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
+
+
+    def test_parse_header_transfer_encoding_invalid(self):
+        from waitress.parser import TransferEncodingNotImplemented
+
+        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except TransferEncodingNotImplemented as e:
+            self.assertIn("Transfer-Encoding requested is not supported.", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_transfer_encoding_invalid_multiple(self):
+        from waitress.parser import TransferEncodingNotImplemented
+
+        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\ntransfer-encoding: chunked\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except TransferEncodingNotImplemented as e:
+            self.assertIn("Transfer-Encoding requested is not supported.", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
 
     def test_parse_header_11_expect_continue(self):
         data = b"GET /foobar HTTP/1.1\r\nexpect: 100-continue\r\n"

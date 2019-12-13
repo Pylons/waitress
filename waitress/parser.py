@@ -26,11 +26,16 @@ from waitress.utilities import (
     BadRequest,
     RequestEntityTooLarge,
     RequestHeaderFieldsTooLarge,
+    ServerNotImplemented,
     find_double_newline,
 )
 
 
 class ParsingError(Exception):
+    pass
+
+
+class TransferEncodingNotImplemented(Exception):
     pass
 
 
@@ -126,31 +131,39 @@ class HTTPRequestParser(object):
                     except ParsingError as e:
                         self.error = BadRequest(e.args[0])
                         self.completed = True
+                    except TransferEncodingNotImplemented as e:
+                        self.error = ServerNotImplemented(e.args[0])
+                        self.completed = True
                     else:
                         if self.body_rcv is None:
                             # no content-length header and not a t-e: chunked
                             # request
                             self.completed = True
+
                         if self.content_length > 0:
                             max_body = self.adj.max_request_body_size
                             # we won't accept this request if the content-length
                             # is too large
+
                             if self.content_length >= max_body:
                                 self.error = RequestEntityTooLarge(
                                     "exceeds max_body of %s" % max_body
                                 )
                                 self.completed = True
                 self.headers_finished = True
+
                 return consumed
 
             # Header not finished yet.
             self.header_plus = s
+
             return datalen
         else:
             # In body.
             consumed = br.received(data)
             self.body_bytes_received += consumed
             max_body = self.adj.max_request_body_size
+
             if self.body_bytes_received >= max_body:
                 # this will only be raised during t-e: chunked requests
                 self.error = RequestEntityTooLarge("exceeds max_body of %s" % max_body)
@@ -162,6 +175,7 @@ class HTTPRequestParser(object):
             elif br.completed:
                 # The request (with the body) is ready to use.
                 self.completed = True
+
                 if self.chunked:
                     # We've converted the chunked transfer encoding request
                     # body into a normal request body, so we know its content
@@ -241,10 +255,31 @@ class HTTPRequestParser(object):
             # should not see the HTTP_TRANSFER_ENCODING header; we pop it
             # here
             te = headers.pop("TRANSFER_ENCODING", "")
-            if te.lower() == "chunked":
+
+            encodings = [encoding.strip().lower() for encoding in te.split(",") if encoding]
+
+            for encoding in encodings:
+                # Out of the transfer-codings listed in
+                # https://tools.ietf.org/html/rfc7230#section-4 we only support
+                # chunked at this time.
+
+                # Note: the identity transfer-coding was removed in RFC7230:
+                # https://tools.ietf.org/html/rfc7230#appendix-A.2 and is thus
+                # not supported
+                if encoding not in {"chunked"}:
+                    raise TransferEncodingNotImplemented(
+                        "Transfer-Encoding requested is not supported."
+                    )
+
+            if encodings and encodings[-1] == "chunked":
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
+            elif encodings:  # pragma: nocover
+                raise TransferEncodingNotImplemented(
+                    "Transfer-Encoding requested is not supported."
+                )
+
             expect = headers.get("EXPECT", "").lower()
             self.expect_continue = expect == "100-continue"
             if connection.lower() == "close":

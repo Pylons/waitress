@@ -302,3 +302,8 @@ class RequestEntityTooLarge(BadRequest):
 class InternalServerError(Error):
     code = 500
     reason = "Internal Server Error"
+
+
+class ServerNotImplemented(Error):
+    code = 501
+    reason = "Not Implemented"
