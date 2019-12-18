@@ -1,3 +1,82 @@
+1.3.1 (2019-08-27)
+------------------
+
+Bugfixes
+~~~~~~~~
+
+- Waitress won't accidentally throw away part of the path if it starts with a
+  double slash (``GET //testing/whatever HTTP/1.0``). WSGI applications will
+  now receive a ``PATH_INFO`` in the environment that contains
+  ``//testing/whatever`` as required. See
+  https://github.com/Pylons/waitress/issues/260 and
+  https://github.com/Pylons/waitress/pull/261
+
+
+1.3.0 (2019-04-22)
+------------------
+
+Deprecations
+~~~~~~~~~~~~
+
+- The ``send_bytes`` adjustment now defaults to ``1`` and is deprecated
+  pending removal in a future release.
+  and https://github.com/Pylons/waitress/pull/246
+
+Features
+~~~~~~~~
+
+- Add a new ``outbuf_high_watermark`` adjustment which is used to apply
+  backpressure on the ``app_iter`` to avoid letting it spin faster than data
+  can be written to the socket. This stabilizes responses that iterate quickly
+  with a lot of data.
+  See https://github.com/Pylons/waitress/pull/242
+
+- Stop early and close the ``app_iter`` when attempting to write to a closed
+  socket due to a client disconnect. This should notify a long-lived streaming
+  response when a client hangs up.
+  See https://github.com/Pylons/waitress/pull/238
+  and https://github.com/Pylons/waitress/pull/240
+  and https://github.com/Pylons/waitress/pull/241
+
+- Adjust the flush to output ``SO_SNDBUF`` bytes instead of whatever was
+  set in the ``send_bytes`` adjustment. ``send_bytes`` now only controls how
+  much waitress will buffer internally before flushing to the kernel, whereas
+  previously it used to also throttle how much data was sent to the kernel.
+  This change enables a streaming ``app_iter`` containing small chunks to
+  still be flushed efficiently.
+  See https://github.com/Pylons/waitress/pull/246
+
+Bugfixes
+~~~~~~~~
+
+- Upon receiving a request that does not include HTTP/1.0 or HTTP/1.1 we will
+  no longer set the version to the string value "None". See
+  https://github.com/Pylons/waitress/pull/252 and
+  https://github.com/Pylons/waitress/issues/110
+
+- When a client closes a socket unexpectedly there was potential for memory
+  leaks in which data was written to the buffers after they were closed,
+  causing them to reopen.
+  See https://github.com/Pylons/waitress/pull/239
+
+- Fix the queue depth warnings to only show when all threads are busy.
+  See https://github.com/Pylons/waitress/pull/243
+  and https://github.com/Pylons/waitress/pull/247
+
+- Trigger the ``app_iter`` to close as part of shutdown. This will only be
+  noticeable for users of the internal server api. In more typical operations
+  the server will die before benefiting from these changes.
+  See https://github.com/Pylons/waitress/pull/245
+
+- Fix a bug in which a streaming ``app_iter`` may never cleanup data that has
+  already been sent. This would cause buffers in waitress to grow without
+  bounds. These buffers now properly rotate and release their data.
+  See https://github.com/Pylons/waitress/pull/242
+
+- Fix a bug in which non-seekable subclasses of ``io.IOBase`` would trigger
+  an exception when passed to the ``wsgi.file_wrapper`` callback.
+  See https://github.com/Pylons/waitress/pull/249
+
 1.2.1 (2019-01-25)
 ------------------
 
