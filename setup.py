@@ -29,7 +29,7 @@ docs_extras = [
 
 testing_extras = [
     "nose",
-    "coverage",
+    "coverage>=5.0",
 ]
 
 setup(

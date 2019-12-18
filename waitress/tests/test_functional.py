@@ -35,16 +35,10 @@ def start_server(app, svr, queue, **kwargs):  # pragma: no cover
 
 def try_register_coverage():  # pragma: no cover
     # Hack around multiprocessing exiting early and not triggering coverage's
-    # atexit handler by trapping the SIGTERM and saving coverage explicitly.
-    if "_COVERAGE_RCFILE" in os.environ:
-        import coverage
+    # atexit handler by always registering a signal handler
 
-        cov = coverage.Coverage(config_file=os.getenv("_COVERAGE_RCFILE"))
-        cov.start()
-
+    if "COVERAGE_PROCESS_START" in os.environ:
         def sigterm(*args):
-            cov.stop()
-            cov.save()
             sys.exit(0)
 
         signal.signal(signal.SIGTERM, sigterm)
@@ -78,10 +72,15 @@ class SubprocessTests(object):
     def start_subprocess(self, target, **kw):
         # Spawn a server process.
         self.queue = multiprocessing.Queue()
+
+        if "COVERAGE_RCFILE" in os.environ:
+            os.environ["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_RCFILE"]
+
         self.proc = multiprocessing.Process(
             target=start_server, args=(target, self.server, self.queue), kwargs=kw,
         )
         self.proc.start()
+
         if self.proc.exitcode is not None:  # pragma: no cover
             raise RuntimeError("%s didn't start" % str(target))
         # Get the socket the server is listening on.
