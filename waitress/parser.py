@@ -19,28 +19,23 @@ processing but threads to do work.
 import re
 from io import BytesIO
 
-from waitress.compat import (
-    tostr,
-    urlparse,
-    unquote_bytes_to_wsgi,
-)
-
 from waitress.buffers import OverflowableBuffer
-
-from waitress.receiver import (
-    FixedStreamReceiver,
-    ChunkedReceiver,
-)
-
+from waitress.compat import tostr, unquote_bytes_to_wsgi, urlparse
+from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
 from waitress.utilities import (
-    find_double_newline,
+    BadRequest,
     RequestEntityTooLarge,
     RequestHeaderFieldsTooLarge,
-    BadRequest,
+    ServerNotImplemented,
+    find_double_newline,
 )
 
 
 class ParsingError(Exception):
+    pass
+
+
+class TransferEncodingNotImplemented(Exception):
     pass
 
 
@@ -85,18 +80,48 @@ class HTTPRequestParser(object):
         """
         if self.completed:
             return 0  # Can't consume any more.
+
         datalen = len(data)
         br = self.body_rcv
         if br is None:
             # In header.
+            max_header = self.adj.max_request_header_size
+
             s = self.header_plus + data
             index = find_double_newline(s)
+            consumed = 0
+
+            if index >= 0:
+                # If the headers have ended, and we also have part of the body
+                # message in data we still want to validate we aren't going
+                # over our limit for received headers.
+                self.header_bytes_received += index
+                consumed = datalen - (len(s) - index)
+            else:
+                self.header_bytes_received += datalen
+                consumed = datalen
+
+            # If the first line + headers is over the max length, we return a
+            # RequestHeaderFieldsTooLarge error rather than continuing to
+            # attempt to parse the headers.
+            if self.header_bytes_received >= max_header:
+                self.parse_header(b"GET / HTTP/1.0\r\n")
+                self.error = RequestHeaderFieldsTooLarge(
+                    "exceeds max_header of %s" % max_header
+                )
+                self.completed = True
+                return consumed
+
             if index >= 0:
                 # Header finished.
                 header_plus = s[:index]
-                consumed = len(data) - (len(s) - index)
-                # Remove preceeding blank lines.
+
+                # Remove preceeding blank lines. This is suggested by
+                # https://tools.ietf.org/html/rfc7230#section-3.5 to support
+                # clients sending an extra CR LF after another request when
+                # using HTTP pipelining
                 header_plus = header_plus.lstrip()
+
                 if not header_plus:
                     self.empty = True
                     self.completed = True
@@ -106,43 +131,39 @@ class HTTPRequestParser(object):
                     except ParsingError as e:
                         self.error = BadRequest(e.args[0])
                         self.completed = True
+                    except TransferEncodingNotImplemented as e:
+                        self.error = ServerNotImplemented(e.args[0])
+                        self.completed = True
                     else:
                         if self.body_rcv is None:
                             # no content-length header and not a t-e: chunked
                             # request
                             self.completed = True
+
                         if self.content_length > 0:
                             max_body = self.adj.max_request_body_size
                             # we won't accept this request if the content-length
                             # is too large
+
                             if self.content_length >= max_body:
                                 self.error = RequestEntityTooLarge(
                                     "exceeds max_body of %s" % max_body
                                 )
                                 self.completed = True
                 self.headers_finished = True
+
                 return consumed
-            else:
-                # Header not finished yet.
-                self.header_bytes_received += datalen
-                max_header = self.adj.max_request_header_size
-                if self.header_bytes_received >= max_header:
-                    # malformed header, we need to construct some request
-                    # on our own. we disregard the incoming(?) requests HTTP
-                    # version and just use 1.0. IOW someone just sent garbage
-                    # over the wire
-                    self.parse_header(b"GET / HTTP/1.0\n")
-                    self.error = RequestHeaderFieldsTooLarge(
-                        "exceeds max_header of %s" % max_header
-                    )
-                    self.completed = True
-                self.header_plus = s
-                return datalen
+
+            # Header not finished yet.
+            self.header_plus = s
+
+            return datalen
         else:
             # In body.
             consumed = br.received(data)
             self.body_bytes_received += consumed
             max_body = self.adj.max_request_body_size
+
             if self.body_bytes_received >= max_body:
                 # this will only be raised during t-e: chunked requests
                 self.error = RequestEntityTooLarge("exceeds max_body of %s" % max_body)
@@ -154,6 +175,7 @@ class HTTPRequestParser(object):
             elif br.completed:
                 # The request (with the body) is ready to use.
                 self.completed = True
+
                 if self.chunked:
                     # We've converted the chunked transfer encoding request
                     # body into a normal request body, so we know its content
@@ -162,6 +184,7 @@ class HTTPRequestParser(object):
                     # appear to the client to be an entirely non-chunked HTTP
                     # request with a valid content-length.
                     self.headers["CONTENT_LENGTH"] = str(br.__len__())
+
             return consumed
 
     def parse_header(self, header_plus):
@@ -169,13 +192,15 @@ class HTTPRequestParser(object):
         Parses the header_plus block of text (the headers plus the
         first line of the request).
         """
-        index = header_plus.find(b"\n")
+        index = header_plus.find(b"\r\n")
         if index >= 0:
             first_line = header_plus[:index].rstrip()
-            header = header_plus[index + 1 :]
+            header = header_plus[index + 2 :]
         else:
-            first_line = header_plus.rstrip()
-            header = b""
+            raise ParsingError("HTTP message header invalid")
+
+        if b"\r" in first_line or b"\n" in first_line:
+            raise ParsingError("Bare CR or LF found in HTTP message")
 
         self.first_line = first_line  # for testing
 
@@ -186,6 +211,10 @@ class HTTPRequestParser(object):
             index = line.find(b":")
             if index > 0:
                 key = line[:index]
+
+                if key != key.strip():
+                    raise ParsingError("Invalid whitespace after field-name")
+
                 if b"_" in key:
                     continue
                 value = line[index + 1 :].strip()
@@ -226,10 +255,31 @@ class HTTPRequestParser(object):
             # should not see the HTTP_TRANSFER_ENCODING header; we pop it
             # here
             te = headers.pop("TRANSFER_ENCODING", "")
-            if te.lower() == "chunked":
+
+            encodings = [encoding.strip().lower() for encoding in te.split(",") if encoding]
+
+            for encoding in encodings:
+                # Out of the transfer-codings listed in
+                # https://tools.ietf.org/html/rfc7230#section-4 we only support
+                # chunked at this time.
+
+                # Note: the identity transfer-coding was removed in RFC7230:
+                # https://tools.ietf.org/html/rfc7230#appendix-A.2 and is thus
+                # not supported
+                if encoding not in {"chunked"}:
+                    raise TransferEncodingNotImplemented(
+                        "Transfer-Encoding requested is not supported."
+                    )
+
+            if encodings and encodings[-1] == "chunked":
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
+            elif encodings:  # pragma: nocover
+                raise TransferEncodingNotImplemented(
+                    "Transfer-Encoding requested is not supported."
+                )
+
             expect = headers.get("EXPECT", "").lower()
             self.expect_continue = expect == "100-continue"
             if connection.lower() == "close":
@@ -239,7 +289,8 @@ class HTTPRequestParser(object):
             try:
                 cl = int(headers.get("CONTENT_LENGTH", 0))
             except ValueError:
-                cl = 0
+                raise ParsingError("Content-Length is invalid")
+
             self.content_length = cl
             if cl > 0:
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
@@ -299,8 +350,11 @@ def get_header_lines(header):
     Splits the header into lines, putting multi-line headers together.
     """
     r = []
-    lines = header.split(b"\n")
+    lines = header.split(b"\r\n")
     for line in lines:
+        if b"\r" in line or b"\n" in line:
+            raise ParsingError('Bare CR or LF found in header line "%s"' % tostr(line))
+
         if line.startswith((b" ", b"\t")):
             if not r:
                 # https://corte.si/posts/code/pathod/pythonservers/index.html

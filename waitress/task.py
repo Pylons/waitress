@@ -353,14 +353,10 @@ class ErrorTask(Task):
         status, headers, body = e.to_response()
         self.status = status
         self.response_headers.extend(headers)
-        if self.version == "1.1":
-            connection = self.request.headers.get("CONNECTION", "").lower()
-            if connection == "close":
-                self.response_headers.append(("Connection", "close"))
-            # under HTTP 1.1 keep-alive is default, no need to set the header
-        else:
-            # HTTP 1.0
-            self.response_headers.append(("Connection", "close"))
+        # We need to explicitly tell the remote client we are closing the
+        # connection, because self.close_on_finish is set, and we are going to
+        # slam the door in the clients face.
+        self.response_headers.append(("Connection", "close"))
         self.close_on_finish = True
         self.content_length = len(body)
         self.write(tobytes(body))

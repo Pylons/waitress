@@ -83,7 +83,7 @@ class Test_find_double_newline(unittest.TestCase):
         self.assertEqual(self._callFUT(b"\n"), -1)
 
     def test_double_linefeed(self):
-        self.assertEqual(self._callFUT(b"\n\n"), 2)
+        self.assertEqual(self._callFUT(b"\n\n"), -1)
 
     def test_one_crlf(self):
         self.assertEqual(self._callFUT(b"\r\n"), -1)
@@ -92,7 +92,7 @@ class Test_find_double_newline(unittest.TestCase):
         self.assertEqual(self._callFUT(b"\r\n\r\n"), 4)
 
     def test_mixed(self):
-        self.assertEqual(self._callFUT(b"\n\n00\r\n\r\n"), 2)
+        self.assertEqual(self._callFUT(b"\n\n00\r\n\r\n"), 8)
 
 
 class TestBadRequest(unittest.TestCase):

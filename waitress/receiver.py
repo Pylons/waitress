@@ -14,9 +14,7 @@
 """Data Chunk Receiver
 """
 
-from waitress.utilities import find_double_newline
-
-from waitress.utilities import BadRequest
+from waitress.utilities import BadRequest, find_double_newline
 
 
 class FixedStreamReceiver(object):
@@ -35,18 +33,23 @@ class FixedStreamReceiver(object):
     def received(self, data):
         "See IStreamConsumer"
         rm = self.remain
+
         if rm < 1:
             self.completed = True  # Avoid any chance of spinning
+
             return 0
         datalen = len(data)
+
         if rm <= datalen:
             self.buf.append(data[:rm])
             self.remain = 0
             self.completed = True
+
             return rm
         else:
             self.buf.append(data)
             self.remain -= datalen
+
             return datalen
 
     def getfile(self):
@@ -59,7 +62,9 @@ class FixedStreamReceiver(object):
 class ChunkedReceiver(object):
 
     chunk_remainder = 0
+    validate_chunk_end = False
     control_line = b""
+    chunk_end = b""
     all_chunks_received = False
     trailer = b""
     completed = False
@@ -76,35 +81,64 @@ class ChunkedReceiver(object):
 
     def received(self, s):
         # Returns the number of bytes consumed.
+
         if self.completed:
             return 0
         orig_size = len(s)
+
         while s:
             rm = self.chunk_remainder
+
             if rm > 0:
                 # Receive the remainder of a chunk.
                 to_write = s[:rm]
                 self.buf.append(to_write)
                 written = len(to_write)
                 s = s[written:]
+
                 self.chunk_remainder -= written
+
+                if self.chunk_remainder == 0:
+                    self.validate_chunk_end = True
+            elif self.validate_chunk_end:
+                s = self.chunk_end + s
+
+                pos = s.find(b"\r\n")
+
+                if pos < 0 and len(s) < 2:
+                    self.chunk_end = s
+                    s = b""
+                else:
+                    self.chunk_end = b""
+                    if pos == 0:
+                        # Chop off the terminating CR LF from the chunk
+                        s = s[2:]
+                    else:
+                        self.error = BadRequest("Chunk not properly terminated")
+                        self.all_chunks_received = True
+
+                    # Always exit this loop
+                    self.validate_chunk_end = False
             elif not self.all_chunks_received:
                 # Receive a control line.
                 s = self.control_line + s
-                pos = s.find(b"\n")
+                pos = s.find(b"\r\n")
+
                 if pos < 0:
                     # Control line not finished.
                     self.control_line = s
-                    s = ""
+                    s = b""
                 else:
                     # Control line finished.
                     line = s[:pos]
-                    s = s[pos + 1 :]
+                    s = s[pos + 2 :]
                     self.control_line = b""
                     line = line.strip()
+
                     if line:
                         # Begin a new chunk.
                         semi = line.find(b";")
+
                         if semi >= 0:
                             # discard extension info.
                             line = line[:semi]
@@ -113,6 +147,7 @@ class ChunkedReceiver(object):
                         except ValueError:  # garbage in input
                             self.error = BadRequest("garbage in chunked encoding input")
                             sz = 0
+
                         if sz > 0:
                             # Start a new chunk.
                             self.chunk_remainder = sz
@@ -123,15 +158,14 @@ class ChunkedReceiver(object):
             else:
                 # Receive the trailer.
                 trailer = self.trailer + s
+
                 if trailer.startswith(b"\r\n"):
                     # No trailer.
                     self.completed = True
+
                     return orig_size - (len(trailer) - 2)
-                elif trailer.startswith(b"\n"):
-                    # No trailer.
-                    self.completed = True
-                    return orig_size - (len(trailer) - 1)
                 pos = find_double_newline(trailer)
+
                 if pos < 0:
                     # Trailer not finished.
                     self.trailer = trailer
@@ -140,7 +174,9 @@ class ChunkedReceiver(object):
                     # Finished the trailer.
                     self.completed = True
                     self.trailer = trailer[:pos]
+
                     return orig_size - (len(trailer) - pos)
+
         return orig_size
 
     def getfile(self):

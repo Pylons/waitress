@@ -1,78 +1,77 @@
-1.3.1 (2019-08-27)
+1.4.0 (2019-12-20)
 ------------------
 
 Bugfixes
 ~~~~~~~~
 
-- Waitress won't accidentally throw away part of the path if it starts with a
-  double slash (``GET //testing/whatever HTTP/1.0``). WSGI applications will
-  now receive a ``PATH_INFO`` in the environment that contains
-  ``//testing/whatever`` as required. See
-  https://github.com/Pylons/waitress/issues/260 and
-  https://github.com/Pylons/waitress/pull/261
+- Waitress used to slam the door shut on HTTP pipelined requests without
+  setting the ``Connection: close`` header as appropriate in the response. This
+  is of course not very friendly. Waitress now explicitly sets the header when
+  responding with an internally generated error such as 400 Bad Request or 500
+  Internal Server Error to notify the remote client that it will be closing the
+  connection after the response is sent.
 
+- Waitress no longer allows any spaces to exist between the header field-name
+  and the colon. While waitress did not strip the space and thereby was not
+  vulnerable to any potential header field-name confusion, it should have sent
+  back a 400 Bad Request. See https://github.com/Pylons/waitress/issues/273
 
-1.3.0 (2019-04-22)
-------------------
+Security Fixes
+~~~~~~~~~~~~~~
 
-Deprecations
-~~~~~~~~~~~~
+- Waitress implemented a "MAY" part of the RFC7230
+  (https://tools.ietf.org/html/rfc7230#section-3.5) which states:
 
-- The ``send_bytes`` adjustment now defaults to ``1`` and is deprecated
-  pending removal in a future release.
-  and https://github.com/Pylons/waitress/pull/246
+      Although the line terminator for the start-line and header fields is
+      the sequence CRLF, a recipient MAY recognize a single LF as a line
+      terminator and ignore any preceding CR.
 
-Features
-~~~~~~~~
+  Unfortunately if a front-end server does not parse header fields with an LF
+  the same way as it does those with a CRLF it can lead to the front-end and
+  the back-end server parsing the same HTTP message in two different ways. This
+  can lead to a potential for HTTP request smuggling/splitting whereby Waitress
+  may see two requests while the front-end server only sees a single HTTP
+  message.
 
-- Add a new ``outbuf_high_watermark`` adjustment which is used to apply
-  backpressure on the ``app_iter`` to avoid letting it spin faster than data
-  can be written to the socket. This stabilizes responses that iterate quickly
-  with a lot of data.
-  See https://github.com/Pylons/waitress/pull/242
+  For more information I can highly recommend the blog post by ZeddYu Lu
+  https://blog.zeddyu.info/2019/12/08/HTTP-Smuggling-en/
 
-- Stop early and close the ``app_iter`` when attempting to write to a closed
-  socket due to a client disconnect. This should notify a long-lived streaming
-  response when a client hangs up.
-  See https://github.com/Pylons/waitress/pull/238
-  and https://github.com/Pylons/waitress/pull/240
-  and https://github.com/Pylons/waitress/pull/241
+- Waitress used to treat LF the same as CRLF in ``Transfer-Encoding: chunked``
+  requests, while the maintainer doesn't believe this could lead to a security
+  issue, this is no longer supported and all chunks are now validated to be
+  properly framed with CRLF as required by RFC7230.
 
-- Adjust the flush to output ``SO_SNDBUF`` bytes instead of whatever was
-  set in the ``send_bytes`` adjustment. ``send_bytes`` now only controls how
-  much waitress will buffer internally before flushing to the kernel, whereas
-  previously it used to also throttle how much data was sent to the kernel.
-  This change enables a streaming ``app_iter`` containing small chunks to
-  still be flushed efficiently.
-  See https://github.com/Pylons/waitress/pull/246
+- Waitress now validates that the ``Transfer-Encoding`` header contains only
+  transfer codes that it is able to decode. At the moment that includes the
+  only valid header value being ``chunked``.
 
-Bugfixes
-~~~~~~~~
+  That means that if the following header is sent:
 
-- Upon receiving a request that does not include HTTP/1.0 or HTTP/1.1 we will
-  no longer set the version to the string value "None". See
-  https://github.com/Pylons/waitress/pull/252 and
-  https://github.com/Pylons/waitress/issues/110
+  ``Transfer-Encoding: gzip, chunked``
 
-- When a client closes a socket unexpectedly there was potential for memory
-  leaks in which data was written to the buffers after they were closed,
-  causing them to reopen.
-  See https://github.com/Pylons/waitress/pull/239
+  Waitress will send back a 501 Not Implemented with an error message stating
+  as such, as while Waitress supports ``chunked`` encoding it does not support
+  ``gzip`` and it is unable to pass that to the underlying WSGI environment
+  correctly.
 
-- Fix the queue depth warnings to only show when all threads are busy.
-  See https://github.com/Pylons/waitress/pull/243
-  and https://github.com/Pylons/waitress/pull/247
+  Waitress DOES NOT implement support for ``Transfer-Encoding: identity``
+  eventhough ``identity`` was valid in RFC2616, it was removed in RFC7230.
+  Please update your clients to remove the ``Transfer-Encoding`` header if the
+  only transfer coding is ``identity`` or update your client to use
+  ``Transfer-Encoding: chunked`` instead of ``Transfer-Encoding: identity,
+  chunked``.
 
-- Trigger the ``app_iter`` to close as part of shutdown. This will only be
-  noticeable for users of the internal server api. In more typical operations
-  the server will die before benefiting from these changes.
-  See https://github.com/Pylons/waitress/pull/245
+- While validating the ``Transfer-Encoding`` header, Waitress now properly
+  handles line-folded ``Transfer-Encoding`` headers or those that contain
+  multiple comma seperated values. This closes a potential issue where a
+  front-end server may treat the request as being a chunked request (and thus
+  ignoring the Content-Length) and Waitress using the Content-Length as it was
+  looking for the single value ``chunked`` and did not support comma seperated
+  values.
 
-- Fix a bug in which a streaming ``app_iter`` may never cleanup data that has
-  already been sent. This would cause buffers in waitress to grow without
-  bounds. These buffers now properly rotate and release their data.
-  See https://github.com/Pylons/waitress/pull/242
-
-- Fix a bug in which non-seekable subclasses of ``io.IOBase`` would trigger
-  an exception when passed to the ``wsgi.file_wrapper`` callback.
-  See https://github.com/Pylons/waitress/pull/249
+- Waitress used to explicitly set the Content-Length header to 0 if it was
+  unable to parse it as an integer (for example if the Content-Length header
+  was sent twice (and thus folded together), or was invalid) thereby allowing
+  for a potential request to be split and treated as two requests by HTTP
+  pipelining support in Waitress. If Waitress is now unable to parse the
+  Content-Length header, a 400 Bad Request is sent back to the client.
