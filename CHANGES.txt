@@ -1,3 +1,17 @@
+1.4.1 (2019-12-??)
+------------------
+
+Security Fixes
+~~~~~~~~~~~~~~
+
+- Waitress did not properly validate that the HTTP headers it received were
+  properly formed, thereby potentially allowing a front-end server to treat a
+  request different from Waitress. This could lead to HTTP request
+  smuggling/splitting.
+
+  Please see the security advisory for more information:
+  https://github.com/Pylons/waitress/security/advisories/GHSA-m5ff-3wj3-8ph4
+
 1.4.0 (2019-12-20)
 ------------------
 
