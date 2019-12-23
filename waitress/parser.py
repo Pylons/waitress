@@ -29,6 +29,7 @@ from waitress.utilities import (
     ServerNotImplemented,
     find_double_newline,
 )
+from .rfc7230 import HEADER_FIELD
 
 
 class ParsingError(Exception):
@@ -37,7 +38,6 @@ class ParsingError(Exception):
 
 class TransferEncodingNotImplemented(Exception):
     pass
-
 
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
@@ -208,26 +208,27 @@ class HTTPRequestParser(object):
 
         headers = self.headers
         for line in lines:
-            index = line.find(b":")
-            if index > 0:
-                key = line[:index]
+            header = HEADER_FIELD.match(line)
 
-                if key != key.strip():
-                    raise ParsingError("Invalid whitespace after field-name")
+            if not header:
+                raise ParsingError("Invalid header")
 
-                if b"_" in key:
-                    continue
-                value = line[index + 1 :].strip()
-                key1 = tostr(key.upper().replace(b"-", b"_"))
-                # If a header already exists, we append subsequent values
-                # seperated by a comma. Applications already need to handle
-                # the comma seperated values, as HTTP front ends might do
-                # the concatenation for you (behavior specified in RFC2616).
-                try:
-                    headers[key1] += tostr(b", " + value)
-                except KeyError:
-                    headers[key1] = tostr(value)
-            # else there's garbage in the headers?
+            key, value = header.group('name', 'value')
+
+            if b"_" in key:
+                # TODO(xistence): Should we drop this request instead?
+                continue
+
+            value = value.strip()
+            key1 = tostr(key.upper().replace(b"-", b"_"))
+            # If a header already exists, we append subsequent values
+            # seperated by a comma. Applications already need to handle
+            # the comma seperated values, as HTTP front ends might do
+            # the concatenation for you (behavior specified in RFC2616).
+            try:
+                headers[key1] += tostr(b", " + value)
+            except KeyError:
+                headers[key1] = tostr(value)
 
         # command, uri, version will be bytes
         command, uri, version = crack_first_line(first_line)
@@ -352,6 +353,9 @@ def get_header_lines(header):
     r = []
     lines = header.split(b"\r\n")
     for line in lines:
+        if not line:
+            continue
+
         if b"\r" in line or b"\n" in line:
             raise ParsingError('Bare CR or LF found in header line "%s"' % tostr(line))
 
