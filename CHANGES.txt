@@ -1,3 +1,17 @@
+1.4.1 (2019-12-??)
+------------------
+
+Security Fixes
+~~~~~~~~~~~~~~
+
+- Waitress did not properly validate that the HTTP headers it received were
+  properly formed, thereby potentially allowing a front-end server to treat a
+  request different from Waitress. This could lead to HTTP request
+  smuggling/splitting.
+
+  Please see the security advisory for more information:
+  https://github.com/Pylons/waitress/security/advisories/GHSA-m5ff-3wj3-8ph4
+
 1.4.0 (2019-12-20)
 ------------------
 
@@ -36,6 +50,11 @@ Security Fixes
   For more information I can highly recommend the blog post by ZeddYu Lu
   https://blog.zeddyu.info/2019/12/08/HTTP-Smuggling-en/
 
+  Please see the security advisory for more information:
+  https://github.com/Pylons/waitress/security/advisories/GHSA-pg36-wpm5-g57p
+
+  CVE-ID: CVE-2019-16785
+
 - Waitress used to treat LF the same as CRLF in ``Transfer-Encoding: chunked``
   requests, while the maintainer doesn't believe this could lead to a security
   issue, this is no longer supported and all chunks are now validated to be
@@ -61,6 +80,11 @@ Security Fixes
   ``Transfer-Encoding: chunked`` instead of ``Transfer-Encoding: identity,
   chunked``.
 
+  PLease see the security advisory for more information: 
+  https://github.com/Pylons/waitress/security/advisories/GHSA-g2xc-35jw-c63p
+
+  CVE-ID: CVE-2019-16786
+
 - While validating the ``Transfer-Encoding`` header, Waitress now properly
   handles line-folded ``Transfer-Encoding`` headers or those that contain
   multiple comma seperated values. This closes a potential issue where a
@@ -75,3 +99,6 @@ Security Fixes
   for a potential request to be split and treated as two requests by HTTP
   pipelining support in Waitress. If Waitress is now unable to parse the
   Content-Length header, a 400 Bad Request is sent back to the client.
+
+  Please see the security advisory for more information:
+  https://github.com/Pylons/waitress/security/advisories/GHSA-4ppp-gpcr-7qf6

@@ -308,9 +308,92 @@ class TestHTTPRequestParser(unittest.TestCase):
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
-            self.assertIn("Invalid whitespace after field-name", e.args[0])
+            self.assertIn("Invalid header", e.args[0])
         else:  # pragma: nocover
             self.assertTrue(False)
+
+    def test_parse_header_invalid_whitespace_vtab(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo:\x0bbar\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Invalid header", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_invalid_no_colon(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nnotvalid\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Invalid header", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_invalid_folding_spacing(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\n\t\x0bbaz\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Invalid header", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_invalid_chars(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\n\foo: \x0bbaz\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Invalid header", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_empty(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nempty:\r\n"
+        self.parser.parse_header(data)
+
+        self.assertIn("EMPTY", self.parser.headers)
+        self.assertIn("FOO", self.parser.headers)
+        self.assertEqual(self.parser.headers["EMPTY"], "")
+        self.assertEqual(self.parser.headers["FOO"], "bar")
+
+    def test_parse_header_multiple_values(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever, more, please, yes\r\n"
+        self.parser.parse_header(data)
+
+        self.assertIn("FOO", self.parser.headers)
+        self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
+
+    def test_parse_header_multiple_values_header_folded(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more, please, yes\r\n"
+        self.parser.parse_header(data)
+
+        self.assertIn("FOO", self.parser.headers)
+        self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
+
+    def test_parse_header_multiple_values_header_folded_multiple(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more\r\nfoo: please, yes\r\n"
+        self.parser.parse_header(data)
+
+        self.assertIn("FOO", self.parser.headers)
+        self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
+
 
 
 class Test_split_uri(unittest.TestCase):
