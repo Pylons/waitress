@@ -236,6 +236,35 @@ class TestHTTPRequestParser(unittest.TestCase):
         else:  # pragma: nocover
             self.assertTrue(False)
 
+    def test_parse_header_transfer_encoding_invalid_whitespace(self):
+        from waitress.parser import TransferEncodingNotImplemented
+
+        data = b"GET /foobar HTTP/1.1\r\nTransfer-Encoding:\x85chunked\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except TransferEncodingNotImplemented as e:
+            self.assertIn("Transfer-Encoding requested is not supported.", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_transfer_encoding_invalid_unicode(self):
+        from waitress.parser import TransferEncodingNotImplemented
+
+        # This is the binary encoding for the UTF-8 character
+        # https://www.compart.com/en/unicode/U+212A "unicode character "K""
+        # which if waitress were to accidentally do the wrong thing get
+        # lowercased to just the ascii "k" due to unicode collisions during
+        # transformation
+        data = b"GET /foobar HTTP/1.1\r\nTransfer-Encoding: chun\xe2\x84\xaaed\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except TransferEncodingNotImplemented as e:
+            self.assertIn("Transfer-Encoding requested is not supported.", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
     def test_parse_header_11_expect_continue(self):
         data = b"GET /foobar HTTP/1.1\r\nexpect: 100-continue\r\n"
         self.parser.parse_header(data)
@@ -394,6 +423,15 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIn("FOO", self.parser.headers)
         self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
 
+    def test_parse_header_multiple_values_extra_space(self):
+        # Tests errata from: https://www.rfc-editor.org/errata_search.php?rfc=7230&eid=4189
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: abrowser/0.001 (C O M M E N T)\r\n"
+        self.parser.parse_header(data)
+
+        self.assertIn("FOO", self.parser.headers)
+        self.assertEqual(self.parser.headers["FOO"], "abrowser/0.001 (C O M M E N T)")
 
 
 class Test_split_uri(unittest.TestCase):

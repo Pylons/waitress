@@ -33,8 +33,14 @@ VCHAR = r"\x21-\x7e"
 # field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
 # field-vchar    = VCHAR / obs-text
 
+# Errata from: https://www.rfc-editor.org/errata_search.php?rfc=7230&eid=4189
+# changes field-content to:
+#
+# field-content  = field-vchar [ 1*( SP / HTAB / field-vchar )
+#                  field-vchar ]
+
 FIELD_VCHAR = "[" + VCHAR + OBS_TEXT + "]"
-FIELD_CONTENT = FIELD_VCHAR + "(" + RWS + FIELD_VCHAR + "){0,}"
+FIELD_CONTENT = FIELD_VCHAR + "([ \t" + VCHAR + OBS_TEXT + "]+" + FIELD_VCHAR + "){,1}"
 FIELD_VALUE = "(" + FIELD_CONTENT + "){0,}"
 
 HEADER_FIELD = re.compile(
@@ -42,3 +48,5 @@ HEADER_FIELD = re.compile(
         "^(?P<name>" + TOKEN + "):" + OWS + "(?P<value>" + FIELD_VALUE + ")" + OWS + "$"
     )
 )
+
+OWS_STRIP = re.compile(OWS + "(?P<value>.*?)" + OWS)
