@@ -213,13 +213,15 @@ class HTTPRequestParser(object):
             if not header:
                 raise ParsingError("Invalid header")
 
-            key, value = header.group('name', 'value')
+            key, value = header.group("name", "value")
 
             if b"_" in key:
                 # TODO(xistence): Should we drop this request instead?
                 continue
 
-            value = value.strip()
+            # Only strip off whitespace that is considered valid whitespace by
+            # RFC7230, don't strip the rest
+            value = value.strip(b" \t")
             key1 = tostr(key.upper().replace(b"-", b"_"))
             # If a header already exists, we append subsequent values
             # seperated by a comma. Applications already need to handle
@@ -257,7 +259,16 @@ class HTTPRequestParser(object):
             # here
             te = headers.pop("TRANSFER_ENCODING", "")
 
-            encodings = [encoding.strip().lower() for encoding in te.split(",") if encoding]
+            # NB: We can not just call bare strip() here because it will also
+            # remove other non-printable characters that we explicitly do not
+            # want removed so that if someone attempts to smuggle a request
+            # with these characters we don't fall prey to it.
+            #
+            # For example \x85 is stripped by default, but it is not considered
+            # valid whitespace to be stripped by RFC7230.
+            encodings = [
+                encoding.strip(" \t").lower() for encoding in te.split(",") if encoding
+            ]
 
             for encoding in encodings:
                 # Out of the transfer-codings listed in
