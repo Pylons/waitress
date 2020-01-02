@@ -1,3 +1,30 @@
+1.4.2 (2020-01-??)
+------------------
+
+Security Fixes
+~~~~~~~~~~~~~~
+
+- This is a follow-up to the fix introduced in 1.4.1 to tighten up the way
+  Waitress strips whitespace from header values. This makes sure Waitress won't
+  accidentally treat non-printable characters as whitespace and lead to a
+  potental HTTP request smuggling/splitting security issue.
+
+  Thanks to ZeddYu Lu for the extra test cases.
+
+  Please see the security advisory for more information:
+  https://github.com/Pylons/waitress/security/advisories/GHSA-m5ff-3wj3-8ph4
+
+  CVE-ID: CVE-2019-16789
+
+Bugfixes
+~~~~~~~~
+
+- Updated the regex used to validate header-field content to match the errata
+  that was published for RFC7230.
+
+  See: https://www.rfc-editor.org/errata_search.php?rfc=7230&eid=4189
+
+
 1.4.1 (2019-12-24)
 ------------------
 
@@ -11,6 +38,8 @@ Security Fixes
 
   Please see the security advisory for more information:
   https://github.com/Pylons/waitress/security/advisories/GHSA-m5ff-3wj3-8ph4
+
+  CVE-ID: CVE-2019-16789
 
 1.4.0 (2019-12-20)
 ------------------
@@ -80,7 +109,7 @@ Security Fixes
   ``Transfer-Encoding: chunked`` instead of ``Transfer-Encoding: identity,
   chunked``.
 
-  PLease see the security advisory for more information: 
+  Please see the security advisory for more information:
   https://github.com/Pylons/waitress/security/advisories/GHSA-g2xc-35jw-c63p
 
   CVE-ID: CVE-2019-16786
