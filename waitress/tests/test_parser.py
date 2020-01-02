@@ -423,6 +423,15 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIn("FOO", self.parser.headers)
         self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
 
+    def test_parse_header_multiple_values_extra_space(self):
+        # Tests errata from: https://www.rfc-editor.org/errata_search.php?rfc=7230&eid=4189
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: abrowser/0.001 (C O M M E N T)\r\n"
+        self.parser.parse_header(data)
+
+        self.assertIn("FOO", self.parser.headers)
+        self.assertEqual(self.parser.headers["FOO"], "abrowser/0.001 (C O M M E N T)")
 
 
 class Test_split_uri(unittest.TestCase):
