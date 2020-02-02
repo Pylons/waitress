@@ -40,13 +40,13 @@ VCHAR = r"\x21-\x7e"
 #                  field-vchar ]
 
 FIELD_VCHAR = "[" + VCHAR + OBS_TEXT + "]"
-FIELD_CONTENT = FIELD_VCHAR + "([ \t" + VCHAR + OBS_TEXT + "]+" + FIELD_VCHAR + "){,1}"
-FIELD_VALUE = "(" + FIELD_CONTENT + "){0,}"
+# Field content is more greedy than the ABNF, in that it will match the whole value
+FIELD_CONTENT = FIELD_VCHAR + "+(?:[ \t]+" + FIELD_VCHAR + "+)*"
+# Which allows the field value here to just see if there is even a value in the first place
+FIELD_VALUE = "(?:" + FIELD_CONTENT + ")?"
 
 HEADER_FIELD = re.compile(
     tobytes(
         "^(?P<name>" + TOKEN + "):" + OWS + "(?P<value>" + FIELD_VALUE + ")" + OWS + "$"
     )
 )
-
-OWS_STRIP = re.compile(OWS + "(?P<value>.*?)" + OWS)
