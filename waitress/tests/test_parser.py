@@ -433,6 +433,17 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIn("FOO", self.parser.headers)
         self.assertEqual(self.parser.headers["FOO"], "abrowser/0.001 (C O M M E N T)")
 
+    def test_parse_header_short_values(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\none: 1\r\ntwo: 22\r\n"
+        self.parser.parse_header(data)
+
+        self.assertIn("ONE", self.parser.headers)
+        self.assertIn("TWO", self.parser.headers)
+        self.assertEqual(self.parser.headers["ONE"], "1")
+        self.assertEqual(self.parser.headers["TWO"], "22")
+
 
 class Test_split_uri(unittest.TestCase):
     def _callFUT(self, uri):
