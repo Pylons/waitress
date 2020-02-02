@@ -55,6 +55,7 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_received_bad_transfer_encoding(self):
         from waitress.utilities import ServerNotImplemented
+
         data = (
             b"GET /foobar HTTP/1.1\r\n"
             b"Transfer-Encoding: foo\r\n"
@@ -210,7 +211,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: ChUnKed\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
-
 
     def test_parse_header_transfer_encoding_invalid(self):
         from waitress.parser import TransferEncodingNotImplemented
@@ -377,7 +377,7 @@ class TestHTTPRequestParser(unittest.TestCase):
     def test_parse_header_invalid_chars(self):
         from waitress.parser import ParsingError
 
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\n\foo: \x0bbaz\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nfoo: \x0bbaz\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
