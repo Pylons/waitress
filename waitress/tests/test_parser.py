@@ -433,6 +433,17 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIn("FOO", self.parser.headers)
         self.assertEqual(self.parser.headers["FOO"], "abrowser/0.001 (C O M M E N T)")
 
+    def test_parse_header_invalid_backtrack_bad(self):
+        from waitress.parser import ParsingError
+
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nfoo: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\x10\r\n"
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Invalid header", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
     def test_parse_header_short_values(self):
         from waitress.parser import ParsingError
 
