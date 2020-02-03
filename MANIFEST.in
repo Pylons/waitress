@@ -1,0 +1,20 @@
+graft src/waitress
+graft tests
+graft docs
+
+include README.rst
+include CHANGES.txt
+include HISTORY.txt
+include RELEASING.txt
+include LICENSE.txt
+include contributing.md
+include CONTRIBUTORS.txt
+include COPYRIGHT.txt
+
+include pyproject.toml setup.cfg
+include .coveragerc
+include tox.ini .travis.yml rtd.txt appveyor.yml
+
+exclude TODO.txt
+
+recursive-exclude * __pycache__ *.py[cod]
