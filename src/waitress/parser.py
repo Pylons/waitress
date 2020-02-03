@@ -39,6 +39,7 @@ class ParsingError(Exception):
 class TransferEncodingNotImplemented(Exception):
     pass
 
+
 class HTTPRequestParser(object):
     """A structure that collects the HTTP request.
 

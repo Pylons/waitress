@@ -38,6 +38,7 @@ def try_register_coverage():  # pragma: no cover
     # atexit handler by always registering a signal handler
 
     if "COVERAGE_PROCESS_START" in os.environ:
+
         def sigterm(*args):
             sys.exit(0)
 
@@ -336,7 +337,8 @@ class EchoTests(object):
         cl = int(headers["content-length"])
         self.assertEqual(cl, len(response_body))
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         self.assertEqual(headers["content-type"], "text/plain")
         # connection has been closed
@@ -361,7 +363,8 @@ class EchoTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(b"Chunk not properly terminated" in response_body)
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         self.assertEqual(headers["content-type"], "text/plain")
         # connection has been closed
@@ -897,7 +900,9 @@ class TooLargeTests(object):
 
     def test_request_body_too_large_with_wrong_cl_http10_keepalive(self):
         body = "a" * self.toobig
-        to_send = "GET / HTTP/1.0\r\nContent-Length: 5\r\nConnection: Keep-Alive\r\n\r\n"
+        to_send = (
+            "GET / HTTP/1.0\r\nContent-Length: 5\r\nConnection: Keep-Alive\r\n\r\n"
+        )
         to_send += body
         to_send = tobytes(to_send)
         self.connect()
@@ -1094,7 +1099,8 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b"Internal Server Error"))
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         # connection has been closed
         self.send_check_error(to_send)
@@ -1153,7 +1159,8 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b"Internal Server Error"))
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         # connection has been closed
         self.send_check_error(to_send)
