@@ -115,11 +115,11 @@ class Test_run(unittest.TestCase):
 
     def test_bad_app_object(self):
         self.match_output(
-            ["waitress.tests.fixtureapps.runner:a"], 1, "^Error: Bad object name 'a'"
+            ["tests.fixtureapps.runner:a"], 1, "^Error: Bad object name 'a'"
         )
 
     def test_simple_call(self):
-        import waitress.tests.fixtureapps.runner as _apps
+        import tests.fixtureapps.runner as _apps
 
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)
@@ -128,12 +128,12 @@ class Test_run(unittest.TestCase):
         argv = [
             "waitress-serve",
             "--port=80",
-            "waitress.tests.fixtureapps.runner:app",
+            "tests.fixtureapps.runner:app",
         ]
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
 
     def test_returned_app(self):
-        import waitress.tests.fixtureapps.runner as _apps
+        import tests.fixtureapps.runner as _apps
 
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)
@@ -143,7 +143,7 @@ class Test_run(unittest.TestCase):
             "waitress-serve",
             "--port=80",
             "--call",
-            "waitress.tests.fixtureapps.runner:returns_app",
+            "tests.fixtureapps.runner:returns_app",
         ]
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
 
