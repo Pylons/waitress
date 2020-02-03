@@ -12,7 +12,8 @@
 #
 ##############################################################################
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 try:
@@ -52,7 +53,6 @@ setup(
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
@@ -65,7 +65,8 @@ setup(
     ],
     url="https://github.com/Pylons/waitress",
     packages=find_packages(),
-    extras_require={"testing": testing_extras, "docs": docs_extras,},
+    python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*",
+    extras_require={"testing": testing_extras, "docs": docs_extras},
     include_package_data=True,
     test_suite="waitress",
     zip_safe=False,

@@ -12,6 +12,7 @@ jobs:
                     {'py': '3.5', 'env': 'py35'},
                     {'py': '3.6', 'env': 'py36'},
                     {'py': '3.7', 'env': 'py37'},
+                    {'py': '3.8', 'env': 'py38'},
                 ]
                 architecture: ['x86', 'x64']
         name: "Python: ${{ matrix.tox.py }} (${{ matrix.architecture }})"
