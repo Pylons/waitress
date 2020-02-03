@@ -1,3 +1,19 @@
+1.4.3 (2020-02-02)
+------------------
+
+Security Fixes
+~~~~~~~~~~~~~~
+
+- In Waitress version 1.4.2 a new regular expression was added to validate the
+  headers that Waitress receives to make sure that it matches RFC7230.
+  Unfortunately the regular expression was written in a way that with invalid
+  input it leads to catastrophic backtracking which allows for a Denial of
+  Service and CPU usage going to a 100%.
+
+  This was reported by Fil Zembowicz to the Pylons Project. Please see
+  https://github.com/Pylons/waitress/security/advisories/GHSA-73m2-3pwg-5fgc
+  for more information.
+
 1.4.2 (2020-01-02)
 ------------------
 
