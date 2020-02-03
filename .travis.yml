@@ -22,8 +22,14 @@ matrix:
           env: TOXENV=pypy
         - python: pypy3
           env: TOXENV=pypy3
-        - python: 3.5
-          env: TOXENV=py27-cover,py35-cover,coverage
+        - python: 3.8
+          env: TOXENV=py27,py38,coverage
+          dist: xenial
+          sudo: true
+        - python: 3.8
+          env: TOXENV=lint
+          dist: xenial
+          sudo: true
         - python: 3.5
           env: TOXENV=docs
 
