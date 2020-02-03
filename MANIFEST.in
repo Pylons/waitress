@@ -1,6 +1,7 @@
 graft src/waitress
 graft tests
 graft docs
+graft .github
 
 include README.rst
 include CHANGES.txt
