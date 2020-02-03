@@ -7,23 +7,26 @@ jobs:
         runs-on: macOS-latest
         strategy:
             matrix:
-                tox: [
-                    {'py': '2.7', 'env': 'py27'},
-                    {'py': '3.5', 'env': 'py35'},
-                    {'py': '3.6', 'env': 'py36'},
-                    {'py': '3.7', 'env': 'py37'},
+                py: [
+                    '2.7',
+                    '3.5',
+                    '3.6',
+                    '3.7',
+                    '3.8',
+                    'pypy2',
+                    'pypy3'
                 ]
                 architecture: ['x64']
-        name: "Python: ${{ matrix.tox.py }}"
+        name: "Python: ${{ matrix.py }}"
         steps:
             - uses: actions/checkout@master
             - name: Setup python
               uses: actions/setup-python@v1
               with:
-                  python-version: ${{ matrix.tox.py }}
+                  python-version: ${{ matrix.py }}
                   architecture: ${{ matrix.architecture }}
             - run: pip install tox
             - name: Running tox
               run: |
                   ulimit -n 4096
-                  tox -e ${{ matrix.tox.env }}
+                  tox -e py
