@@ -368,20 +368,14 @@ class TcpWSGIServer(BaseWSGIServer):
         self.bind(sockaddr)
 
     def getsockname(self):
-        try:
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(), self.socketmod.NI_NUMERICSERV
-            )
-        except:  # pragma: no cover
-            # This only happens on Linux because a DNS issue is considered a
-            # temporary failure that will raise (even when NI_NAMEREQD is not
-            # set). Instead we try again, but this time we just ask for the
-            # numerichost and the numericserv (port) and return those. It is
-            # better than nothing.
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(),
-                self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV,
-            )
+        # If we don't include self.socketmod.NI_NUMERICHOST with python 3.8,
+	# we get back an irrelevant host name, like the name of the computer,
+	# or any other server name we have routed to 0.0.0.0, in, eg etc hosts
+	# on Windows 10.
+        return self.socketmod.getnameinfo(
+	    self.socket.getsockname(),
+            self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV,
+        )
 
     def set_socket_options(self, conn):
         for (level, optname, value) in self.adj.socket_options:
