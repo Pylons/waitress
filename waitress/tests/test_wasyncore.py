@@ -125,7 +125,7 @@ def gc_collect():  # pragma: no cover
     In non-CPython implementations of Python, this is needed because timely
     deallocation is not guaranteed by the garbage collector.  (Even in CPython
     this can be the case in case of reference cycles.)  This means that __del__
-    methods may be called later than expected and weakrefs may remain alive for
+    methods may be called later than expected and weakref may remain alive for
     longer than expected.  This function tries its best to force all garbage
     objects to disappear.
     """
