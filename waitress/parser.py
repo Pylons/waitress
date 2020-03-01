@@ -224,8 +224,8 @@ class HTTPRequestParser(object):
             value = value.strip(b" \t")
             key1 = tostr(key.upper().replace(b"-", b"_"))
             # If a header already exists, we append subsequent values
-            # seperated by a comma. Applications already need to handle
-            # the comma seperated values, as HTTP front ends might do
+            # separated by a comma. Applications already need to handle
+            # the comma separated values, as HTTP front ends might do
             # the concatenation for you (behavior specified in RFC2616).
             try:
                 headers[key1] += tostr(b", " + value)
