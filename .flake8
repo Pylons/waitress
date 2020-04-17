@@ -1,0 +1,36 @@
+# Recommended flake8 settings while editing, we use Black for the final linting/say in how code is formatted
+#
+# pip install flake8 flake8-bugbear
+#
+# This will warn/error on things that black does not fix, on purpose.
+#
+# Run:
+#
+# tox -e run-flake8
+#
+# To have it automatically create and install the appropriate tools, and run
+# flake8 across the source code/tests
+
+[flake8]
+# max line length is set to 88 in black, here it is set to 80 and we enable bugbear's B950 warning, which is:
+#
+# B950: Line too long. This is a pragmatic equivalent of pycodestyle’s E501: it
+# considers “max-line-length” but only triggers when the value has been
+# exceeded by more than 10%. You will no longer be forced to reformat code due
+# to the closing parenthesis being one character too far to satisfy the linter.
+# At the same time, if you do significantly violate the line length, you will
+# receive a message that states what the actual limit is. This is inspired by
+# Raymond Hettinger’s “Beyond PEP 8” talk and highway patrol not stopping you
+# if you drive < 5mph too fast. Disable E501 to avoid duplicate warnings.
+max-line-length = 80
+max-complexity = 12
+select = E,F,W,C,B,B9
+ignore =
+    # E123 closing bracket does not match indentation of opening bracket’s line
+    E123
+    # E203 whitespace before ‘:’ (Not PEP8 compliant, Python Black)
+    E203
+    # E501 line too long (82 > 79 characters) (replaced by B950 from flake8-bugbear, https://github.com/PyCQA/flake8-bugbear)
+    E501
+    # W503 line break before binary operator (Not PEP8 compliant, Python Black)
+    W503

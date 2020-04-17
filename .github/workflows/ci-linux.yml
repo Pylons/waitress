@@ -40,10 +40,10 @@ jobs:
             - name: Setup python
               uses: actions/setup-python@v1
               with:
-                  python-version: 3.5
+                  python-version: 3.8
                   architecture: x64
             - run: pip install tox
-            - run: tox -e py35-cover,py27-cover,coverage
+            - run: tox -e py38,py27,coverage
     docs:
         runs-on: ubuntu-latest
         name: Build the documentation
@@ -52,7 +52,19 @@ jobs:
             - name: Setup python
               uses: actions/setup-python@v1
               with:
-                  python-version: 3.5
+                  python-version: 3.8
                   architecture: x64
             - run: pip install tox
             - run: tox -e docs
+    lint:
+        runs-on: ubuntu-latest
+        name: Lint the package
+        steps:
+            - uses: actions/checkout@master
+            - name: Setup python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: 3.8
+                  architecture: x64
+            - run: pip install tox
+            - run: tox -e lint

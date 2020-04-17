@@ -5,9 +5,14 @@ concurrency =
     multiprocessing
 source =
     waitress
-
 omit =
     waitress/tests/fixtureapps/getline.py
+
+[paths]
+source =
+    src/waitress
+    */src/waitress
+    */site-packages/waitress
 
 [report]
 show_missing = true

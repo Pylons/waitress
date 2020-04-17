@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools >= 41"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+py36 = false
+exclude = '''
+/(
+  \.git
+  | .tox
+)/
+'''

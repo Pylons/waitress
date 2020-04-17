@@ -38,6 +38,7 @@ def try_register_coverage():  # pragma: no cover
     # atexit handler by always registering a signal handler
 
     if "COVERAGE_PROCESS_START" in os.environ:
+
         def sigterm(*args):
             sys.exit(0)
 
@@ -126,7 +127,7 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
     # test that sleepy thread doesnt block other requests
 
     def setUp(self):
-        from waitress.tests.fixtureapps import sleepy
+        from tests.fixtureapps import sleepy
 
         self.start_subprocess(sleepy.app)
 
@@ -159,7 +160,7 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
 
 class EchoTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import echo
+        from tests.fixtureapps import echo
 
         self.start_subprocess(
             echo.app,
@@ -173,7 +174,7 @@ class EchoTests(object):
         self.stop_subprocess()
 
     def _read_echo(self, fp):
-        from waitress.tests.fixtureapps import echo
+        from tests.fixtureapps import echo
 
         line, headers, body = read_http(fp)
         return line, headers, echo.parse_response(body)
@@ -336,7 +337,8 @@ class EchoTests(object):
         cl = int(headers["content-length"])
         self.assertEqual(cl, len(response_body))
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         self.assertEqual(headers["content-type"], "text/plain")
         # connection has been closed
@@ -361,7 +363,8 @@ class EchoTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(b"Chunk not properly terminated" in response_body)
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         self.assertEqual(headers["content-type"], "text/plain")
         # connection has been closed
@@ -479,7 +482,7 @@ class EchoTests(object):
 
 class PipeliningTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import echo
+        from tests.fixtureapps import echo
 
         self.start_subprocess(echo.app_body_only)
 
@@ -521,7 +524,7 @@ class PipeliningTests(object):
 
 class ExpectContinueTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import echo
+        from tests.fixtureapps import echo
 
         self.start_subprocess(echo.app_body_only)
 
@@ -560,7 +563,7 @@ class ExpectContinueTests(object):
 
 class BadContentLengthTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import badcl
+        from tests.fixtureapps import badcl
 
         self.start_subprocess(badcl.app)
 
@@ -626,7 +629,7 @@ class BadContentLengthTests(object):
 
 class NoContentLengthTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import nocl
+        from tests.fixtureapps import nocl
 
         self.start_subprocess(nocl.app)
 
@@ -763,7 +766,7 @@ class NoContentLengthTests(object):
 
 class WriteCallbackTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import writecb
+        from tests.fixtureapps import writecb
 
         self.start_subprocess(writecb.app)
 
@@ -867,7 +870,7 @@ class TooLargeTests(object):
     toobig = 1050
 
     def setUp(self):
-        from waitress.tests.fixtureapps import toolarge
+        from tests.fixtureapps import toolarge
 
         self.start_subprocess(
             toolarge.app, max_request_header_size=1000, max_request_body_size=1000
@@ -897,7 +900,9 @@ class TooLargeTests(object):
 
     def test_request_body_too_large_with_wrong_cl_http10_keepalive(self):
         body = "a" * self.toobig
-        to_send = "GET / HTTP/1.0\r\nContent-Length: 5\r\nConnection: Keep-Alive\r\n\r\n"
+        to_send = (
+            "GET / HTTP/1.0\r\nContent-Length: 5\r\nConnection: Keep-Alive\r\n\r\n"
+        )
         to_send += body
         to_send = tobytes(to_send)
         self.connect()
@@ -1059,7 +1064,7 @@ class TooLargeTests(object):
 
 class InternalServerErrorTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import error
+        from tests.fixtureapps import error
 
         self.start_subprocess(error.app, expose_tracebacks=True)
 
@@ -1094,7 +1099,8 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b"Internal Server Error"))
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         # connection has been closed
         self.send_check_error(to_send)
@@ -1153,7 +1159,8 @@ class InternalServerErrorTests(object):
         self.assertEqual(cl, len(response_body))
         self.assertTrue(response_body.startswith(b"Internal Server Error"))
         self.assertEqual(
-            sorted(headers.keys()), ["connection", "content-length", "content-type", "date", "server"]
+            sorted(headers.keys()),
+            ["connection", "content-length", "content-type", "date", "server"],
         )
         # connection has been closed
         self.send_check_error(to_send)
@@ -1209,7 +1216,7 @@ class InternalServerErrorTests(object):
 
 class FileWrapperTests(object):
     def setUp(self):
-        from waitress.tests.fixtureapps import filewrapper
+        from tests.fixtureapps import filewrapper
 
         self.start_subprocess(filewrapper.app)
 
