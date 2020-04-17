@@ -14,7 +14,7 @@ include COPYRIGHT.txt
 
 include pyproject.toml setup.cfg
 include .coveragerc .flake8
-include tox.ini .travis.yml rtd.txt appveyor.yml
+include tox.ini rtd.txt
 
 exclude TODO.txt
 
