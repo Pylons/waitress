@@ -5,14 +5,8 @@ Waitress
     :target: https://pypi.org/project/waitress/
     :alt: latest version of waitress on PyPI
 
-.. image:: https://github.com/Pylons/waitress/workflows/Build/test%20on%20Linux/badge.svg?branch=master
-    :target: https://github.com/Pylons/waitress/actions?query=workflow%3A%22Build%2Ftest+on+Linux%22
-
-.. image:: https://github.com/Pylons/waitress/workflows/Build/test%20on%20MacOS/badge.svg?branch=master
-    :target: https://github.com/Pylons/waitress/actions?query=workflow%3A%22Build%2Ftest+on+MacOS%22
-
-.. image:: https://github.com/Pylons/waitress/workflows/Build/test%20on%20Windows/badge.svg?branch=master
-    :target: https://github.com/Pylons/waitress/actions?query=workflow%3A%22Build%2Ftest+on+Windows%22
+.. image:: https://github.com/Pylons/waitress/workflows/Build%20and%20test/badge.svg
+    :target: https://github.com/Pylons/waitress/actions?query=workflow%3A%22Build+and+test%22
 
 .. image:: https://readthedocs.org/projects/waitress/badge/?version=master
         :target: https://docs.pylonsproject.org/projects/waitress/en/master
