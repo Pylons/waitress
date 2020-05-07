@@ -116,7 +116,7 @@ class HTTPChannel(wasyncore.dispatcher):
         if flush:
             try:
                 flush()
-            except socket.error:
+            except OSError:
                 if self.adj.log_socket_errors:
                     self.logger.exception("Socket error")
                 self.will_close = True
@@ -142,7 +142,7 @@ class HTTPChannel(wasyncore.dispatcher):
     def handle_read(self):
         try:
             data = self.recv(self.adj.recv_bytes)
-        except socket.error:
+        except OSError:
             if self.adj.log_socket_errors:
                 self.logger.exception("Socket error")
             self.handle_close()

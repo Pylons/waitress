@@ -170,7 +170,7 @@ class Task:
                 self.start()
                 self.execute()
                 self.finish()
-            except socket.error:
+            except OSError:
                 self.close_on_finish = True
                 if self.channel.adj.log_socket_errors:
                     raise

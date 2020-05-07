@@ -195,7 +195,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.will_close = False
 
         def recv(b):
-            raise socket.error
+            raise OSError
 
         inst.recv = recv
         inst.last_activity = 0

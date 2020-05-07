@@ -240,7 +240,7 @@ class TestWSGIServer(unittest.TestCase):
         inst.adj = DummyAdj
 
         def foo():
-            raise socket.error
+            raise OSError
 
         inst.accept = foo
         inst.logger = DummyLogger()

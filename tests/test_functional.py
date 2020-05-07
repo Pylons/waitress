@@ -1531,7 +1531,7 @@ if hasattr(socket, "AF_UNIX"):
             # 'Broken pipe' error when the socket it closed.
             try:
                 self.sock.send(to_send)
-            except socket.error as exc:
+            except OSError as exc:
                 self.assertEqual(get_errno(exc), errno.EPIPE)
 
     class UnixEchoTests(EchoTests, UnixTests, unittest.TestCase):
@@ -1602,7 +1602,7 @@ class ConnectionClosed(Exception):
 def read_http(fp):  # pragma: no cover
     try:
         response_line = fp.readline()
-    except socket.error as exc:
+    except OSError as exc:
         fp.close()
         # errno 104 is ENOTRECOVERABLE, In WinSock 10054 is ECONNRESET
         if get_errno(exc) in (errno.ECONNABORTED, errno.ECONNRESET, 104, 10054):

@@ -400,7 +400,7 @@ class TestWSGITask(unittest.TestCase):
         inst = self._makeOne()
 
         def execute():
-            raise socket.error
+            raise OSError
 
         inst.execute = execute
         self.assertRaises(socket.error, inst.service)
