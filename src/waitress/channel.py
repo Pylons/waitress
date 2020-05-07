@@ -120,7 +120,7 @@ class HTTPChannel(wasyncore.dispatcher):
                 if self.adj.log_socket_errors:
                     self.logger.exception("Socket error")
                 self.will_close = True
-            except Exception:
+            except Exception:  # pragma: nocover
                 self.logger.exception("Unexpected exception when flushing")
                 self.will_close = True
 
