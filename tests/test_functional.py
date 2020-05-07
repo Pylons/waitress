@@ -54,7 +54,7 @@ class FixtureTcpWSGIServer(server.TcpWSGIServer):
     def __init__(self, application, queue, **kw):  # pragma: no cover
         # Coverage doesn't see this as it's ran in a separate process.
         kw["port"] = 0  # Bind to any available port.
-        super(FixtureTcpWSGIServer, self).__init__(application, **kw)
+        super().__init__(application, **kw)
         host, port = self.socket.getsockname()
         if os.name == "nt":
             host = "127.0.0.1"
@@ -1512,7 +1512,7 @@ if hasattr(socket, "AF_UNIX"):
             # Coverage doesn't see this as it's ran in a separate process.
             # To permit parallel testing, use a PID-dependent socket.
             kw["unix_socket"] = "/tmp/waitress.test-%d.sock" % os.getpid()
-            super(FixtureUnixWSGIServer, self).__init__(application, **kw)
+            super().__init__(application, **kw)
             queue.put(self.socket.getsockname())
 
     class UnixTests(SubprocessTests):
@@ -1523,7 +1523,7 @@ if hasattr(socket, "AF_UNIX"):
             return UnixHTTPConnection(self.bound_to)
 
         def stop_subprocess(self):
-            super(UnixTests, self).stop_subprocess()
+            super().stop_subprocess()
             cleanup_unix_socket(self.bound_to)
 
         def send_check_error(self, to_send):

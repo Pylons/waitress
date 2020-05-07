@@ -405,7 +405,7 @@ if hasattr(socket, "AF_UNIX"):
             if sockinfo is None:
                 sockinfo = (socket.AF_UNIX, socket.SOCK_STREAM, None, None)
 
-            super(UnixWSGIServer, self).__init__(
+            super().__init__(
                 application,
                 map=map,
                 _start=_start,

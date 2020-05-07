@@ -15,7 +15,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
 
         class BadDummyTask(DummyTask):
             def service(self):
-                super(BadDummyTask, self).service()
+                super().service()
                 inst.stop_count += 1
                 raise Exception
 
