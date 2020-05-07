@@ -19,7 +19,7 @@ import time
 from collections import deque
 
 from .buffers import ReadOnlyFileBasedBuffer
-from .compat import reraise, tobytes
+from .compat import tobytes
 from .utilities import build_http_date, logger, queue_logger
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -383,7 +383,7 @@ class WSGITask(Task):
                         # 1. "service" method in task.py
                         # 2. "service" method in channel.py
                         # 3. "handler_thread" method in task.py
-                        reraise(exc_info[0], exc_info[1], exc_info[2])
+                        raise exc_info[1]
                     else:
                         # As per WSGI spec existing headers must be cleared
                         self.response_headers = []
