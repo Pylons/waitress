@@ -19,7 +19,6 @@ import warnings
 
 from .proxy_headers import PROXY_HEADERS
 from .compat import (
-    PY2,
     WIN,
     string_types,
     HAS_IPV6,
@@ -346,7 +345,7 @@ class Adjustments:
             else:
                 (host, port) = (i, str(self.port))
 
-            if WIN and PY2:  # pragma: no cover
+            if WIN:  # pragma: no cover
                 try:
                     # Try turning the port into an integer
                     port = int(port)
