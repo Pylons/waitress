@@ -270,7 +270,7 @@ class TestHTTPChannel(unittest.TestCase):
         class Lock(DummyLock):
             def wait(self):
                 inst.total_outbufs_len = 0
-                super(Lock, self).wait()
+                super().wait()
 
         inst.outbuf_lock = Lock()
         wrote = inst.write_soon(b"xyz")

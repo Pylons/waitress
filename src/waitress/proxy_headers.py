@@ -22,7 +22,7 @@ class MalformedProxyHeader(Exception):
         self.header = header
         self.reason = reason
         self.value = value
-        super(MalformedProxyHeader, self).__init__(header, reason, value)
+        super().__init__(header, reason, value)
 
 
 def proxy_headers_middleware(
