@@ -14,7 +14,6 @@
 """Command line runner.
 """
 
-from __future__ import print_function, unicode_literals
 
 import getopt
 import os
@@ -191,7 +190,7 @@ RUNNER_PATTERN = re.compile(
 def match(obj_name):
     matches = RUNNER_PATTERN.match(obj_name)
     if not matches:
-        raise ValueError("Malformed application '{0}'".format(obj_name))
+        raise ValueError("Malformed application '{}'".format(obj_name))
     return matches.group("module"), matches.group("object")
 
 
@@ -216,7 +215,7 @@ def resolve(module_name, object_name):
 
 def show_help(stream, name, error=None):  # pragma: no cover
     if error is not None:
-        print("Error: {0}\n".format(error), file=stream)
+        print("Error: {}\n".format(error), file=stream)
     print(HELP.format(name), file=stream)
 
 
@@ -224,7 +223,7 @@ def show_exception(stream):
     exc_type, exc_value = sys.exc_info()[:2]
     args = getattr(exc_value, "args", None)
     print(
-        ("There was an exception ({0}) importing your module.\n").format(
+        ("There was an exception ({}) importing your module.\n").format(
             exc_type.__name__,
         ),
         file=stream,
@@ -232,7 +231,7 @@ def show_exception(stream):
     if args:
         print("It had these arguments: ", file=stream)
         for idx, arg in enumerate(args, start=1):
-            print("{0}. {1}\n".format(idx, arg), file=stream)
+            print("{}. {}\n".format(idx, arg), file=stream)
     else:
         print("It had no arguments.", file=stream)
 
@@ -269,11 +268,11 @@ def run(argv=sys.argv, _serve=serve):
     try:
         app = resolve(module, obj_name)
     except ImportError:
-        show_help(sys.stderr, name, "Bad module '{0}'".format(module))
+        show_help(sys.stderr, name, "Bad module '{}'".format(module))
         show_exception(sys.stderr)
         return 1
     except AttributeError:
-        show_help(sys.stderr, name, "Bad object name '{0}'".format(obj_name))
+        show_help(sys.stderr, name, "Bad object name '{}'".format(obj_name))
         show_exception(sys.stderr)
         return 1
     if kw["call"]:
