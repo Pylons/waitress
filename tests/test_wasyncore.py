@@ -732,7 +732,7 @@ class FileWrapperTest(unittest.TestCase):
             os.close(fd)
 
             try:
-                with check_warnings(("", compat.ResourceWarning)):
+                with check_warnings(("", ResourceWarning)):
                     f = None
                     gc_collect()
             except AssertionError:  # pragma: no cover

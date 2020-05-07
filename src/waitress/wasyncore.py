@@ -320,7 +320,7 @@ class dispatcher:
             self.socket = None
 
     def __repr__(self):
-        status = [self.__class__.__module__ + "." + compat.qualname(self.__class__)]
+        status = [self.__class__.__module__ + "." + self.__class__.__qualname__]
         if self.accepting and self.addr:
             status.append("listening")
         elif self.connected:
@@ -646,7 +646,7 @@ if os.name == "posix":
 
         def __del__(self):
             if self.fd >= 0:
-                warnings.warn("unclosed file %r" % self, compat.ResourceWarning)
+                warnings.warn("unclosed file %r" % self, ResourceWarning)
             self.close()
 
         def recv(self, *args):
@@ -685,7 +685,7 @@ if os.name == "posix":
                 pass
             self.set_file(fd)
             # set it to non-blocking mode
-            compat.set_nonblocking(fd)
+            os.set_blocking(fd, False)
 
         def set_file(self, fd):
             self.socket = file_wrapper(fd)
