@@ -100,11 +100,11 @@ class _int_marker(int):
     pass
 
 
-class _bool_marker(object):
+class _bool_marker:
     pass
 
 
-class Adjustments(object):
+class Adjustments:
     """This class contains tunable parameters.
     """
 

@@ -29,13 +29,13 @@ class TestHTTPChannel(unittest.TestCase):
 
         inst, _, map = self._makeOneWithMap()
 
-        class DummyBuffer(object):
+        class DummyBuffer:
             chunks = []
 
             def append(self, data):
                 self.chunks.append(data)
 
-        class DummyData(object):
+        class DummyData:
             def __len__(self):
                 return MAXINT
 
@@ -367,7 +367,7 @@ class TestHTTPChannel(unittest.TestCase):
 
         inst, sock, map = self._makeOneWithMap()
 
-        class DummyHugeOutbuffer(object):
+        class DummyHugeOutbuffer:
             def __init__(self):
                 self.length = MAXINT + 1
 
@@ -705,7 +705,7 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertEqual(inst.requests, [])
 
 
-class DummySock(object):
+class DummySock:
     blocking = False
     closed = False
 
@@ -732,7 +732,7 @@ class DummySock(object):
         return len(data)
 
 
-class DummyLock(object):
+class DummyLock:
     notified = False
 
     def __init__(self, acquirable=True):
@@ -759,7 +759,7 @@ class DummyLock(object):
         pass
 
 
-class DummyBuffer(object):
+class DummyBuffer:
     closed = False
 
     def __init__(self, data, toraise=None):
@@ -783,7 +783,7 @@ class DummyBuffer(object):
         self.closed = True
 
 
-class DummyAdjustments(object):
+class DummyAdjustments:
     outbuf_overflow = 1048576
     outbuf_high_watermark = 1048576
     inbuf_overflow = 512000
@@ -798,7 +798,7 @@ class DummyAdjustments(object):
     max_request_header_size = 10000
 
 
-class DummyServer(object):
+class DummyServer:
     trigger_pulled = False
     adj = DummyAdjustments()
 
@@ -813,7 +813,7 @@ class DummyServer(object):
         self.trigger_pulled = True
 
 
-class DummyParser(object):
+class DummyParser:
     version = 1
     data = None
     completed = True
@@ -831,7 +831,7 @@ class DummyParser(object):
         return len(data)
 
 
-class DummyRequest(object):
+class DummyRequest:
     error = None
     path = "/"
     version = "1.0"
@@ -844,7 +844,7 @@ class DummyRequest(object):
         self.closed = True
 
 
-class DummyLogger(object):
+class DummyLogger:
     def __init__(self):
         self.exceptions = []
         self.infos = []
@@ -857,13 +857,13 @@ class DummyLogger(object):
         self.exceptions.append(msg)
 
 
-class DummyError(object):
+class DummyError:
     code = "431"
     reason = "Bleh"
     body = "My body"
 
 
-class DummyTaskClass(object):
+class DummyTaskClass:
     wrote_header = True
     close_on_finish = False
     serviced = False

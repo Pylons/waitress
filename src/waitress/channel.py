@@ -37,7 +37,7 @@ class ClientDisconnected(Exception):
     """ Raised when attempting to write to a closed socket."""
 
 
-class HTTPChannel(wasyncore.dispatcher, object):
+class HTTPChannel(wasyncore.dispatcher):
     """
     Setting self.requests = [somerequest] prevents more requests from being
     received until the out buffers have been flushed.

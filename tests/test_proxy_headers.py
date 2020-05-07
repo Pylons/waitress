@@ -681,7 +681,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertIn(b'Header "X-Forwarded-Host" malformed', response.body)
 
 
-class DummyLogger(object):
+class DummyLogger:
     def __init__(self):
         self.logged = []
 
@@ -689,14 +689,14 @@ class DummyLogger(object):
         self.logged.append(msg % args)
 
 
-class DummyApp(object):
+class DummyApp:
     def __call__(self, environ, start_response):
         self.environ = environ
         start_response("200 OK", [("Content-Type", "text/plain")])
         yield "hello"
 
 
-class DummyResponse(object):
+class DummyResponse:
     status = None
     headers = None
     body = None

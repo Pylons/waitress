@@ -5,7 +5,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 fn = os.path.join(here, "groundhog1.jpg")
 
 
-class KindaFilelike(object):  # pragma: no cover
+class KindaFilelike:  # pragma: no cover
     def __init__(self, bytes):
         self.bytes = bytes
 

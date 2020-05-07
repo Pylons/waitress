@@ -41,7 +41,7 @@ hop_by_hop = frozenset(
 )
 
 
-class ThreadedTaskDispatcher(object):
+class ThreadedTaskDispatcher:
     """A Task Dispatcher that creates a thread for each task.
     """
 
@@ -141,7 +141,7 @@ class ThreadedTaskDispatcher(object):
         return False
 
 
-class Task(object):
+class Task:
     close_on_finish = False
     status = "200 OK"
     wrote_header = False

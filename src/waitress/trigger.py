@@ -50,7 +50,7 @@ from . import wasyncore
 # the main thread is trying to remove some]
 
 
-class _triggerbase(object):
+class _triggerbase:
     """OS-independent base class for OS-dependent trigger class."""
 
     kind = None  # subclass must set to "pipe" or "loopback"; used by repr
