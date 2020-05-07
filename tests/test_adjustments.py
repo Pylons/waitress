@@ -3,7 +3,6 @@ import socket
 import warnings
 
 from waitress.compat import (
-    PY2,
     WIN,
 )
 
@@ -220,7 +219,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertRaises(ValueError, self._makeOne, listen="127.0.0.1:test")
 
     def test_service_port(self):
-        if WIN and PY2:  # pragma: no cover
+        if WIN:  # pragma: no cover
             # On Windows and Python 2 this is broken, so we raise a ValueError
             self.assertRaises(
                 ValueError, self._makeOne, listen="127.0.0.1:http",
