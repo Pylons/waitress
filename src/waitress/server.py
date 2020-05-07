@@ -260,7 +260,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
         if server_name == "0.0.0.0" or server_name == "::":
             try:
                 return str(self.socketmod.gethostname())
-            except (socket.error, UnicodeDecodeError):  # pragma: no cover
+            except (OSError, UnicodeDecodeError):  # pragma: no cover
                 # We also deal with UnicodeDecodeError in case of Windows with
                 # non-ascii hostname
                 return "localhost"
@@ -268,7 +268,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
         # Now let's try and convert the IP address to a proper hostname
         try:
             server_name = self.socketmod.gethostbyaddr(server_name)[0]
-        except (socket.error, UnicodeDecodeError):  # pragma: no cover
+        except (OSError, UnicodeDecodeError):  # pragma: no cover
             # We also deal with UnicodeDecodeError in case of Windows with
             # non-ascii hostname
             pass
@@ -312,7 +312,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
             if v is None:
                 return
             conn, addr = v
-        except socket.error:
+        except OSError:
             # Linux: On rare occasions we get a bogus socket back from
             # accept.  socketmodule.c:makesockaddr complains that the
             # address family is unknown.  We don't want the whole server

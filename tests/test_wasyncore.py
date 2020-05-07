@@ -401,7 +401,7 @@ def _is_ipv6_enabled():  # pragma: no cover
             sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             sock.bind(("::1", 0))
             return True
-        except socket.error:
+        except OSError:
             pass
         finally:
             if sock:
@@ -1420,7 +1420,7 @@ class Test_dispatcher(unittest.TestCase):
         sock = dummysocket()
 
         def getpeername():
-            raise socket.error(errno.EBADF)
+            raise OSError(errno.EBADF)
 
         map = {}
         sock.getpeername = getpeername
@@ -1454,7 +1454,7 @@ class Test_dispatcher(unittest.TestCase):
 
         def setsockopt(*arg, **kw):
             sock.errored = True
-            raise socket.error
+            raise OSError
 
         sock.setsockopt = setsockopt
         sock.getsockopt = lambda *arg: 0
@@ -1486,7 +1486,7 @@ class Test_dispatcher(unittest.TestCase):
         map = {}
 
         def accept(*arg, **kw):
-            raise socket.error(122)
+            raise OSError(122)
 
         sock.accept = accept
         inst = self._makeOne(sock=sock, map=map)
@@ -1497,7 +1497,7 @@ class Test_dispatcher(unittest.TestCase):
         map = {}
 
         def send(*arg, **kw):
-            raise socket.error(errno.EWOULDBLOCK)
+            raise OSError(errno.EWOULDBLOCK)
 
         sock.send = send
         inst = self._makeOne(sock=sock, map=map)
@@ -1509,7 +1509,7 @@ class Test_dispatcher(unittest.TestCase):
         map = {}
 
         def send(*arg, **kw):
-            raise socket.error(122)
+            raise OSError(122)
 
         sock.send = send
         inst = self._makeOne(sock=sock, map=map)
@@ -1520,7 +1520,7 @@ class Test_dispatcher(unittest.TestCase):
         map = {}
 
         def recv(*arg, **kw):
-            raise socket.error(errno.ECONNRESET)
+            raise OSError(errno.ECONNRESET)
 
         def handle_close():
             inst.close_handled = True
@@ -1537,7 +1537,7 @@ class Test_dispatcher(unittest.TestCase):
         map = {}
 
         def close():
-            raise socket.error(122)
+            raise OSError(122)
 
         sock.close = close
         inst = self._makeOne(sock=sock, map=map)
