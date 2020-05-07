@@ -53,7 +53,7 @@ def proxy_headers_middleware(
                     ex.reason,
                     ex.value,
                 )
-                error = BadRequest('Header "{0}" malformed.'.format(ex.header))
+                error = BadRequest('Header "{}" malformed.'.format(ex.header))
                 return error.wsgi_response(environ, start_response)
 
         # Clear out the untrusted proxy headers
