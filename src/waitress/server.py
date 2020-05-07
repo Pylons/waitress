@@ -413,7 +413,7 @@ if hasattr(socket, "AF_UNIX"):
                 dispatcher=dispatcher,
                 adj=adj,
                 sockinfo=sockinfo,
-                **kw
+                **kw,
             )
 
         def bind_server_socket(self):
