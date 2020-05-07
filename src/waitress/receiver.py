@@ -17,7 +17,7 @@
 from waitress.utilities import BadRequest, find_double_newline
 
 
-class FixedStreamReceiver(object):
+class FixedStreamReceiver:
 
     # See IStreamConsumer
     completed = False
@@ -59,7 +59,7 @@ class FixedStreamReceiver(object):
         return self.buf
 
 
-class ChunkedReceiver(object):
+class ChunkedReceiver:
 
     chunk_remainder = 0
     validate_chunk_end = False

@@ -31,7 +31,7 @@ class Test_serve_paste(unittest.TestCase):
         self.assertEqual(server.ran, True)
 
 
-class DummyServerFactory(object):
+class DummyServerFactory:
     ran = False
 
     def __call__(self, app, **kw):
@@ -44,7 +44,7 @@ class DummyServerFactory(object):
         self.ran = True
 
 
-class DummyAdj(object):
+class DummyAdj:
     verbose = False
 
     def __init__(self, kw):

@@ -226,7 +226,7 @@ class TestChunkedReceiver(unittest.TestCase):
         self.assertEqual(inst.error, None)
 
 
-class DummyBuffer(object):
+class DummyBuffer:
     def __init__(self, data=None):
         if data is None:
             data = []

@@ -137,7 +137,7 @@ def create_server(
 # This class is only ever used if we have multiple listen sockets. It allows
 # the serve() API to call .run() which starts the wasyncore loop, and catches
 # SystemExit/KeyboardInterrupt so that it can atempt to cleanly shut down.
-class MultiSocketServer(object):
+class MultiSocketServer:
     asyncore = wasyncore  # test shim
 
     def __init__(
@@ -172,7 +172,7 @@ class MultiSocketServer(object):
         wasyncore.close_all(self.map)
 
 
-class BaseWSGIServer(wasyncore.dispatcher, object):
+class BaseWSGIServer(wasyncore.dispatcher):
 
     channel_class = HTTPChannel
     next_channel_cleanup = 0

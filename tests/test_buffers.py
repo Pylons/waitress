@@ -413,7 +413,7 @@ class TestOverflowableBuffer(unittest.TestCase):
     def test_prune_with_buf(self):
         inst = self._makeOne()
 
-        class Buf(object):
+        class Buf:
             def prune(self):
                 self.pruned = True
 
@@ -477,7 +477,7 @@ class TestOverflowableBuffer(unittest.TestCase):
         self.buffers_to_close.remove(inst)
 
     def test_close_withbuf(self):
-        class Buffer(object):
+        class Buffer:
             def close(self):
                 self.closed = True
 
@@ -489,7 +489,7 @@ class TestOverflowableBuffer(unittest.TestCase):
         self.buffers_to_close.remove(inst)
 
 
-class KindaFilelike(object):
+class KindaFilelike:
     def __init__(self, bytes, close=None, tellresults=None):
         self.bytes = bytes
         self.tellresults = tellresults
@@ -506,7 +506,7 @@ class Filelike(KindaFilelike):
         return v
 
 
-class DummyBuffer(object):
+class DummyBuffer:
     def __init__(self, length=0):
         self.length = length
 

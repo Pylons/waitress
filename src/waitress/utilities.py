@@ -273,7 +273,7 @@ def cleanup_unix_socket(path):
                 pass
 
 
-class Error(object):
+class Error:
     code = 500
     reason = "Internal Server Error"
 

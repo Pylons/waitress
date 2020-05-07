@@ -61,7 +61,7 @@ class FixtureTcpWSGIServer(server.TcpWSGIServer):
         queue.put((host, port))
 
 
-class SubprocessTests(object):
+class SubprocessTests:
 
     # For nose: all tests may be ran in separate processes.
     _multiprocess_can_split_ = True
@@ -158,7 +158,7 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
         self.assertEqual(result, b"notsleepy returnedsleepy returned")
 
 
-class EchoTests(object):
+class EchoTests:
     def setUp(self):
         from tests.fixtureapps import echo
 
@@ -480,7 +480,7 @@ class EchoTests(object):
         self.assertEqual(echo.remote_host, "192.168.1.1")
 
 
-class PipeliningTests(object):
+class PipeliningTests:
     def setUp(self):
         from tests.fixtureapps import echo
 
@@ -522,7 +522,7 @@ class PipeliningTests(object):
             self.assertEqual(response_body, expect_body)
 
 
-class ExpectContinueTests(object):
+class ExpectContinueTests:
     def setUp(self):
         from tests.fixtureapps import echo
 
@@ -561,7 +561,7 @@ class ExpectContinueTests(object):
         self.assertEqual(response_body, tobytes(data))
 
 
-class BadContentLengthTests(object):
+class BadContentLengthTests:
     def setUp(self):
         from tests.fixtureapps import badcl
 
@@ -627,7 +627,7 @@ class BadContentLengthTests(object):
         self.assertEqual(int(status), 200)
 
 
-class NoContentLengthTests(object):
+class NoContentLengthTests:
     def setUp(self):
         from tests.fixtureapps import nocl
 
@@ -764,7 +764,7 @@ class NoContentLengthTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 
-class WriteCallbackTests(object):
+class WriteCallbackTests:
     def setUp(self):
         from tests.fixtureapps import writecb
 
@@ -865,7 +865,7 @@ class WriteCallbackTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 
-class TooLargeTests(object):
+class TooLargeTests:
 
     toobig = 1050
 
@@ -1062,7 +1062,7 @@ class TooLargeTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 
-class InternalServerErrorTests(object):
+class InternalServerErrorTests:
     def setUp(self):
         from tests.fixtureapps import error
 
@@ -1214,7 +1214,7 @@ class InternalServerErrorTests(object):
         self.assertRaises(ConnectionClosed, read_http, fp)
 
 
-class FileWrapperTests(object):
+class FileWrapperTests:
     def setUp(self):
         from tests.fixtureapps import filewrapper
 

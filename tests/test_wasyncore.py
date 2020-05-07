@@ -33,7 +33,7 @@ else:
 TESTFN = "{}_{}_tmp".format(TESTFN, os.getpid())
 
 
-class DummyLogger(object):  # pragma: no cover
+class DummyLogger:  # pragma: no cover
     def __init__(self):
         self.messages = []
 
@@ -41,7 +41,7 @@ class DummyLogger(object):  # pragma: no cover
         self.messages.append((severity, message))
 
 
-class WarningsRecorder(object):  # pragma: no cover
+class WarningsRecorder:  # pragma: no cover
     """Convenience wrapper for the warnings list returned on
        entry to the warnings.catch_warnings() context manager.
     """
@@ -1680,7 +1680,7 @@ class Test_close_all(unittest.TestCase):
         self.assertRaises(RuntimeError, self._callFUT, map)
 
 
-class DummyDispatcher(object):
+class DummyDispatcher:
     read_event_handled = False
     write_event_handled = False
     expt_event_handled = False
@@ -1723,7 +1723,7 @@ class DummyDispatcher(object):
             raise self.exc
 
 
-class DummyTime(object):
+class DummyTime:
     def __init__(self):
         self.sleepvals = []
 
@@ -1731,7 +1731,7 @@ class DummyTime(object):
         self.sleepvals.append(val)
 
 
-class DummySelect(object):
+class DummySelect:
     error = select.error
 
     def __init__(self, exc=None, pollster=None):
@@ -1748,7 +1748,7 @@ class DummySelect(object):
         return self.pollster
 
 
-class DummyPollster(object):
+class DummyPollster:
     def __init__(self, exc=None):
         self.polled = []
         self.exc = exc

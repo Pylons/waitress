@@ -721,7 +721,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertEqual(self.parser.headers, {"CONTENT_LENGTH": "6",})
 
 
-class DummyBodyStream(object):
+class DummyBodyStream:
     def getfile(self):
         return self
 

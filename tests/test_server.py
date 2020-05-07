@@ -263,7 +263,7 @@ class TestWSGIServer(unittest.TestCase):
     def test_maintenance(self):
         inst = self._makeOneWithMap()
 
-        class DummyChannel(object):
+        class DummyChannel:
             requests = []
 
         zombie = DummyChannel()
@@ -479,7 +479,7 @@ class DummySock(socket.socket):
         pass
 
 
-class DummyTaskDispatcher(object):
+class DummyTaskDispatcher:
     def __init__(self):
         self.tasks = []
 
@@ -490,7 +490,7 @@ class DummyTaskDispatcher(object):
         self.was_shutdown = True
 
 
-class DummyTask(object):
+class DummyTask:
     serviced = False
     start_response_called = False
     wrote_header = False
@@ -512,12 +512,12 @@ class DummyAdj:
     channel_timeout = 300
 
 
-class DummyAsyncore(object):
+class DummyAsyncore:
     def loop(self, timeout=30.0, use_poll=False, map=None, count=None):
         raise SystemExit
 
 
-class DummyTrigger(object):
+class DummyTrigger:
     def pull_trigger(self):
         self.pulled = True
 
@@ -525,7 +525,7 @@ class DummyTrigger(object):
         pass
 
 
-class DummyLogger(object):
+class DummyLogger:
     def __init__(self):
         self.logged = []
 

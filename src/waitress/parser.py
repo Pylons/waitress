@@ -40,7 +40,7 @@ class TransferEncodingNotImplemented(Exception):
     pass
 
 
-class HTTPRequestParser(object):
+class HTTPRequestParser:
     """A structure that collects the HTTP request.
 
     Once the stream is completed, the instance is passed to
