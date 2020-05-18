@@ -6,7 +6,8 @@ def serve(app, **kw):
     _server = kw.pop("_server", create_server)  # test shim
     _quiet = kw.pop("_quiet", False)  # test shim
     _profile = kw.pop("_profile", False)  # test shim
-    if not _quiet:  # pragma: no cover
+    disable_root_log_config = kw.pop("disable_root_log_config", False)
+    if not _quiet and not disable_root_log_config:  # pragma: no cover
         # idempotent if logging has already been set up
         logging.basicConfig()
     server = _server(app, **kw)
