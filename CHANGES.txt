@@ -1,3 +1,14 @@
+Unreleased
+----------
+
+- Fix an issue with keep-alive connections in which memory usage was higher
+  than expected because output buffers were being reused across requests on
+  a long-lived connection and each buffer would not be freed until it was full
+  or the connection was closed. Buffers are now rotated per-request to
+  stabilize their behavior.
+
+  See https://github.com/Pylons/waitress/pull/300
+
 1.4.3 (2020-02-02)
 ------------------
 
