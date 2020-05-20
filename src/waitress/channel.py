@@ -174,9 +174,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     # there's no current task, so we don't need to try to
                     # lock the outbuf to append to it.
                     outbuf_payload = b"HTTP/1.1 100 Continue\r\n\r\n"
+                    num_bytes = len(outbuf_payload)
                     self.outbufs[-1].append(outbuf_payload)
-                    self.current_outbuf_count += len(outbuf_payload)
-                    self.total_outbufs_len += len(outbuf_payload)
+                    self.current_outbuf_count += num_bytes
+                    self.total_outbufs_len += num_bytes
                     self.sent_continue = True
                     self._flush_some()
                     request.completed = False
@@ -311,7 +312,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.outbufs.append(nextbuf)
                     self.current_outbuf_count = 0
                 else:
-                    if self.current_outbuf_count > self.adj.outbuf_high_watermark:
+                    if self.current_outbuf_count >= self.adj.outbuf_high_watermark:
                         # rotate to a new buffer if the current buffer has hit
                         # the watermark to avoid it growing unbounded
                         nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)
@@ -399,6 +400,15 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     # at the end to account for consecutive service() calls
                     if len(self.requests) > 1:
                         self._flush_outbufs_below_high_watermark()
+
+                    # this is a little hacky but basically it's forcing the
+                    # next request to create a new outbuf to avoid sharing
+                    # outbufs across requests which can cause outbufs to
+                    # not be deallocated regularly when a connection is open
+                    # for a long time
+                    if self.current_outbuf_count > 0:
+                        self.current_outbuf_count = self.adj.outbuf_high_watermark
+
                     request = self.requests.pop(0)
                     request.close()
 
