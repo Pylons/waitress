@@ -57,8 +57,10 @@ class ThreadedTaskDispatcher(object):
         self.queue_cv = threading.Condition(self.lock)
         self.thread_exit_cv = threading.Condition(self.lock)
 
-    def start_new_thread(self, target, args):
-        t = threading.Thread(target=target, name="waitress", args=args)
+    def start_new_thread(self, target, thread_no):
+        t = threading.Thread(
+            target=target, name="waitress-{}".format(thread_no), args=(thread_no,)
+        )
         t.daemon = True
         t.start()
 
@@ -96,7 +98,7 @@ class ThreadedTaskDispatcher(object):
                     thread_no = thread_no + 1
                 threads.add(thread_no)
                 running += 1
-                self.start_new_thread(self.handler_thread, (thread_no,))
+                self.start_new_thread(self.handler_thread, thread_no)
                 self.active_count += 1
                 thread_no = thread_no + 1
             if running > count:

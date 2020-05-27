@@ -34,7 +34,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         L = []
         inst.start_new_thread = lambda *x: L.append(x)
         inst.set_thread_count(1)
-        self.assertEqual(L, [(inst.handler_thread, (0,))])
+        self.assertEqual(L, [(inst.handler_thread, 0)])
 
     def test_set_thread_count_increase_with_existing(self):
         inst = self._makeOne()
@@ -42,7 +42,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.threads = {0}
         inst.start_new_thread = lambda *x: L.append(x)
         inst.set_thread_count(2)
-        self.assertEqual(L, [(inst.handler_thread, (1,))])
+        self.assertEqual(L, [(inst.handler_thread, 1)])
 
     def test_set_thread_count_decrease(self):
         inst = self._makeOne()
