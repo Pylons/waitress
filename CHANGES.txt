@@ -9,6 +9,12 @@ Unreleased
 
   See https://github.com/Pylons/waitress/pull/300
 
+- Waitress threads have been updated to contain their thread number. This will
+  allow loggers that use that information to print the thread that the log is
+  coming from.
+
+  See https://github.com/Pylons/waitress/pull/302
+
 1.4.3 (2020-02-02)
 ------------------
 
