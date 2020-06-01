@@ -1,5 +1,5 @@
-Unreleased
-----------
+1.4.4 (2020-06-01)
+------------------
 
 - Fix an issue with keep-alive connections in which memory usage was higher
   than expected because output buffers were being reused across requests on
