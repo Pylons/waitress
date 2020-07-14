@@ -80,4 +80,11 @@ can be used in development and in situations where the likes of
     # Listen on only IPv4 on port 8041
     waitress-serve --port=8041 myapp:wsgifunc
 
+Waitress can be used to serve WSGI apps on Heroku, include waitress in your
+requirements.txt file a update the Procfile as following:
+
+.. code-block:: bash
+
+    web: waitress-serve --port=$PORT myapp:wsgifunc
+
 For more information on this, see :ref:`runner`.
