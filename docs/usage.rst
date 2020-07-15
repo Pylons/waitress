@@ -80,23 +80,25 @@ can be used in development and in situations where the likes of
     # Listen on only IPv4 on port 8041
     waitress-serve --port=8041 myapp:wsgifunc
 
-Waitress can be used to serve WSGI apps on Heroku, include waitress in your
-requirements.txt file a update the Procfile as following:
+Heroku
+------
+
+Waitress can be used to serve WSGI apps on Heroku, include waitress in your requirements.txt file a update the Procfile as following:
 
 .. code-block:: bash
 
-    web: waitress-serve \
-  --listen "*:$PORT" \
-  --trusted-proxy '*' \
-  --trusted-proxy-headers 'x-forwarded-for x-forwarded-proto x-forwarded-port' \
-  --log-untrusted-proxy-headers \
-  --clear-untrusted-proxy-headers \
-  --threads ${WEB_CONCURRENCY:-4} \
-  myapp:wsgifunc
+   web: waitress-serve \
+       --listen "*:$PORT" \
+       --trusted-proxy '*' \
+       --trusted-proxy-headers 'x-forwarded-for x-forwarded-proto x-forwarded-port' \
+       --log-untrusted-proxy-headers \
+       --clear-untrusted-proxy-headers \
+       --threads ${WEB_CONCURRENCY:-4} \
+       myapp:wsgifunc
 
-Note that Waitress uses a thread-based model and careful effort should be taken to ensure
-that requests do not take longer than 30 seconds or Heroku will inform the client that the
-request failed even though the request is still being processed by waitress and occupying
-a thread until it completes.
+The proxy config informs Waitress to trust the `forwarding headers <https://devcenter.heroku.com/articles/http-routing#heroku-headers>`_ set by the Heroku load balancer.
+It also allows for setting the standard ``WEB_CONCURRENCY`` environment variable to tweak the number of requests handled by Waitress at a time.
+
+Note that Waitress uses a thread-based model and careful effort should be taken to ensure that requests do not take longer than 30 seconds or Heroku will inform the client that the request failed even though the request is still being processed by Waitress and occupying a thread until it completes.
 
 For more information on this, see :ref:`runner`.
