@@ -165,16 +165,13 @@ class Task:
 
     def service(self):
         try:
-            try:
-                self.start()
-                self.execute()
-                self.finish()
-            except OSError:
-                self.close_on_finish = True
-                if self.channel.adj.log_socket_errors:
-                    raise
-        finally:
-            pass
+            self.start()
+            self.execute()
+            self.finish()
+        except OSError:
+            self.close_on_finish = True
+            if self.channel.adj.log_socket_errors:
+                raise
 
     @property
     def has_body(self):
