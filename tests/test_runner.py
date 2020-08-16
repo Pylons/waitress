@@ -12,17 +12,17 @@ from waitress import runner
 
 class Test_match(unittest.TestCase):
     def test_empty(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, "^Malformed application ''$", runner.match, ""
         )
 
     def test_module_only(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, r"^Malformed application 'foo\.bar'$", runner.match, "foo.bar"
         )
 
     def test_bad_module(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             r"^Malformed application 'foo#bar:barney'$",
             runner.match,
@@ -42,7 +42,7 @@ class Test_resolve(unittest.TestCase):
         )
 
     def test_nonexistent_function(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             AttributeError,
             r"has no attribute 'nonexistent_function'",
             runner.resolve,
@@ -57,7 +57,7 @@ class Test_resolve(unittest.TestCase):
 
     def test_complex_happy_path(self):
         # Ensure we can recursively resolve object attributes if necessary.
-        self.assertEquals(runner.resolve("os.path", "exists.__name__"), "exists")
+        self.assertEqual(runner.resolve("os.path", "exists.__name__"), "exists")
 
 
 class Test_run(unittest.TestCase):
@@ -65,7 +65,7 @@ class Test_run(unittest.TestCase):
         argv = ["waitress-serve"] + argv
         with capture() as captured:
             self.assertEqual(runner.run(argv=argv), code)
-        self.assertRegexpMatches(captured.getvalue(), regex)
+        self.assertRegex(captured.getvalue(), regex)
         captured.close()
 
     def test_bad(self):
@@ -162,7 +162,7 @@ class Test_helper(unittest.TestCase):
                 raise ImportError("My reason")
             except ImportError:
                 self.assertEqual(show_exception(sys.stderr), None)
-            self.assertRegexpMatches(captured.getvalue(), regex)
+            self.assertRegex(captured.getvalue(), regex)
         captured.close()
 
         regex = (
@@ -175,7 +175,7 @@ class Test_helper(unittest.TestCase):
                 raise ImportError
             except ImportError:
                 self.assertEqual(show_exception(sys.stderr), None)
-            self.assertRegexpMatches(captured.getvalue(), regex)
+            self.assertRegex(captured.getvalue(), regex)
         captured.close()
 
 

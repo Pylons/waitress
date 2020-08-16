@@ -404,6 +404,9 @@ class TestCLI(unittest.TestCase):
 
         return Adjustments.parse_args(argv)
 
+    def assertDictContainsSubset(self, subset, dictionary):
+        self.assertTrue(set(subset.items()) <= set(dictionary.items()))
+
     def test_noargs(self):
         opts, args = self.parse([])
         self.assertDictEqual(opts, {"call": False, "help": False})
