@@ -19,7 +19,6 @@ import threading
 import time
 
 from .buffers import ReadOnlyFileBasedBuffer
-from .compat import tobytes
 from .utilities import build_http_date, logger, queue_logger
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -281,7 +280,7 @@ class Task:
         lines = [first_line] + next_lines
         res = "%s\r\n\r\n" % "\r\n".join(lines)
 
-        return tobytes(res)
+        return res.encode("latin-1")
 
     def remove_content_length_header(self):
         response_headers = []
@@ -317,7 +316,7 @@ class Task:
             cl = self.content_length
             if self.chunked_response:
                 # use chunked encoding response
-                towrite = tobytes(hex(len(data))[2:].upper()) + b"\r\n"
+                towrite = hex(len(data))[2:].upper().encode("latin-1") + b"\r\n"
                 towrite += data + b"\r\n"
             elif cl is not None:
                 towrite = data[: cl - self.content_bytes_written]
@@ -361,7 +360,7 @@ class ErrorTask(Task):
         self.response_headers.append(("Connection", "close"))
         self.close_on_finish = True
         self.content_length = len(body)
-        self.write(tobytes(body))
+        self.write(body.encode("latin-1"))
 
 
 class WSGITask(Task):

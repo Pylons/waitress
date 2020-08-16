@@ -181,9 +181,9 @@ class Test_helper(unittest.TestCase):
 
 @contextlib.contextmanager
 def capture():
-    from waitress.compat import NativeIO
+    from io import StringIO
 
-    fd = NativeIO()
+    fd = StringIO()
     sys.stdout = fd
     sys.stderr = fd
     yield fd

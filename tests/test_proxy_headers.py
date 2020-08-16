@@ -1,7 +1,5 @@
 import unittest
 
-from waitress.compat import tobytes
-
 
 class TestProxyHeadersMiddleware(unittest.TestCase):
     def _makeOne(self, app, **kw):
@@ -18,7 +16,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
             response.headers = response_headers
 
         response.steps = list(app(environ, start_response))
-        response.body = b"".join(tobytes(s) for s in response.steps)
+        response.body = b"".join(s.encode("latin-1") for s in response.steps)
         return response
 
     def test_get_environment_values_w_scheme_override_untrusted(self):

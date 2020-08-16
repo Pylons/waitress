@@ -17,7 +17,7 @@ import getopt
 import socket
 import warnings
 
-from .compat import HAS_IPV6, WIN, string_types
+from .compat import HAS_IPV6, WIN
 from .proxy_headers import PROXY_HEADERS
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
@@ -47,7 +47,7 @@ def asoctal(s):
 
 
 def aslist_cronly(value):
-    if isinstance(value, string_types):
+    if isinstance(value, str):
         value = filter(None, [x.strip() for x in value.splitlines()])
     return list(value)
 
