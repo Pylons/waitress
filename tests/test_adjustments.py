@@ -218,7 +218,7 @@ class TestAdjustments(unittest.TestCase):
 
     def test_service_port(self):
         if WIN:  # pragma: no cover
-            # On Windows and Python 2 this is broken, so we raise a ValueError
+            # On Windows this is broken, so we raise a ValueError
             self.assertRaises(
                 ValueError, self._makeOne, listen="127.0.0.1:http",
             )
