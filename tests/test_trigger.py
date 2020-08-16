@@ -1,6 +1,6 @@
-import unittest
 import os
 import sys
+import unittest
 
 if not sys.platform.startswith("win"):
 

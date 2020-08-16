@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 import unittest
+
 from waitress import server
 from waitress.compat import httplib, tobytes
 from waitress.utilities import cleanup_unix_socket

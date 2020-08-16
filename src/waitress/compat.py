@@ -1,3 +1,6 @@
+import _thread as thread
+from http import client as httplib
+from io import StringIO as NativeIO
 import os
 import platform
 
@@ -5,13 +8,9 @@ import platform
 # Python on Windows may not define IPPROTO_IPV6 in socket.
 import socket
 import sys
-import warnings
-from http import client as httplib
-from io import StringIO as NativeIO
 from urllib import parse as urlparse
 from urllib.parse import unquote_to_bytes
-
-import _thread as thread
+import warnings
 
 # True if we are running on Windows
 WIN = platform.system() == "Windows"

@@ -274,8 +274,8 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(zombie.will_close, True)
 
     def test_backward_compatibility(self):
-        from waitress.server import WSGIServer, TcpWSGIServer
         from waitress.adjustments import Adjustments
+        from waitress.server import TcpWSGIServer, WSGIServer
 
         self.assertTrue(WSGIServer is TcpWSGIServer)
         self.inst = WSGIServer(None, _start=False, port=1234)
@@ -411,8 +411,8 @@ if hasattr(socket, "AF_UNIX"):
 
         def test_create_with_unix_socket(self):
             from waitress.server import (
-                MultiSocketServer,
                 BaseWSGIServer,
+                MultiSocketServer,
                 TcpWSGIServer,
                 UnixWSGIServer,
             )

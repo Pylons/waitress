@@ -12,11 +12,11 @@
 #
 ##############################################################################
 
+from collections import deque
 import socket
 import sys
 import threading
 import time
-from collections import deque
 
 from .buffers import ReadOnlyFileBasedBuffer
 from .compat import tobytes

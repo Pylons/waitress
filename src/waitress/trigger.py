@@ -12,9 +12,9 @@
 #
 ##############################################################################
 
+import errno
 import os
 import socket
-import errno
 import threading
 
 from . import wasyncore

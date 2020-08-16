@@ -17,12 +17,8 @@ import getopt
 import socket
 import warnings
 
+from .compat import HAS_IPV6, WIN, string_types
 from .proxy_headers import PROXY_HEADERS
-from .compat import (
-    WIN,
-    string_types,
-    HAS_IPV6,
-)
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
 

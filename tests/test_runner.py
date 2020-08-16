@@ -119,7 +119,7 @@ class Test_run(unittest.TestCase):
         )
 
     def test_simple_call(self):
-        import tests.fixtureapps.runner as _apps
+        from tests.fixtureapps import runner as _apps
 
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)
@@ -133,7 +133,7 @@ class Test_run(unittest.TestCase):
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
 
     def test_returned_app(self):
-        import tests.fixtureapps.runner as _apps
+        from tests.fixtureapps import runner as _apps
 
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)

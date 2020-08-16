@@ -1,21 +1,20 @@
-from waitress import wasyncore as asyncore
-from waitress import compat
 import contextlib
+import errno
 import functools
 import gc
-import unittest
-import select
+from io import BytesIO
 import os
-import socket
-import sys
-import time
-import errno
 import re
+import select
+import socket
 import struct
+import sys
 import threading
+import time
+import unittest
 import warnings
 
-from io import BytesIO
+from waitress import compat, wasyncore as asyncore
 
 TIMEOUT = 3
 HAS_UNIX_SOCKETS = hasattr(socket, "AF_UNIX")

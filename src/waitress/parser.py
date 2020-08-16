@@ -16,8 +16,8 @@
 This server uses asyncore to accept connections and do initial
 processing but threads to do work.
 """
-import re
 from io import BytesIO
+import re
 
 from waitress.buffers import OverflowableBuffer
 from waitress.compat import tostr, unquote_bytes_to_wsgi, urlparse
@@ -29,6 +29,7 @@ from waitress.utilities import (
     ServerNotImplemented,
     find_double_newline,
 )
+
 from .rfc7230 import HEADER_FIELD
 
 

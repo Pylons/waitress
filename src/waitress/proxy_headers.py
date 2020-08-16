@@ -1,7 +1,6 @@
 from collections import namedtuple
 
-from .utilities import logger, undquote, BadRequest
-
+from .utilities import BadRequest, logger, undquote
 
 PROXY_HEADERS = frozenset(
     {

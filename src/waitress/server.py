@@ -20,13 +20,10 @@ import time
 from waitress import trigger
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
+from waitress.compat import IPPROTO_IPV6, IPV6_V6ONLY
 from waitress.task import ThreadedTaskDispatcher
 from waitress.utilities import cleanup_unix_socket
 
-from waitress.compat import (
-    IPPROTO_IPV6,
-    IPV6_V6ONLY,
-)
 from . import wasyncore
 from .proxy_headers import proxy_headers_middleware
 

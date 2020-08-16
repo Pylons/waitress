@@ -20,8 +20,8 @@ from waitress.compat import text_, tobytes
 
 class TestHTTPRequestParser(unittest.TestCase):
     def setUp(self):
-        from waitress.parser import HTTPRequestParser
         from waitress.adjustments import Adjustments
+        from waitress.parser import HTTPRequestParser
 
         my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)
@@ -595,8 +595,8 @@ class Test_crack_first_line(unittest.TestCase):
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
     def setUp(self):
-        from waitress.parser import HTTPRequestParser
         from waitress.adjustments import Adjustments
+        from waitress.parser import HTTPRequestParser
 
         my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)

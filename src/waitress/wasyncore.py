@@ -51,33 +51,31 @@ in the stdlib will be dropped soon.  It is neither a copy of the 2.7 asyncore
 nor the 3.X asyncore; it is a version compatible with either 2.7 or 3.X.
 """
 
-from . import compat
-from . import utilities
-
+from errno import (
+    EAGAIN,
+    EALREADY,
+    EBADF,
+    ECONNABORTED,
+    ECONNRESET,
+    EINPROGRESS,
+    EINTR,
+    EINVAL,
+    EISCONN,
+    ENOTCONN,
+    EPIPE,
+    ESHUTDOWN,
+    EWOULDBLOCK,
+    errorcode,
+)
 import logging
+import os
 import select
 import socket
 import sys
 import time
 import warnings
 
-import os
-from errno import (
-    EALREADY,
-    EINPROGRESS,
-    EWOULDBLOCK,
-    ECONNRESET,
-    EINVAL,
-    ENOTCONN,
-    ESHUTDOWN,
-    EISCONN,
-    EBADF,
-    ECONNABORTED,
-    EPIPE,
-    EAGAIN,
-    EINTR,
-    errorcode,
-)
+from . import compat, utilities
 
 _DISCONNECTED = frozenset({ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED, EPIPE, EBADF})
 

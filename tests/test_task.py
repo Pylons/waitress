@@ -1,5 +1,5 @@
-import unittest
 import io
+import unittest
 
 
 class TestThreadedTaskDispatcher(unittest.TestCase):
