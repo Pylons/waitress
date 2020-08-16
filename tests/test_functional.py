@@ -1501,7 +1501,8 @@ if hasattr(socket, "AF_UNIX"):
             try:
                 self.sock.send(to_send)
             except OSError as exc:
-                self.assertEqual(get_errno(exc), errno.EPIPE)
+                valid_errors = {errno.EPIPE, errno.ENOTCONN}
+                self.assertIn(get_errno(exc), valid_errors)
 
     class UnixEchoTests(EchoTests, UnixTests, unittest.TestCase):
         pass
