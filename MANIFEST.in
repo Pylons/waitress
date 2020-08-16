@@ -17,5 +17,6 @@ include .coveragerc .flake8
 include tox.ini rtd.txt
 
 exclude TODO.txt
+prune docs/_build
 
 recursive-exclude * __pycache__ *.py[cod]
