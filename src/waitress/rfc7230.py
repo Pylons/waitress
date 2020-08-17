@@ -5,8 +5,6 @@ needed to properly parse HTTP messages.
 
 import re
 
-from .compat import tobytes
-
 WS = "[ \t]"
 OWS = WS + "{0,}?"
 RWS = WS + "{1,}?"
@@ -46,7 +44,7 @@ FIELD_CONTENT = FIELD_VCHAR + "+(?:[ \t]+" + FIELD_VCHAR + "+)*"
 FIELD_VALUE = "(?:" + FIELD_CONTENT + ")?"
 
 HEADER_FIELD = re.compile(
-    tobytes(
+    (
         "^(?P<name>" + TOKEN + "):" + OWS + "(?P<value>" + FIELD_VALUE + ")" + OWS + "$"
-    )
+    ).encode("latin-1")
 )

@@ -1,7 +1,6 @@
 from collections import namedtuple
 
-from .utilities import logger, undquote, BadRequest
-
+from .utilities import BadRequest, logger, undquote
 
 PROXY_HEADERS = frozenset(
     {
@@ -22,7 +21,7 @@ class MalformedProxyHeader(Exception):
         self.header = header
         self.reason = reason
         self.value = value
-        super(MalformedProxyHeader, self).__init__(header, reason, value)
+        super().__init__(header, reason, value)
 
 
 def proxy_headers_middleware(
@@ -53,7 +52,7 @@ def proxy_headers_middleware(
                     ex.reason,
                     ex.value,
                 )
-                error = BadRequest('Header "{0}" malformed.'.format(ex.header))
+                error = BadRequest('Header "{}" malformed.'.format(ex.header))
                 return error.wsgi_response(environ, start_response)
 
         # Clear out the untrusted proxy headers

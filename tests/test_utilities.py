@@ -39,8 +39,9 @@ class Test_parse_http_date(unittest.TestCase):
 
 class Test_build_http_date(unittest.TestCase):
     def test_rountdrip(self):
-        from waitress.utilities import build_http_date, parse_http_date
         from time import time
+
+        from waitress.utilities import build_http_date, parse_http_date
 
         t = int(time())
         self.assertEqual(t, parse_http_date(build_http_date(t)))
@@ -48,7 +49,7 @@ class Test_build_http_date(unittest.TestCase):
 
 class Test_unpack_rfc850(unittest.TestCase):
     def _callFUT(self, val):
-        from waitress.utilities import unpack_rfc850, rfc850_reg
+        from waitress.utilities import rfc850_reg, unpack_rfc850
 
         return unpack_rfc850(rfc850_reg.match(val.lower()))
 
@@ -60,7 +61,7 @@ class Test_unpack_rfc850(unittest.TestCase):
 
 class Test_unpack_rfc_822(unittest.TestCase):
     def _callFUT(self, val):
-        from waitress.utilities import unpack_rfc822, rfc822_reg
+        from waitress.utilities import rfc822_reg, unpack_rfc822
 
         return unpack_rfc822(rfc822_reg.match(val.lower()))
 

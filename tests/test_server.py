@@ -240,7 +240,7 @@ class TestWSGIServer(unittest.TestCase):
         inst.adj = DummyAdj
 
         def foo():
-            raise socket.error
+            raise OSError
 
         inst.accept = foo
         inst.logger = DummyLogger()
@@ -263,7 +263,7 @@ class TestWSGIServer(unittest.TestCase):
     def test_maintenance(self):
         inst = self._makeOneWithMap()
 
-        class DummyChannel(object):
+        class DummyChannel:
             requests = []
 
         zombie = DummyChannel()
@@ -274,8 +274,8 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(zombie.will_close, True)
 
     def test_backward_compatibility(self):
-        from waitress.server import WSGIServer, TcpWSGIServer
         from waitress.adjustments import Adjustments
+        from waitress.server import TcpWSGIServer, WSGIServer
 
         self.assertTrue(WSGIServer is TcpWSGIServer)
         self.inst = WSGIServer(None, _start=False, port=1234)
@@ -411,8 +411,8 @@ if hasattr(socket, "AF_UNIX"):
 
         def test_create_with_unix_socket(self):
             from waitress.server import (
-                MultiSocketServer,
                 BaseWSGIServer,
+                MultiSocketServer,
                 TcpWSGIServer,
                 UnixWSGIServer,
             )
@@ -479,7 +479,7 @@ class DummySock(socket.socket):
         pass
 
 
-class DummyTaskDispatcher(object):
+class DummyTaskDispatcher:
     def __init__(self):
         self.tasks = []
 
@@ -490,7 +490,7 @@ class DummyTaskDispatcher(object):
         self.was_shutdown = True
 
 
-class DummyTask(object):
+class DummyTask:
     serviced = False
     start_response_called = False
     wrote_header = False
@@ -512,12 +512,12 @@ class DummyAdj:
     channel_timeout = 300
 
 
-class DummyAsyncore(object):
+class DummyAsyncore:
     def loop(self, timeout=30.0, use_poll=False, map=None, count=None):
         raise SystemExit
 
 
-class DummyTrigger(object):
+class DummyTrigger:
     def pull_trigger(self):
         self.pulled = True
 
@@ -525,7 +525,7 @@ class DummyTrigger(object):
         pass
 
 
-class DummyLogger(object):
+class DummyLogger:
     def __init__(self):
         self.logged = []
 

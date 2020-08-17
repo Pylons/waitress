@@ -16,11 +16,12 @@
 This server uses asyncore to accept connections and do initial
 processing but threads to do work.
 """
-import re
 from io import BytesIO
+import re
+from urllib import parse
+from urllib.parse import unquote_to_bytes
 
 from waitress.buffers import OverflowableBuffer
-from waitress.compat import tostr, unquote_bytes_to_wsgi, urlparse
 from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
 from waitress.utilities import (
     BadRequest,
@@ -29,7 +30,12 @@ from waitress.utilities import (
     ServerNotImplemented,
     find_double_newline,
 )
+
 from .rfc7230 import HEADER_FIELD
+
+
+def unquote_bytes_to_wsgi(bytestring):
+    return unquote_to_bytes(bytestring).decode("latin-1")
 
 
 class ParsingError(Exception):
@@ -40,7 +46,7 @@ class TransferEncodingNotImplemented(Exception):
     pass
 
 
-class HTTPRequestParser(object):
+class HTTPRequestParser:
     """A structure that collects the HTTP request.
 
     Once the stream is completed, the instance is passed to
@@ -79,11 +85,13 @@ class HTTPRequestParser(object):
         bytes consumed.  Sets the completed flag once both the header and the
         body have been received.
         """
+
         if self.completed:
             return 0  # Can't consume any more.
 
         datalen = len(data)
         br = self.body_rcv
+
         if br is None:
             # In header.
             max_header = self.adj.max_request_header_size
@@ -105,12 +113,14 @@ class HTTPRequestParser(object):
             # If the first line + headers is over the max length, we return a
             # RequestHeaderFieldsTooLarge error rather than continuing to
             # attempt to parse the headers.
+
             if self.header_bytes_received >= max_header:
                 self.parse_header(b"GET / HTTP/1.0\r\n")
                 self.error = RequestHeaderFieldsTooLarge(
                     "exceeds max_header of %s" % max_header
                 )
                 self.completed = True
+
                 return consumed
 
             if index >= 0:
@@ -194,6 +204,7 @@ class HTTPRequestParser(object):
         first line of the request).
         """
         index = header_plus.find(b"\r\n")
+
         if index >= 0:
             first_line = header_plus[:index].rstrip()
             header = header_plus[index + 2 :]
@@ -208,6 +219,7 @@ class HTTPRequestParser(object):
         lines = get_header_lines(header)
 
         headers = self.headers
+
         for line in lines:
             header = HEADER_FIELD.match(line)
 
@@ -218,25 +230,26 @@ class HTTPRequestParser(object):
 
             if b"_" in key:
                 # TODO(xistence): Should we drop this request instead?
+
                 continue
 
             # Only strip off whitespace that is considered valid whitespace by
             # RFC7230, don't strip the rest
             value = value.strip(b" \t")
-            key1 = tostr(key.upper().replace(b"-", b"_"))
+            key1 = key.upper().replace(b"-", b"_").decode("latin-1")
             # If a header already exists, we append subsequent values
             # separated by a comma. Applications already need to handle
             # the comma separated values, as HTTP front ends might do
             # the concatenation for you (behavior specified in RFC2616).
             try:
-                headers[key1] += tostr(b", " + value)
+                headers[key1] += (b", " + value).decode("latin-1")
             except KeyError:
-                headers[key1] = tostr(value)
+                headers[key1] = value.decode("latin-1")
 
         # command, uri, version will be bytes
         command, uri, version = crack_first_line(first_line)
-        version = tostr(version)
-        command = tostr(command)
+        version = version.decode("latin-1")
+        command = command.decode("latin-1")
         self.command = command
         self.version = version
         (
@@ -279,6 +292,7 @@ class HTTPRequestParser(object):
                 # Note: the identity transfer-coding was removed in RFC7230:
                 # https://tools.ietf.org/html/rfc7230#appendix-A.2 and is thus
                 # not supported
+
                 if encoding not in {"chunked"}:
                     raise TransferEncodingNotImplemented(
                         "Transfer-Encoding requested is not supported."
@@ -295,6 +309,7 @@ class HTTPRequestParser(object):
 
             expect = headers.get("EXPECT", "").lower()
             self.expect_continue = expect == "100-continue"
+
             if connection.lower() == "close":
                 self.connection_close = True
 
@@ -305,12 +320,14 @@ class HTTPRequestParser(object):
                 raise ParsingError("Content-Length is invalid")
 
             self.content_length = cl
+
             if cl > 0:
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = FixedStreamReceiver(cl, buf)
 
     def get_body_stream(self):
         body_rcv = self.body_rcv
+
         if body_rcv is not None:
             return body_rcv.getfile()
         else:
@@ -318,6 +335,7 @@ class HTTPRequestParser(object):
 
     def close(self):
         body_rcv = self.body_rcv
+
         if body_rcv is not None:
             body_rcv.getbuf().close()
 
@@ -345,16 +363,16 @@ def split_uri(uri):
             path, query = path.split(b"?", 1)
     else:
         try:
-            scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
+            scheme, netloc, path, query, fragment = parse.urlsplit(uri)
         except UnicodeError:
             raise ParsingError("Bad URI")
 
     return (
-        tostr(scheme),
-        tostr(netloc),
+        scheme.decode("latin-1"),
+        netloc.decode("latin-1"),
         unquote_bytes_to_wsgi(path),
-        tostr(query),
-        tostr(fragment),
+        query.decode("latin-1"),
+        fragment.decode("latin-1"),
     )
 
 
@@ -364,20 +382,24 @@ def get_header_lines(header):
     """
     r = []
     lines = header.split(b"\r\n")
+
     for line in lines:
         if not line:
             continue
 
         if b"\r" in line or b"\n" in line:
-            raise ParsingError('Bare CR or LF found in header line "%s"' % tostr(line))
+            raise ParsingError(
+                'Bare CR or LF found in header line "%s"' % str(line, "latin-1")
+            )
 
         if line.startswith((b" ", b"\t")):
             if not r:
                 # https://corte.si/posts/code/pathod/pythonservers/index.html
-                raise ParsingError('Malformed header line "%s"' % tostr(line))
+                raise ParsingError('Malformed header line "%s"' % str(line, "latin-1"))
             r[-1] += line
         else:
             r.append(line)
+
     return r
 
 
@@ -390,6 +412,7 @@ first_line_re = re.compile(
 
 def crack_first_line(line):
     m = first_line_re.match(line)
+
     if m is not None and m.end() == len(line):
         if m.group(3):
             version = m.group(5)
@@ -406,9 +429,11 @@ def crack_first_line(line):
         # unsuspecting souls from sending lowercase HTTP methods to waitress
         # and having the request complete, while servers like nginx drop the
         # request onto the floor.
+
         if method != method.upper():
-            raise ParsingError('Malformed HTTP method "%s"' % tostr(method))
+            raise ParsingError('Malformed HTTP method "%s"' % str(method, "latin-1"))
         uri = m.group(2)
+
         return method, uri, version
     else:
         return b"", b"", b""

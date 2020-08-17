@@ -12,14 +12,13 @@
 #
 ##############################################################################
 
+from collections import deque
 import socket
 import sys
 import threading
 import time
-from collections import deque
 
 from .buffers import ReadOnlyFileBasedBuffer
-from .compat import reraise, tobytes
 from .utilities import build_http_date, logger, queue_logger
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -41,7 +40,7 @@ hop_by_hop = frozenset(
 )
 
 
-class ThreadedTaskDispatcher(object):
+class ThreadedTaskDispatcher:
     """A Task Dispatcher that creates a thread for each task.
     """
 
@@ -141,7 +140,7 @@ class ThreadedTaskDispatcher(object):
         return False
 
 
-class Task(object):
+class Task:
     close_on_finish = False
     status = "200 OK"
     wrote_header = False
@@ -166,16 +165,13 @@ class Task(object):
 
     def service(self):
         try:
-            try:
-                self.start()
-                self.execute()
-                self.finish()
-            except socket.error:
-                self.close_on_finish = True
-                if self.channel.adj.log_socket_errors:
-                    raise
-        finally:
-            pass
+            self.start()
+            self.execute()
+            self.finish()
+        except OSError:
+            self.close_on_finish = True
+            if self.channel.adj.log_socket_errors:
+                raise
 
     @property
     def has_body(self):
@@ -281,7 +277,7 @@ class Task(object):
         lines = [first_line] + next_lines
         res = "%s\r\n\r\n" % "\r\n".join(lines)
 
-        return tobytes(res)
+        return res.encode("latin-1")
 
     def remove_content_length_header(self):
         response_headers = []
@@ -317,7 +313,7 @@ class Task(object):
             cl = self.content_length
             if self.chunked_response:
                 # use chunked encoding response
-                towrite = tobytes(hex(len(data))[2:].upper()) + b"\r\n"
+                towrite = hex(len(data))[2:].upper().encode("latin-1") + b"\r\n"
                 towrite += data + b"\r\n"
             elif cl is not None:
                 towrite = data[: cl - self.content_bytes_written]
@@ -361,7 +357,7 @@ class ErrorTask(Task):
         self.response_headers.append(("Connection", "close"))
         self.close_on_finish = True
         self.content_length = len(body)
-        self.write(tobytes(body))
+        self.write(body.encode("latin-1"))
 
 
 class WSGITask(Task):
@@ -385,7 +381,7 @@ class WSGITask(Task):
                         # 1. "service" method in task.py
                         # 2. "service" method in channel.py
                         # 3. "handler_thread" method in task.py
-                        reraise(exc_info[0], exc_info[1], exc_info[2])
+                        raise exc_info[1]
                     else:
                         # As per WSGI spec existing headers must be cleared
                         self.response_headers = []

@@ -16,18 +16,9 @@ import threading
 import time
 import traceback
 
-from waitress.buffers import (
-    OverflowableBuffer,
-    ReadOnlyFileBasedBuffer,
-)
-
+from waitress.buffers import OverflowableBuffer, ReadOnlyFileBasedBuffer
 from waitress.parser import HTTPRequestParser
-
-from waitress.task import (
-    ErrorTask,
-    WSGITask,
-)
-
+from waitress.task import ErrorTask, WSGITask
 from waitress.utilities import InternalServerError
 
 from . import wasyncore
@@ -37,7 +28,7 @@ class ClientDisconnected(Exception):
     """ Raised when attempting to write to a closed socket."""
 
 
-class HTTPChannel(wasyncore.dispatcher, object):
+class HTTPChannel(wasyncore.dispatcher):
     """
     Setting self.requests = [somerequest] prevents more requests from being
     received until the out buffers have been flushed.
@@ -85,16 +76,20 @@ class HTTPChannel(wasyncore.dispatcher, object):
         # if there's data in the out buffer or we've been instructed to close
         # the channel (possibly by our server maintenance logic), run
         # handle_write
+
         return self.total_outbufs_len or self.will_close or self.close_when_flushed
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
         # there's a pending will_close request
+
         if not self.connected:
             # we dont want to close the channel twice
+
             return
 
         # try to flush any pending output
+
         if not self.requests:
             # 1. There are no running tasks, so we don't need to try to lock
             #    the outbuf before sending
@@ -116,11 +111,11 @@ class HTTPChannel(wasyncore.dispatcher, object):
         if flush:
             try:
                 flush()
-            except socket.error:
+            except OSError:
                 if self.adj.log_socket_errors:
                     self.logger.exception("Socket error")
                 self.will_close = True
-            except Exception:
+            except Exception:  # pragma: nocover
                 self.logger.exception("Unexpected exception when flushing")
                 self.will_close = True
 
@@ -134,19 +129,29 @@ class HTTPChannel(wasyncore.dispatcher, object):
     def readable(self):
         # We might want to create a new task.  We can only do this if:
         # 1. We're not already about to close the connection.
-        # 2. There's no already currently running task(s).
-        # 3. There's no data in the output buffer that needs to be sent
+        # 2. We're not waiting to flush remaining data before closing the
+        #    connection
+        # 3. There's no already currently running task(s).
+        # 4. There's no data in the output buffer that needs to be sent
         #    before we potentially create a new task.
-        return not (self.will_close or self.requests or self.total_outbufs_len)
+
+        return not (
+            self.will_close
+            or self.close_when_flushed
+            or self.requests
+            or self.total_outbufs_len
+        )
 
     def handle_read(self):
         try:
             data = self.recv(self.adj.recv_bytes)
-        except socket.error:
+        except OSError:
             if self.adj.log_socket_errors:
                 self.logger.exception("Socket error")
             self.handle_close()
+
             return
+
         if data:
             self.last_activity = time.time()
             self.received(data)
@@ -167,9 +172,11 @@ class HTTPChannel(wasyncore.dispatcher, object):
             if request is None:
                 request = self.parser_class(self.adj)
             n = request.received(data)
+
             if request.expect_continue and request.headers_finished:
                 # guaranteed by parser to be a 1.1 request
                 request.expect_continue = False
+
                 if not self.sent_continue:
                     # there's no current task, so we don't need to try to
                     # lock the outbuf to append to it.
@@ -181,14 +188,17 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.sent_continue = True
                     self._flush_some()
                     request.completed = False
+
             if request.completed:
                 # The request (with the body) is ready to use.
                 self.request = None
+
                 if not request.empty:
                     requests.append(request)
                 request = None
             else:
                 self.request = request
+
             if n >= len(data):
                 break
             data = data[n:]
@@ -202,6 +212,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
     def _flush_some_if_lockable(self):
         # Since our task may be appending to the outbuf, we try to acquire
         # the lock, but we don't block if we can't.
+
         if self.outbuf_lock.acquire(False):
             try:
                 self._flush_some()
@@ -222,9 +233,11 @@ class HTTPChannel(wasyncore.dispatcher, object):
             # use outbuf.__len__ rather than len(outbuf) FBO of not getting
             # OverflowError on 32-bit Python
             outbuflen = outbuf.__len__()
+
             while outbuflen > 0:
                 chunk = outbuf.get(self.sendbuf_len)
                 num_sent = self.send(chunk)
+
                 if num_sent:
                     outbuf.skip(num_sent, True)
                     outbuflen -= num_sent
@@ -233,9 +246,11 @@ class HTTPChannel(wasyncore.dispatcher, object):
                 else:
                     # failed to write anything, break out entirely
                     dobreak = True
+
                     break
             else:
                 # self.outbufs[-1] must always be a writable outbuf
+
                 if len(self.outbufs) > 1:
                     toclose = self.outbufs.pop(0)
                     try:
@@ -251,6 +266,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
 
         if sent:
             self.last_activity = time.time()
+
             return True
 
         return False
@@ -285,6 +301,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         fd = self._fileno  # next line sets this to None
         wasyncore.dispatcher.del_channel(self, map)
         ac = self.server.active_channels
+
         if fd in ac:
             del ac[fd]
 
@@ -297,14 +314,17 @@ class HTTPChannel(wasyncore.dispatcher, object):
             # if the socket is closed then interrupt the task so that it
             # can cleanup possibly before the app_iter is exhausted
             raise ClientDisconnected
+
         if data:
             # the async mainloop might be popping data off outbuf; we can
             # block here waiting for it because we're in a task thread
             with self.outbuf_lock:
                 self._flush_outbufs_below_high_watermark()
+
                 if not self.connected:
                     raise ClientDisconnected
                 num_bytes = len(data)
+
                 if data.__class__ is ReadOnlyFileBasedBuffer:
                     # they used wsgi.file_wrapper
                     self.outbufs.append(data)
@@ -321,13 +341,17 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.outbufs[-1].append(data)
                     self.current_outbuf_count += num_bytes
                 self.total_outbufs_len += num_bytes
+
                 if self.total_outbufs_len >= self.adj.send_bytes:
                     self.server.pull_trigger()
+
             return num_bytes
+
         return 0
 
     def _flush_outbufs_below_high_watermark(self):
         # check first to avoid locking if possible
+
         if self.total_outbufs_len > self.adj.outbuf_high_watermark:
             with self.outbuf_lock:
                 while (
@@ -342,6 +366,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
         with self.task_lock:
             while self.requests:
                 request = self.requests[0]
+
                 if request.error:
                     task = self.error_task_class(self, request)
                 else:
@@ -357,6 +382,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     self.logger.exception(
                         "Exception while serving %s" % task.request.path
                     )
+
                     if not task.wrote_header:
                         if self.adj.expose_tracebacks:
                             body = traceback.format_exc()
@@ -385,8 +411,10 @@ class HTTPChannel(wasyncore.dispatcher, object):
                         task.close_on_finish = True
                 # we cannot allow self.requests to drop to empty til
                 # here; otherwise the mainloop gets confused
+
                 if task.close_on_finish:
                     self.close_when_flushed = True
+
                     for request in self.requests:
                         request.close()
                     self.requests = []
@@ -398,6 +426,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     # that we need to account for, otherwise it'd be better
                     # to do this check at the start of the request instead of
                     # at the end to account for consecutive service() calls
+
                     if len(self.requests) > 1:
                         self._flush_outbufs_below_high_watermark()
 
@@ -406,6 +435,7 @@ class HTTPChannel(wasyncore.dispatcher, object):
                     # outbufs across requests which can cause outbufs to
                     # not be deallocated regularly when a connection is open
                     # for a long time
+
                     if self.current_outbuf_count > 0:
                         self.current_outbuf_count = self.adj.outbuf_high_watermark
 

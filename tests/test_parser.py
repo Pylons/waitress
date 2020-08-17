@@ -15,13 +15,26 @@
 """
 import unittest
 
-from waitress.compat import text_, tobytes
+from waitress.adjustments import Adjustments
+from waitress.parser import (
+    HTTPRequestParser,
+    ParsingError,
+    TransferEncodingNotImplemented,
+    crack_first_line,
+    get_header_lines,
+    split_uri,
+    unquote_bytes_to_wsgi,
+)
+from waitress.utilities import (
+    BadRequest,
+    RequestEntityTooLarge,
+    RequestHeaderFieldsTooLarge,
+    ServerNotImplemented,
+)
 
 
 class TestHTTPRequestParser(unittest.TestCase):
     def setUp(self):
-        from waitress.parser import HTTPRequestParser
-        from waitress.adjustments import Adjustments
 
         my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)
@@ -45,8 +58,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers, {})
 
     def test_received_bad_host_header(self):
-        from waitress.utilities import BadRequest
-
         data = b"HTTP/1.0 GET /foobar\r\n Host: foo\r\n\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, 36)
@@ -54,8 +65,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.error.__class__, BadRequest)
 
     def test_received_bad_transfer_encoding(self):
-        from waitress.utilities import ServerNotImplemented
-
         data = (
             b"GET /foobar HTTP/1.1\r\n"
             b"Transfer-Encoding: foo\r\n"
@@ -89,7 +98,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(result, 0)
 
     def test_received_cl_too_large(self):
-        from waitress.utilities import RequestEntityTooLarge
 
         self.parser.adj.max_request_body_size = 2
         data = b"GET /foobar HTTP/8.4\r\nContent-Length: 10\r\n\r\n"
@@ -99,7 +107,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
 
     def test_received_headers_too_large(self):
-        from waitress.utilities import RequestHeaderFieldsTooLarge
 
         self.parser.adj.max_request_header_size = 2
         data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n\r\n"
@@ -109,8 +116,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(isinstance(self.parser.error, RequestHeaderFieldsTooLarge))
 
     def test_received_body_too_large(self):
-        from waitress.utilities import RequestEntityTooLarge
-
         self.parser.adj.max_request_body_size = 2
         data = (
             b"GET /foobar HTTP/1.1\r\n"
@@ -129,8 +134,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
 
     def test_received_error_from_parser(self):
-        from waitress.utilities import BadRequest
-
         data = (
             b"GET /foobar HTTP/1.1\r\n"
             b"Transfer-Encoding: chunked\r\n"
@@ -171,8 +174,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["FOO"], "bar")
 
     def test_parse_header_no_cr_in_headerplus(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/8.4"
 
         try:
@@ -183,8 +184,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_bad_content_length(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/8.4\r\ncontent-length: abc\r\n"
 
         try:
@@ -195,8 +194,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_multiple_content_length(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/8.4\r\ncontent-length: 10\r\ncontent-length: 20\r\n"
 
         try:
@@ -213,8 +210,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
 
     def test_parse_header_transfer_encoding_invalid(self):
-        from waitress.parser import TransferEncodingNotImplemented
-
         data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\n"
 
         try:
@@ -225,7 +220,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_transfer_encoding_invalid_multiple(self):
-        from waitress.parser import TransferEncodingNotImplemented
 
         data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\ntransfer-encoding: chunked\r\n"
 
@@ -237,8 +231,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_transfer_encoding_invalid_whitespace(self):
-        from waitress.parser import TransferEncodingNotImplemented
-
         data = b"GET /foobar HTTP/1.1\r\nTransfer-Encoding:\x85chunked\r\n"
 
         try:
@@ -249,8 +241,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_transfer_encoding_invalid_unicode(self):
-        from waitress.parser import TransferEncodingNotImplemented
-
         # This is the binary encoding for the UTF-8 character
         # https://www.compart.com/en/unicode/U+212A "unicode character "K""
         # which if waitress were to accidentally do the wrong thing get
@@ -286,8 +276,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.parser.close()  # doesn't raise
 
     def test_parse_header_lf_only(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/8.4\nfoo: bar"
 
         try:
@@ -298,8 +286,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_cr_only(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/8.4\rfoo: bar"
         try:
             self.parser.parse_header(data)
@@ -309,8 +295,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_extra_lf_in_header(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/8.4\r\nfoo: \nbar\r\n"
         try:
             self.parser.parse_header(data)
@@ -320,8 +304,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_extra_lf_in_first_line(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar\n HTTP/8.4\r\n"
         try:
             self.parser.parse_header(data)
@@ -331,8 +313,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_whitespace(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/8.4\r\nfoo : bar\r\n"
         try:
             self.parser.parse_header(data)
@@ -342,8 +322,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_whitespace_vtab(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo:\x0bbar\r\n"
         try:
             self.parser.parse_header(data)
@@ -353,8 +331,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_no_colon(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nnotvalid\r\n"
         try:
             self.parser.parse_header(data)
@@ -364,8 +340,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_folding_spacing(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\n\t\x0bbaz\r\n"
         try:
             self.parser.parse_header(data)
@@ -375,8 +349,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_chars(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nfoo: \x0bbaz\r\n"
         try:
             self.parser.parse_header(data)
@@ -386,8 +358,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_empty(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nempty:\r\n"
         self.parser.parse_header(data)
 
@@ -397,8 +367,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["FOO"], "bar")
 
     def test_parse_header_multiple_values(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever, more, please, yes\r\n"
         self.parser.parse_header(data)
 
@@ -406,8 +374,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
 
     def test_parse_header_multiple_values_header_folded(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more, please, yes\r\n"
         self.parser.parse_header(data)
 
@@ -415,8 +381,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
 
     def test_parse_header_multiple_values_header_folded_multiple(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more\r\nfoo: please, yes\r\n"
         self.parser.parse_header(data)
 
@@ -425,8 +389,6 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_parse_header_multiple_values_extra_space(self):
         # Tests errata from: https://www.rfc-editor.org/errata_search.php?rfc=7230&eid=4189
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: abrowser/0.001 (C O M M E N T)\r\n"
         self.parser.parse_header(data)
 
@@ -434,8 +396,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["FOO"], "abrowser/0.001 (C O M M E N T)")
 
     def test_parse_header_invalid_backtrack_bad(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nfoo: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\x10\r\n"
         try:
             self.parser.parse_header(data)
@@ -445,8 +405,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_short_values(self):
-        from waitress.parser import ParsingError
-
         data = b"GET /foobar HTTP/1.1\r\none: 1\r\ntwo: 22\r\n"
         self.parser.parse_header(data)
 
@@ -458,8 +416,6 @@ class TestHTTPRequestParser(unittest.TestCase):
 
 class Test_split_uri(unittest.TestCase):
     def _callFUT(self, uri):
-        from waitress.parser import split_uri
-
         (
             self.proxy_scheme,
             self.proxy_netloc,
@@ -499,7 +455,6 @@ class Test_split_uri(unittest.TestCase):
 
     def test_split_uri_unicode_error_raises_parsing_error(self):
         # See https://github.com/Pylons/waitress/issues/64
-        from waitress.parser import ParsingError
 
         # Either pass or throw a ParsingError, just don't throw another type of
         # exception as that will cause the connection to close badly:
@@ -535,8 +490,6 @@ class Test_split_uri(unittest.TestCase):
 
 class Test_get_header_lines(unittest.TestCase):
     def _callFUT(self, data):
-        from waitress.parser import get_header_lines
-
         return get_header_lines(data)
 
     def test_get_header_lines(self):
@@ -561,15 +514,11 @@ class Test_get_header_lines(unittest.TestCase):
 
     def test_get_header_lines_malformed(self):
         # https://corte.si/posts/code/pathod/pythonservers/index.html
-        from waitress.parser import ParsingError
-
         self.assertRaises(ParsingError, self._callFUT, b" Host: localhost\r\n\r\n")
 
 
 class Test_crack_first_line(unittest.TestCase):
     def _callFUT(self, line):
-        from waitress.parser import crack_first_line
-
         return crack_first_line(line)
 
     def test_crack_first_line_matchok(self):
@@ -577,8 +526,6 @@ class Test_crack_first_line(unittest.TestCase):
         self.assertEqual(result, (b"GET", b"/", b"1.0"))
 
     def test_crack_first_line_lowercase_method(self):
-        from waitress.parser import ParsingError
-
         self.assertRaises(ParsingError, self._callFUT, b"get / HTTP/1.0")
 
     def test_crack_first_line_nomatch(self):
@@ -595,9 +542,6 @@ class Test_crack_first_line(unittest.TestCase):
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
     def setUp(self):
-        from waitress.parser import HTTPRequestParser
-        from waitress.adjustments import Adjustments
-
         my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)
 
@@ -657,8 +601,8 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         )
         # path should be utf-8 encoded
         self.assertEqual(
-            tobytes(parser.path).decode("utf-8"),
-            text_(b"/foo/a++/\xc3\xa4=&a:int", "utf-8"),
+            parser.path.encode("latin-1").decode("utf-8"),
+            b"/foo/a++/\xc3\xa4=&a:int".decode("utf-8"),
         )
         self.assertEqual(
             parser.query, "d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6"
@@ -721,7 +665,19 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertEqual(self.parser.headers, {"CONTENT_LENGTH": "6",})
 
 
-class DummyBodyStream(object):
+class Test_unquote_bytes_to_wsgi(unittest.TestCase):
+    def _callFUT(self, v):
+
+        return unquote_bytes_to_wsgi(v)
+
+    def test_highorder(self):
+        val = b"/a%C5%9B"
+        result = self._callFUT(val)
+        # PEP 3333 urlunquoted-latin1-decoded-bytes
+        self.assertEqual(result, "/aÅ\x9b")
+
+
+class DummyBodyStream:
     def getfile(self):
         return self
 

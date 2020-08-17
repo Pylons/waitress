@@ -12,9 +12,9 @@
 #
 ##############################################################################
 
+import errno
 import os
 import socket
-import errno
 import threading
 
 from . import wasyncore
@@ -50,7 +50,7 @@ from . import wasyncore
 # the main thread is trying to remove some]
 
 
-class _triggerbase(object):
+class _triggerbase:
     """OS-independent base class for OS-dependent trigger class."""
 
     kind = None  # subclass must set to "pipe" or "loopback"; used by repr
@@ -98,7 +98,7 @@ class _triggerbase(object):
     def handle_read(self):
         try:
             self.recv(8192)
-        except (OSError, socket.error):
+        except OSError:
             return
         with self.lock:
             for thunk in self.thunks:
@@ -173,7 +173,7 @@ else:  # pragma: no cover
                 try:
                     w.connect(connect_address)
                     break  # success
-                except socket.error as detail:
+                except OSError as detail:
                     if detail[0] != errno.WSAEADDRINUSE:
                         # "Address already in use" is the only error
                         # I've seen on two WinXP Pro SP2 boxes, under

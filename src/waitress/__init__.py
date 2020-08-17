@@ -1,5 +1,6 @@
-from waitress.server import create_server
 import logging
+
+from waitress.server import create_server
 
 
 def serve(app, **kw):

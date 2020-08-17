@@ -17,13 +17,8 @@ import getopt
 import socket
 import warnings
 
+from .compat import HAS_IPV6, WIN
 from .proxy_headers import PROXY_HEADERS
-from .compat import (
-    PY2,
-    WIN,
-    string_types,
-    HAS_IPV6,
-)
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
 
@@ -52,7 +47,7 @@ def asoctal(s):
 
 
 def aslist_cronly(value):
-    if isinstance(value, string_types):
+    if isinstance(value, str):
         value = filter(None, [x.strip() for x in value.splitlines()])
     return list(value)
 
@@ -100,11 +95,11 @@ class _int_marker(int):
     pass
 
 
-class _bool_marker(object):
+class _bool_marker:
     pass
 
 
-class Adjustments(object):
+class Adjustments:
     """This class contains tunable parameters.
     """
 
@@ -346,7 +341,7 @@ class Adjustments(object):
             else:
                 (host, port) = (i, str(self.port))
 
-            if WIN and PY2:  # pragma: no cover
+            if WIN:  # pragma: no cover
                 try:
                     # Try turning the port into an integer
                     port = int(port)

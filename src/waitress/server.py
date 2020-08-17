@@ -20,13 +20,10 @@ import time
 from waitress import trigger
 from waitress.adjustments import Adjustments
 from waitress.channel import HTTPChannel
+from waitress.compat import IPPROTO_IPV6, IPV6_V6ONLY
 from waitress.task import ThreadedTaskDispatcher
 from waitress.utilities import cleanup_unix_socket
 
-from waitress.compat import (
-    IPPROTO_IPV6,
-    IPV6_V6ONLY,
-)
 from . import wasyncore
 from .proxy_headers import proxy_headers_middleware
 
@@ -137,7 +134,7 @@ def create_server(
 # This class is only ever used if we have multiple listen sockets. It allows
 # the serve() API to call .run() which starts the wasyncore loop, and catches
 # SystemExit/KeyboardInterrupt so that it can atempt to cleanly shut down.
-class MultiSocketServer(object):
+class MultiSocketServer:
     asyncore = wasyncore  # test shim
 
     def __init__(
@@ -172,7 +169,7 @@ class MultiSocketServer(object):
         wasyncore.close_all(self.map)
 
 
-class BaseWSGIServer(wasyncore.dispatcher, object):
+class BaseWSGIServer(wasyncore.dispatcher):
 
     channel_class = HTTPChannel
     next_channel_cleanup = 0
@@ -260,7 +257,7 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
         if server_name == "0.0.0.0" or server_name == "::":
             try:
                 return str(self.socketmod.gethostname())
-            except (socket.error, UnicodeDecodeError):  # pragma: no cover
+            except (OSError, UnicodeDecodeError):  # pragma: no cover
                 # We also deal with UnicodeDecodeError in case of Windows with
                 # non-ascii hostname
                 return "localhost"
@@ -268,7 +265,7 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
         # Now let's try and convert the IP address to a proper hostname
         try:
             server_name = self.socketmod.gethostbyaddr(server_name)[0]
-        except (socket.error, UnicodeDecodeError):  # pragma: no cover
+        except (OSError, UnicodeDecodeError):  # pragma: no cover
             # We also deal with UnicodeDecodeError in case of Windows with
             # non-ascii hostname
             pass
@@ -312,7 +309,7 @@ class BaseWSGIServer(wasyncore.dispatcher, object):
             if v is None:
                 return
             conn, addr = v
-        except socket.error:
+        except OSError:
             # Linux: On rare occasions we get a bogus socket back from
             # accept.  socketmodule.c:makesockaddr complains that the
             # address family is unknown.  We don't want the whole server
@@ -405,7 +402,7 @@ if hasattr(socket, "AF_UNIX"):
             if sockinfo is None:
                 sockinfo = (socket.AF_UNIX, socket.SOCK_STREAM, None, None)
 
-            super(UnixWSGIServer, self).__init__(
+            super().__init__(
                 application,
                 map=map,
                 _start=_start,
@@ -413,7 +410,7 @@ if hasattr(socket, "AF_UNIX"):
                 dispatcher=dispatcher,
                 adj=adj,
                 sockinfo=sockinfo,
-                **kw
+                **kw,
             )
 
         def bind_server_socket(self):

@@ -1,7 +1,5 @@
 import unittest
 
-from waitress.compat import tobytes
-
 
 class TestProxyHeadersMiddleware(unittest.TestCase):
     def _makeOne(self, app, **kw):
@@ -18,7 +16,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
             response.headers = response_headers
 
         response.steps = list(app(environ, start_response))
-        response.body = b"".join(tobytes(s) for s in response.steps)
+        response.body = b"".join(s.encode("latin-1") for s in response.steps)
         return response
 
     def test_get_environment_values_w_scheme_override_untrusted(self):
@@ -681,7 +679,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertIn(b'Header "X-Forwarded-Host" malformed', response.body)
 
 
-class DummyLogger(object):
+class DummyLogger:
     def __init__(self):
         self.logged = []
 
@@ -689,14 +687,14 @@ class DummyLogger(object):
         self.logged.append(msg % args)
 
 
-class DummyApp(object):
+class DummyApp:
     def __call__(self, environ, start_response):
         self.environ = environ
         start_response("200 OK", [("Content-Type", "text/plain")])
         yield "hello"
 
 
-class DummyResponse(object):
+class DummyResponse:
     status = None
     headers = None
     body = None
