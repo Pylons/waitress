@@ -356,7 +356,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
                 channel.will_close = True
 
     def print_listen(self, format_str):  # pragma: nocover
-        print(format_str.format(self.effective_host, self.effective_port))
+        self.log_info(format_str.format(self.effective_host, self.effective_port))
 
     def close(self):
         self.trigger.close()
