@@ -85,7 +85,10 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         self.assertEqual(inst.shutdown(timeout=0.01), True)
         self.assertEqual(
             inst.logger.logged,
-            ["1 thread(s) still running", "Canceling 1 pending task(s)",],
+            [
+                "1 thread(s) still running",
+                "Canceling 1 pending task(s)",
+            ],
         )
         self.assertEqual(task.cancelled, True)
 

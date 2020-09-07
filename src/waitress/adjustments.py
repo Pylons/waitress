@@ -28,7 +28,7 @@ KNOWN_PROXY_HEADERS = frozenset(
 
 
 def asbool(s):
-    """ Return the boolean value ``True`` if the case-lowered value of string
+    """Return the boolean value ``True`` if the case-lowered value of string
     input ``s`` is any of ``t``, ``true``, ``y``, ``on``, or ``1``, otherwise
     return the boolean value ``False``.  If ``s`` is the value ``None``,
     return ``False``.  If ``s`` is already one of the boolean values ``True``
@@ -53,7 +53,7 @@ def aslist_cronly(value):
 
 
 def aslist(value):
-    """ Return a list of strings, separating the input based on newlines
+    """Return a list of strings, separating the input based on newlines
     and, if flatten=True (the default), also split on spaces within
     each line."""
     values = aslist_cronly(value)
@@ -100,8 +100,7 @@ class _bool_marker:
 
 
 class Adjustments:
-    """This class contains tunable parameters.
-    """
+    """This class contains tunable parameters."""
 
     _params = (
         ("host", str),
@@ -303,7 +302,7 @@ class Adjustments:
 
         if "send_bytes" in kw:
             warnings.warn(
-                "send_bytes will be removed in a future release", DeprecationWarning,
+                "send_bytes will be removed in a future release", DeprecationWarning
             )
 
         for k, v in kw.items():

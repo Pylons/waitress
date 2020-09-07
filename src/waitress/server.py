@@ -138,7 +138,11 @@ class MultiSocketServer:
     asyncore = wasyncore  # test shim
 
     def __init__(
-        self, map=None, adj=None, effective_listen=None, dispatcher=None,
+        self,
+        map=None,
+        adj=None,
+        effective_listen=None,
+        dispatcher=None,
     ):
         self.adj = adj
         self.map = map

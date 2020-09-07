@@ -19,16 +19,14 @@ here = dn(__file__)
 
 
 class NullHandler(logging.Handler):  # pragma: no cover
-    """A logging handler that swallows all emitted messages.
-    """
+    """A logging handler that swallows all emitted messages."""
 
     def emit(self, record):
         pass
 
 
 def start_server(app, svr, queue, **kwargs):  # pragma: no cover
-    """Run a fixture application.
-    """
+    """Run a fixture application."""
     logging.getLogger("waitress").addHandler(NullHandler())
     try_register_coverage()
     svr(app, queue, **kwargs).run()
@@ -47,8 +45,7 @@ def try_register_coverage():  # pragma: no cover
 
 
 class FixtureTcpWSGIServer(server.TcpWSGIServer):
-    """A version of TcpWSGIServer that relays back what it's bound to.
-    """
+    """A version of TcpWSGIServer that relays back what it's bound to."""
 
     family = socket.AF_INET  # Testing
 
@@ -80,7 +77,9 @@ class SubprocessTests:
             os.environ["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_RCFILE"]
 
         self.proc = multiprocessing.Process(
-            target=start_server, args=(target, self.server, self.queue), kwargs=kw,
+            target=start_server,
+            args=(target, self.server, self.queue),
+            kwargs=kw,
         )
         self.proc.start()
 
@@ -1472,8 +1471,7 @@ class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
 if hasattr(socket, "AF_UNIX"):
 
     class FixtureUnixWSGIServer(server.UnixWSGIServer):
-        """A version of UnixWSGIServer that relays back what it's bound to.
-        """
+        """A version of UnixWSGIServer that relays back what it's bound to."""
 
         family = socket.AF_UNIX  # Testing
 
@@ -1537,8 +1535,7 @@ if hasattr(socket, "AF_UNIX"):
 
 
 def parse_headers(fp):
-    """Parses only RFC2822 headers from a file pointer.
-    """
+    """Parses only RFC2822 headers from a file pointer."""
     headers = {}
 
     while True:
@@ -1554,8 +1551,7 @@ def parse_headers(fp):
 
 
 class UnixHTTPConnection(httplib.HTTPConnection):
-    """Patched version of HTTPConnection that uses Unix domain sockets.
-    """
+    """Patched version of HTTPConnection that uses Unix domain sockets."""
 
     def __init__(self, path):
         httplib.HTTPConnection.__init__(self, "localhost")
@@ -1629,7 +1625,7 @@ def read_http(fp):  # pragma: no cover
 
 # stolen from gevent
 def get_errno(exc):  # pragma: no cover
-    """ Get the error code out of socket.error objects.
+    """Get the error code out of socket.error objects.
     socket.error in <2.5 does not have errno attribute
     socket.error in 3.x does not allow indexing access
     e.args[0] works for all.
@@ -1649,8 +1645,7 @@ def get_errno(exc):  # pragma: no cover
 
 
 def chunks(l, n):
-    """ Yield successive n-sized chunks from l.
-    """
+    """Yield successive n-sized chunks from l."""
 
     for i in range(0, len(l), n):
         yield l[i : i + n]

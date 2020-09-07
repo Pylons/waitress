@@ -572,7 +572,11 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertFalse(parser.empty)
         self.assertEqual(
             parser.headers,
-            {"FIRSTNAME": "mickey", "LASTNAME": "Mouse", "CONTENT_LENGTH": "6",},
+            {
+                "FIRSTNAME": "mickey",
+                "LASTNAME": "Mouse",
+                "CONTENT_LENGTH": "6",
+            },
         )
         self.assertEqual(parser.path, "/foobar")
         self.assertEqual(parser.command, "GET")
@@ -662,7 +666,12 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         )
         self.feed(data)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(self.parser.headers, {"CONTENT_LENGTH": "6",})
+        self.assertEqual(
+            self.parser.headers,
+            {
+                "CONTENT_LENGTH": "6",
+            },
+        )
 
 
 class Test_unquote_bytes_to_wsgi(unittest.TestCase):

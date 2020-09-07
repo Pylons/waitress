@@ -53,9 +53,7 @@ class HTTPChannel(wasyncore.dispatcher):
     # ASYNCHRONOUS METHODS (including __init__)
     #
 
-    def __init__(
-        self, server, sock, addr, adj, map=None,
-    ):
+    def __init__(self, server, sock, addr, adj, map=None):
         self.server = server
         self.adj = adj
         self.outbufs = [OverflowableBuffer(adj.outbuf_overflow)]

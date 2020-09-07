@@ -44,7 +44,7 @@ class DummyLogger:  # pragma: no cover
 
 class WarningsRecorder:  # pragma: no cover
     """Convenience wrapper for the warnings list returned on
-       entry to the warnings.catch_warnings() context manager.
+    entry to the warnings.catch_warnings() context manager.
     """
 
     def __init__(self, warnings_list):

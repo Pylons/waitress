@@ -41,8 +41,7 @@ hop_by_hop = frozenset(
 
 
 class ThreadedTaskDispatcher:
-    """A Task Dispatcher that creates a thread for each task.
-    """
+    """A Task Dispatcher that creates a thread for each task."""
 
     stop_count = 0  # Number of threads that will stop soon.
     active_count = 0  # Number of currently active threads
@@ -341,8 +340,7 @@ class Task:
 
 
 class ErrorTask(Task):
-    """ An error task produces an error response
-    """
+    """An error task produces an error response"""
 
     complete = True
 
@@ -361,8 +359,7 @@ class ErrorTask(Task):
 
 
 class WSGITask(Task):
-    """A WSGI task produces a response from a WSGI application.
-    """
+    """A WSGI task produces a response from a WSGI application."""
 
     environ = None
 

@@ -139,8 +139,7 @@ def zombies_test():
 
     >>> channel4.last_activity != last_active
     True
-
-"""
+    """
 
 
 def test_suite():

@@ -8,7 +8,13 @@ def app_body_only(environ, start_response):  # pragma: no cover
         cl = int(cl)
     body = environ["wsgi.input"].read(cl)
     cl = str(len(body))
-    start_response("200 OK", [("Content-Length", cl), ("Content-Type", "text/plain"),])
+    start_response(
+        "200 OK",
+        [
+            ("Content-Length", cl),
+            ("Content-Type", "text/plain"),
+        ],
+    )
     return [body]
 
 
@@ -36,7 +42,10 @@ def app(environ, start_response):  # pragma: no cover
     response = json.dumps(meta).encode("utf8") + b"\r\n\r\n" + request_body
     start_response(
         "200 OK",
-        [("Content-Length", str(len(response))), ("Content-Type", "text/plain"),],
+        [
+            ("Content-Length", str(len(response))),
+            ("Content-Type", "text/plain"),
+        ],
     )
     return [response]
 

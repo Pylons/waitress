@@ -220,7 +220,9 @@ class TestAdjustments(unittest.TestCase):
         if WIN:  # pragma: no cover
             # On Windows this is broken, so we raise a ValueError
             self.assertRaises(
-                ValueError, self._makeOne, listen="127.0.0.1:http",
+                ValueError,
+                self._makeOne,
+                listen="127.0.0.1:http",
             )
 
             return
@@ -442,18 +444,32 @@ class TestCLI(unittest.TestCase):
             ["--host=localhost", "--port=80", "--unix-socket-perms=777"]
         )
         self.assertDictContainsSubset(
-            {"host": "localhost", "port": "80", "unix_socket_perms": "777",}, opts
+            {
+                "host": "localhost",
+                "port": "80",
+                "unix_socket_perms": "777",
+            },
+            opts,
         )
         self.assertSequenceEqual(args, [])
 
     def test_listen_params(self):
-        opts, args = self.parse(["--listen=test:80",])
+        opts, args = self.parse(
+            [
+                "--listen=test:80",
+            ]
+        )
 
         self.assertDictContainsSubset({"listen": " test:80"}, opts)
         self.assertSequenceEqual(args, [])
 
     def test_multiple_listen_params(self):
-        opts, args = self.parse(["--listen=test:80", "--listen=test:8080",])
+        opts, args = self.parse(
+            [
+                "--listen=test:80",
+                "--listen=test:8080",
+            ]
+        )
 
         self.assertDictContainsSubset({"listen": " test:80 test:8080"}, opts)
         self.assertSequenceEqual(args, [])
