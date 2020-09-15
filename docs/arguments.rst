@@ -3,7 +3,7 @@
 Arguments to ``waitress.serve``
 -------------------------------
 
-Here are the arguments you can pass to the `waitress.serve`` function or use
+Here are the arguments you can pass to the ``waitress.serve`` function or use
 in :term:`PasteDeploy` configuration (interchangeably):
 
 host
