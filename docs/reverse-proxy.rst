@@ -68,7 +68,7 @@ the environment using ``X-Forwarded-Proto``, ``X-Forwarded-For``,
 
    proxy_set_header X-Forwarded-Proto $scheme;
    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-   proxy_set_header X-Forwarded-Host $host:$server_port;
+   proxy_set_header X-Forwarded-Host $http_host;
    proxy_set_header X-Forwarded-Port $server_port;
 
 when using Apache, ``mod_proxy`` automatically forwards the following headers::
