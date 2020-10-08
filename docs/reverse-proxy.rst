@@ -68,10 +68,14 @@ the environment using ``X-Forwarded-Proto``, ``X-Forwarded-For``,
 
    proxy_set_header X-Forwarded-Proto $scheme;
    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-   proxy_set_header X-Forwarded-Host $http_host;
+   proxy_set_header X-Forwarded-Host $host:$server_port;
    proxy_set_header X-Forwarded-Port $server_port;
 
-when using Apache, ``mod_proxy`` automatically forwards the following headers::
+Note that if your proxy is running on a port other than 80 or 443, you may need to use ``$http_host`` to include the non-standard port in `request.route_url` (see https://stackoverflow.com/questions/1459739/php-serverhttp-host-vs-serverserver-name-am-i-understanding-the-ma/12046836#12046836).
+
+   proxy_set_header X-Forwarded-Host $http_host;
+
+When using Apache, ``mod_proxy`` automatically forwards the following headers::
 
    X-Forwarded-For
    X-Forwarded-Host
