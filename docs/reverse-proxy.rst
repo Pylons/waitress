@@ -73,7 +73,7 @@ the environment using ``X-Forwarded-Proto``, ``X-Forwarded-For``,
    proxy_set_header X-Forwarded-Host $host:$server_port;
    proxy_set_header X-Forwarded-Port $server_port;
 
-Note that if your proxy is running on a port other than 80 or 443, you may need to use ``$http_host`` to include the non-standard port in ``request.route_url`` (see https://stackoverflow.com/questions/1459739/php-serverhttp-host-vs-serverserver-name-am-i-understanding-the-ma/12046836#12046836).
+Note that if your external proxy (for a pod or ingress) is serving a port other than 80 or 443 but your internal proxy (for a container) is serving a standard port, you may need to use ``$http_host`` to include the non-standard port in ``request.route_url``. This is because the internal proxy will not populate ``$server_port`` when it is serving a standard port (see https://github.com/Pylons/waitress/pull/319#issuecomment-705853859).
 
 .. code-block:: nginx
 
