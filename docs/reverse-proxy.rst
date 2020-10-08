@@ -64,7 +64,9 @@ If your proxy accepts both HTTP and HTTPS URLs, and you want your application
 to generate the appropriate url based on the incoming scheme, you'll want to
 pass waitress ``X-Forwarded-Proto``, however Waitress is also able to update
 the environment using ``X-Forwarded-Proto``, ``X-Forwarded-For``,
-``X-Forwarded-Host``, and ``X-Forwarded-Port``::
+``X-Forwarded-Host``, and ``X-Forwarded-Port``
+
+.. code-block:: nginx
 
    proxy_set_header X-Forwarded-Proto $scheme;
    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -72,6 +74,8 @@ the environment using ``X-Forwarded-Proto``, ``X-Forwarded-For``,
    proxy_set_header X-Forwarded-Port $server_port;
 
 Note that if your proxy is running on a port other than 80 or 443, you may need to use ``$http_host`` to include the non-standard port in `request.route_url` (see https://stackoverflow.com/questions/1459739/php-serverhttp-host-vs-serverserver-name-am-i-understanding-the-ma/12046836#12046836).
+
+.. code-block:: nginx
 
    proxy_set_header X-Forwarded-Host $http_host;
 
