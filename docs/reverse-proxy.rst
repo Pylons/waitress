@@ -73,7 +73,7 @@ the environment using ``X-Forwarded-Proto``, ``X-Forwarded-For``,
    proxy_set_header X-Forwarded-Host $host:$server_port;
    proxy_set_header X-Forwarded-Port $server_port;
 
-Note that if your external proxy (for a pod or ingress) is serving a port other than 80 or 443 but your internal proxy (for a container) is serving a standard port, you may need to use ``$http_host`` to include the non-standard port in ``request.route_url``. This is because the internal proxy will not populate ``$server_port`` when it is serving a standard port (see https://github.com/Pylons/waitress/pull/319#issuecomment-705853859).
+Note that if your external proxy (for a pod or ingress) is serving a port that is different from your internal proxy (for a container), you may need to use ``$http_host`` to include the external port in ``request.route_url``. This is because the value of ``$server_port`` that is forwarded to your pyramid application will reference the value for the internal proxy, which is probably not what you want (see https://github.com/Pylons/waitress/pull/319#issuecomment-705853859).
 
 .. code-block:: nginx
 
