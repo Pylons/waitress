@@ -156,7 +156,7 @@ class MultiSocketServer:
             if ":" in l[0]:
                 l[0] = "[{}]".format(l[0])
 
-            print(format_str.format(*l))
+            self.log_info(format_str.format(*l))
 
     def run(self):
         try:
