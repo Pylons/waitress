@@ -890,8 +890,10 @@ class TooLargeTests:
         self.sock.send(to_send)
         fp = self.sock.makefile("rb")
         response_line, headers, response_body = read_http(fp)
-        self.assertline(response_line, "431", "Request Header Fields Too Large", "HTTP/1.0")
-        self.assertEqual(headers['connection'], "close")
+        self.assertline(
+            response_line, "431", "Request Header Fields Too Large", "HTTP/1.0"
+        )
+        self.assertEqual(headers["connection"], "close")
 
     def test_request_body_too_large_with_wrong_cl_http10(self):
         body = b"a" * self.toobig
