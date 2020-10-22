@@ -305,8 +305,8 @@ class BaseWSGIServer(wasyncore.dispatcher):
             ):
                 self.in_connection_overflow = True
                 self.logger.warning(
-                    'total open connections reached the connection limit, '
-                    'no longer accepting new connections'
+                    "total open connections reached the connection limit, "
+                    "no longer accepting new connections"
                 )
             elif (
                 self.in_connection_overflow
@@ -314,8 +314,8 @@ class BaseWSGIServer(wasyncore.dispatcher):
             ):
                 self.in_connection_overflow = False
                 self.logger.info(
-                    'total open connections dropped below the connection limit, '
-                    'listening again'
+                    "total open connections dropped below the connection limit, "
+                    "listening again"
                 )
             return not self.in_connection_overflow
         return False
