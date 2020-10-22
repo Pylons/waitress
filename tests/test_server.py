@@ -185,6 +185,7 @@ class TestWSGIServer(unittest.TestCase):
         inst.adj = DummyAdj
         inst._map = {"a": 1, "b": 2}
         self.assertFalse(inst.readable())
+        self.assertTrue(inst.in_connection_overflow)
 
     def test_readable_maplen_lt_connection_limit(self):
         inst = self._makeOneWithMap()
@@ -192,6 +193,19 @@ class TestWSGIServer(unittest.TestCase):
         inst.adj = DummyAdj
         inst._map = {}
         self.assertTrue(inst.readable())
+        self.assertFalse(inst.in_connection_overflow)
+
+    def test_readable_maplen_toggles_connection_overflow(self):
+        inst = self._makeOneWithMap()
+        inst.accepting = True
+        inst.adj = DummyAdj
+        inst._map = {"a": 1, "b": 2}
+        self.assertFalse(inst.in_connection_overflow)
+        self.assertFalse(inst.readable())
+        self.assertTrue(inst.in_connection_overflow)
+        inst._map = {}
+        self.assertTrue(inst.readable())
+        self.assertFalse(inst.in_connection_overflow)
 
     def test_readable_maintenance_false(self):
         import time
