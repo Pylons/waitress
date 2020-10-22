@@ -3,6 +3,12 @@
 
 - Drop Python 2.7 support
 
+- The server now issues warning output when it there are enough open
+  connections (controlled by "connection_limit"), that it is no longer
+  accepting new connections. This situation was previously difficult to
+  diagnose.
+  See https://github.com/Pylons/waitress/pull/322
+
 1.4.4 (2020-06-01)
 ------------------
 
