@@ -298,25 +298,27 @@ class BaseWSGIServer(wasyncore.dispatcher):
             self.next_channel_cleanup = now + self.adj.cleanup_interval
             self.maintenance(now)
 
-        if (
-            not self.in_connection_overflow
-            and len(self._map) >= self.adj.connection_limit
-        ):
-            self.in_connection_overflow = True
-            self.logger.warning(
-                'server active connections reached the connection limit, '
-                'no longer accepting new connections'
-            )
-        elif (
-            self.in_connection_overflow
-            and len(self._map) < self.adj.connection_limit
-        ):
-            self.in_connection_overflow = False
-            self.logger.info(
-                'server active connections dropped below the connection limit, '
-                'listening again'
-            )
-        return self.accepting and not self.in_connection_overflow
+        if self.accepting:
+            if (
+                not self.in_connection_overflow
+                and len(self._map) >= self.adj.connection_limit
+            ):
+                self.in_connection_overflow = True
+                self.logger.warning(
+                    'total open connections reached the connection limit, '
+                    'no longer accepting new connections'
+                )
+            elif (
+                self.in_connection_overflow
+                and len(self._map) < self.adj.connection_limit
+            ):
+                self.in_connection_overflow = False
+                self.logger.info(
+                    'total open connections dropped below the connection limit, '
+                    'listening again'
+                )
+            return not self.in_connection_overflow
+        return False
 
     def writable(self):
         return False
