@@ -879,6 +879,20 @@ class TooLargeTests:
     def tearDown(self):
         self.stop_subprocess()
 
+    def test_request_headers_too_large_http11(self):
+        body = b""
+        bad_headers = b"X-Random-Header: 100\r\n" * int(self.toobig / 20)
+        to_send = b"GET / HTTP/1.1\r\nContent-Length: 0\r\n"
+        to_send += bad_headers
+        to_send += b"\r\n\r\n"
+        to_send += body
+        self.connect()
+        self.sock.send(to_send)
+        fp = self.sock.makefile("rb")
+        response_line, headers, response_body = read_http(fp)
+        self.assertline(response_line, "431", "Request Header Fields Too Large", "HTTP/1.0")
+        self.assertEqual(headers['connection'], "close")
+
     def test_request_body_too_large_with_wrong_cl_http10(self):
         body = b"a" * self.toobig
         to_send = b"GET / HTTP/1.0\r\nContent-Length: 5\r\n\r\n"
