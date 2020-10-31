@@ -169,6 +169,12 @@ Tuning options:
         The use_poll argument passed to ``asyncore.loop()``. Helps overcome
         open file descriptors limit. Default is False.
 
+    --channel-request-lookahead=INT
+        Allows channels to stay readable and buffer more requests up to the
+        given maximum even if a request is already being processed. This allows
+        detecting if a client closed the connection while its request is being
+        processed. Default is 0.
+
 """
 
 RUNNER_PATTERN = re.compile(

@@ -560,6 +560,11 @@ class WSGITask(Task):
             if mykey not in environ:
                 environ[mykey] = value
 
+        # Insert a callable into the environment that allows the application to
+        # check if the client disconnected. Only works with
+        # channel_request_lookahead larger than 0.
+        environ["waitress.client_disconnected"] = self.channel.check_client_disconnected
+
         # cache the environ for this request
         self.environ = environ
         return environ

@@ -135,6 +135,7 @@ class Adjustments:
         ("unix_socket", str),
         ("unix_socket_perms", asoctal),
         ("sockets", as_socket_list),
+        ("channel_request_lookahead", int),
     )
 
     _param_map = dict(_params)
@@ -279,6 +280,13 @@ class Adjustments:
     # A list of sockets that waitress will use to accept connections. They can
     # be used for e.g. socket activation
     sockets = []
+
+    # By setting this to a value larger than zero, each channel stays readable
+    # and continues to read requests from the client even if a request is still
+    # running, until the number of buffered requests exceeds this value.
+    # This allows detecting if a client closed the connection while its request
+    # is being processed.
+    channel_request_lookahead = 0
 
     def __init__(self, **kw):
 

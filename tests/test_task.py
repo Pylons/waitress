@@ -802,6 +802,7 @@ class TestWSGITask(unittest.TestCase):
                 "SERVER_PORT",
                 "SERVER_PROTOCOL",
                 "SERVER_SOFTWARE",
+                "waitress.client_disconnected",
                 "wsgi.errors",
                 "wsgi.file_wrapper",
                 "wsgi.input",
@@ -957,6 +958,10 @@ class DummyChannel:
     adj = DummyAdj()
     creation_time = 0
     addr = ("127.0.0.1", 39830)
+
+    def check_client_disconnected(self):
+        # For now, until we have tests handling this feature
+        return False
 
     def __init__(self, server=None):
         if server is None:
