@@ -18,8 +18,8 @@ Waitress
 
 Waitress is a production-quality pure-Python WSGI server with very acceptable
 performance. It has no dependencies except ones which live in the Python
-standard library. It runs on CPython on Unix and Windows under Python 3.5+. It
-is also known to run on PyPy (version 3.5 compatible) on UNIX. It supports
+standard library. It runs on CPython on Unix and Windows under Python 3.6+. It
+is also known to run on PyPy (version 3.6 compatible) on UNIX. It supports
 HTTP/1.0 and HTTP/1.1.
 
 For more information, see the "docs" directory of the Waitress package or visit
