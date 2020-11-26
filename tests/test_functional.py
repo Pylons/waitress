@@ -12,6 +12,7 @@ import time
 import unittest
 
 from waitress import server
+from waitress.compat import WIN
 from waitress.utilities import cleanup_unix_socket
 
 dn = os.path.dirname
@@ -76,7 +77,12 @@ class SubprocessTests:
         if "COVERAGE_RCFILE" in os.environ:
             os.environ["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_RCFILE"]
 
-        self.proc = multiprocessing.Process(
+        if not WIN:
+            ctx = multiprocessing.get_context("fork")
+        else:
+            ctx = multiprocessing.get_context("spawn")
+
+        self.proc = ctx.Process(
             target=start_server,
             args=(target, self.server, self.queue),
             kwargs=kw,
