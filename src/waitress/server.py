@@ -241,46 +241,13 @@ class BaseWSGIServer(wasyncore.dispatcher):
             self.bind_server_socket()
 
         self.effective_host, self.effective_port = self.getsockname()
-        self.server_name = self.get_server_name(self.effective_host)
+        self.server_name = adj.server_name
         self.active_channels = {}
         if _start:
             self.accept_connections()
 
     def bind_server_socket(self):
         raise NotImplementedError  # pragma: no cover
-
-    def get_server_name(self, ip):
-        """Given an IP or hostname, try to determine the server name."""
-
-        if not ip:
-            raise ValueError("Requires an IP to get the server name")
-
-        server_name = str(ip)
-
-        # If we are bound to all IP's, just return the current hostname, only
-        # fall-back to "localhost" if we fail to get the hostname
-        if server_name == "0.0.0.0" or server_name == "::":
-            try:
-                return str(self.socketmod.gethostname())
-            except (OSError, UnicodeDecodeError):  # pragma: no cover
-                # We also deal with UnicodeDecodeError in case of Windows with
-                # non-ascii hostname
-                return "localhost"
-
-        # Now let's try and convert the IP address to a proper hostname
-        try:
-            server_name = self.socketmod.gethostbyaddr(server_name)[0]
-        except (OSError, UnicodeDecodeError):  # pragma: no cover
-            # We also deal with UnicodeDecodeError in case of Windows with
-            # non-ascii hostname
-            pass
-
-        # If it contains an IPv6 literal, make sure to surround it with
-        # brackets
-        if ":" in server_name and "[" not in server_name:
-            server_name = "[{}]".format(server_name)
-
-        return server_name
 
     def getsockname(self):
         raise NotImplementedError  # pragma: no cover
@@ -391,20 +358,11 @@ class TcpWSGIServer(BaseWSGIServer):
         self.bind(sockaddr)
 
     def getsockname(self):
-        try:
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(), self.socketmod.NI_NUMERICSERV
-            )
-        except:  # pragma: no cover
-            # This only happens on Linux because a DNS issue is considered a
-            # temporary failure that will raise (even when NI_NAMEREQD is not
-            # set). Instead we try again, but this time we just ask for the
-            # numerichost and the numericserv (port) and return those. It is
-            # better than nothing.
-            return self.socketmod.getnameinfo(
-                self.socket.getsockname(),
-                self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV,
-            )
+        # Return the IP address, port as numeric
+        return self.socketmod.getnameinfo(
+            self.socket.getsockname(),
+            self.socketmod.NI_NUMERICHOST | self.socketmod.NI_NUMERICSERV,
+        )
 
     def set_socket_options(self, conn):
         for (level, optname, value) in self.adj.socket_options:
@@ -450,9 +408,6 @@ if hasattr(socket, "AF_UNIX"):
 
         def fix_addr(self, addr):
             return ("localhost", None)
-
-        def get_server_name(self, ip):
-            return "localhost"
 
 
 # Compatibility alias.

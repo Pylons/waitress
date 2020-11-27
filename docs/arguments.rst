@@ -35,6 +35,23 @@ listen
 
     .. versionadded:: 1.0
 
+server_name
+    This is the value that will be placed in the WSGI environment as
+    ``SERVER_NAME``, the only time that this value is used in the WSGI
+    environment for a request is if the client sent a HTTP/1.0 request without
+    a ``Host`` header set, and no other proxy headers.
+
+    The default is value is ``waitress.invalid``, if your WSGI application is
+    creating URL's that include this as the hostname and you are using a
+    reverse proxy setup, you may want to validate that your reverse proxy is
+    sending the appropriate headers.
+
+    In most situations you will not need to set this value.
+
+    Default: ``waitress.invalid``
+
+    .. versionadded:: 2.0
+
 ipv4
     Enable or disable IPv4 (boolean)
 

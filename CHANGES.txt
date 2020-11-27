@@ -1,13 +1,22 @@
 2.0.0 (unreleased)
 ------------------
+
+- Waitress no longer attempts to guess at what the ``server_name`` should be for
+  a listen socket, instead it always use a new adjustment/argument named
+  ``server_name``.
+
+  Please see the documentation for ``server_name`` in
+  https://docs.pylonsproject.org/projects/waitress/en/latest/arguments.html and
+  see https://github.com/Pylons/waitress/pull/329
+
 - Allow tasks to notice if the client disconnected.
 
-  This inserts a callable `waitress.client_disconnected` into the environment
+  This inserts a callable ``waitress.client_disconnected`` into the environment
   that allows the task to check if the client disconnected while waiting for
   the response at strategic points in the execution and to cancel the
   operation.
 
-  It requires setting the new adjustment `channel_request_lookahead` to a value
+  It requires setting the new adjustment ``channel_request_lookahead`` to a value
   larger than 0, which continues to read requests from a channel even if a
   request is already being processed on that channel, up to the given count,
   since a client disconnect is detected by reading from a readable socket and
@@ -15,7 +24,7 @@
 
   See https://github.com/Pylons/waitress/pull/310
 
-- Drop Python 2.7 support
+- Drop Python 2.7, 3.5 support
 
 - The server now issues warning output when it there are enough open
   connections (controlled by "connection_limit"), that it is no longer
