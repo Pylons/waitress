@@ -136,6 +136,7 @@ class Adjustments:
         ("unix_socket_perms", asoctal),
         ("sockets", as_socket_list),
         ("channel_request_lookahead", int),
+        ("server_name", str),
     )
 
     _param_map = dict(_params)
@@ -287,6 +288,11 @@ class Adjustments:
     # This allows detecting if a client closed the connection while its request
     # is being processed.
     channel_request_lookahead = 0
+
+    # This setting controls the SERVER_NAME of the WSGI environment, this is
+    # only ever used if the remote client sent a request without a Host header
+    # (or when using the Proxy settings, without forwarding a Host header)
+    server_name = "waitress.invalid"
 
     def __init__(self, **kw):
 
