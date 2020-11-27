@@ -1,5 +1,5 @@
-2.0.0 (unreleased)
-------------------
+2.0.0b0 (2020-11-26)
+--------------------
 
 - Waitress no longer attempts to guess at what the ``server_name`` should be for
   a listen socket, instead it always use a new adjustment/argument named
