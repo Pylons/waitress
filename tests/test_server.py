@@ -113,35 +113,6 @@ class TestWSGIServer(unittest.TestCase):
         inst = self._makeOneWithMap(_start=False)
         self.assertEqual(inst.accepting, False)
 
-    def test_get_server_name_empty(self):
-        inst = self._makeOneWithMap(_start=False)
-        self.assertRaises(ValueError, inst.get_server_name, "")
-
-    def test_get_server_name_with_ip(self):
-        inst = self._makeOneWithMap(_start=False)
-        result = inst.get_server_name("127.0.0.1")
-        self.assertTrue(result)
-
-    def test_get_server_name_with_hostname(self):
-        inst = self._makeOneWithMap(_start=False)
-        result = inst.get_server_name("fred.flintstone.com")
-        self.assertEqual(result, "fred.flintstone.com")
-
-    def test_get_server_name_0000(self):
-        inst = self._makeOneWithMap(_start=False)
-        result = inst.get_server_name("0.0.0.0")
-        self.assertTrue(len(result) != 0)
-
-    def test_get_server_name_double_colon(self):
-        inst = self._makeOneWithMap(_start=False)
-        result = inst.get_server_name("::")
-        self.assertTrue(len(result) != 0)
-
-    def test_get_server_name_ipv6(self):
-        inst = self._makeOneWithMap(_start=False)
-        result = inst.get_server_name("2001:DB8::ffff")
-        self.assertEqual("[2001:DB8::ffff]", result)
-
     def test_get_server_multi(self):
         inst = self._makeOneWithMulti()
         self.assertEqual(inst.__class__.__name__, "MultiSocketServer")
