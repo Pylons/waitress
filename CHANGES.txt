@@ -1,3 +1,9 @@
+unreleased
+----------
+
+- Fix a crash on startup when listening to multiple interfaces.
+  See https://github.com/Pylons/waitress/pull/332
+
 2.0.0b0 (2020-11-26)
 --------------------
 

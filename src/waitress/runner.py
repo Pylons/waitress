@@ -16,6 +16,7 @@
 
 
 import getopt
+import logging
 import os
 import os.path
 import re
@@ -23,6 +24,7 @@ import sys
 
 from waitress import serve
 from waitress.adjustments import Adjustments
+from waitress.utilities import logger
 
 HELP = """\
 Usage:
@@ -259,6 +261,12 @@ def run(argv=sys.argv, _serve=serve):
     if len(args) != 1:
         show_help(sys.stderr, name, "Specify one application only")
         return 1
+
+    # set a default level for the logger only if it hasn't been set explicitly
+    # note that this level does not override any parent logger levels,
+    # handlers, etc but without it no log messages are emitted by default
+    if logger.level == logging.NOTSET:
+        logger.setLevel(logging.INFO)
 
     try:
         module, obj_name = match(args[0])
