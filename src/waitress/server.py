@@ -125,10 +125,11 @@ def create_server(
         # In this case we have no need to use a MultiSocketServer
         return last_serv
 
+    log_info = last_serv.log_info
     # Return a class that has a utility function to print out the sockets it's
     # listening on, and has a .run() function. All of the TcpWSGIServers
     # registered themselves in the map above.
-    return MultiSocketServer(map, adj, effective_listen, dispatcher)
+    return MultiSocketServer(map, adj, effective_listen, dispatcher, log_info)
 
 
 # This class is only ever used if we have multiple listen sockets. It allows
@@ -143,11 +144,13 @@ class MultiSocketServer:
         adj=None,
         effective_listen=None,
         dispatcher=None,
+        log_info=None,
     ):
         self.adj = adj
         self.map = map
         self.effective_listen = effective_listen
         self.task_dispatcher = dispatcher
+        self.log_info = log_info
 
     def print_listen(self, format_str):  # pragma: nocover
         for l in self.effective_listen:
@@ -344,7 +347,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
             if (not channel.requests) and channel.last_activity < cutoff:
                 channel.will_close = True
 
-    def print_listen(self, format_str):  # pragma: nocover
+    def print_listen(self, format_str):  # pragma: no cover
         self.log_info(format_str.format(self.effective_host, self.effective_port))
 
     def close(self):
