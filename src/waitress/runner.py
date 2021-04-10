@@ -63,7 +63,8 @@ Standard options:
         A wildcard for the hostname is also supported and will bind to both
         IPv4/IPv6 depending on whether they are enabled or disabled.
 
-    --[no-]ipv4
+    --ipv4
+    --no-ipv4
         Toggle on/off IPv4 support.
 
         Example:
@@ -73,7 +74,8 @@ Standard options:
         This will disable IPv4 socket support. This affects wildcard matching
         when generating the list of sockets.
 
-    --[no-]ipv6
+    --ipv6
+    --no-ipv6
         Toggle on/off IPv6 support.
 
         Example:
@@ -149,7 +151,8 @@ Tuning options:
         Default is 120. 'Inactive' is defined as 'has received no data
         from the client and has sent no data to the client'.
 
-    --[no-]log-socket-errors
+    --log-socket-errors
+    --no-log-socket-errors
         Toggle whether premature client disconnect tracebacks ought to be
         logged. On by default.
 
@@ -160,7 +163,8 @@ Tuning options:
     --max-request-body-size=INT
         Maximum size of request body. Default is 1073741824 (1GB).
 
-    --[no-]expose-tracebacks
+    --expose-tracebacks
+    --no-expose-tracebacks
         Toggle whether to expose tracebacks of unhandled exceptions to the
         client. Off by default.
 
@@ -177,7 +181,8 @@ Tuning options:
         detecting if a client closed the connection while its request is being
         processed. Default is 0.
 
-    --[no-]decode-path
+    --decode-path
+    --no-decode-path
         Decode URL-escaped characters in the path. Enabled by default.
 """
 
