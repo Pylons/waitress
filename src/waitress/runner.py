@@ -183,7 +183,8 @@ Tuning options:
 
     --decode-path
     --no-decode-path
-        Decode URL-escaped characters in the path. Enabled by default.
+        Toggle whether to decode URL-escaped characters in the path. Enabled
+        by default.
 """
 
 RUNNER_PATTERN = re.compile(
