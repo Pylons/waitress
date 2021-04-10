@@ -137,6 +137,7 @@ class Adjustments:
         ("sockets", as_socket_list),
         ("channel_request_lookahead", int),
         ("server_name", str),
+        ("decode_path", asbool),
     )
 
     _param_map = dict(_params)
@@ -293,6 +294,10 @@ class Adjustments:
     # only ever used if the remote client sent a request without a Host header
     # (or when using the Proxy settings, without forwarding a Host header)
     server_name = "waitress.invalid"
+
+    # Decode %XX escapes in the path. Enabled by default. If false,
+    # waitress decodes the path bytes as 'latin-1' and applies no URL decoding.
+    decode_path = True
 
     def __init__(self, **kw):
 

@@ -1,3 +1,13 @@
+Next Release
+------------
+
+- Add the decode_path adjustment.
+
+  The decode_path adjustment is enabled by default. Disable it for apps
+  that need to distinguish between encoded and non-encoded characters
+  in the path. For example, some apps need to allow encoded slashes in
+  path segments.
+
 2.0.0 (2021-03-07)
 ------------------
 

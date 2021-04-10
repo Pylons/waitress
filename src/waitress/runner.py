@@ -177,6 +177,8 @@ Tuning options:
         detecting if a client closed the connection while its request is being
         processed. Default is 0.
 
+    --[no-]decode-path
+        Decode URL-escaped characters in the path. Enabled by default.
 """
 
 RUNNER_PATTERN = re.compile(

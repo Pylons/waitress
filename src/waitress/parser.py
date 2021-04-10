@@ -258,7 +258,7 @@ class HTTPRequestParser:
             self.path,
             self.query,
             self.fragment,
-        ) = split_uri(uri)
+        ) = split_uri(uri, adj=self.adj)
         self.url_scheme = self.adj.url_scheme
         connection = headers.get("CONNECTION", "")
 
@@ -340,7 +340,7 @@ class HTTPRequestParser:
             body_rcv.getbuf().close()
 
 
-def split_uri(uri):
+def split_uri(uri, adj=None):
     # urlsplit handles byte input by returning bytes on py3, so
     # scheme, netloc, path, query, and fragment are bytes
 
@@ -367,10 +367,15 @@ def split_uri(uri):
         except UnicodeError:
             raise ParsingError("Bad URI")
 
+    if adj is None or adj.decode_path:
+        final_path = unquote_bytes_to_wsgi(path)
+    else:
+        final_path = path.decode("latin-1")
+
     return (
         scheme.decode("latin-1"),
         netloc.decode("latin-1"),
-        unquote_bytes_to_wsgi(path),
+        final_path,
         query.decode("latin-1"),
         fragment.decode("latin-1"),
     )

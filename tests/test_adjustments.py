@@ -164,6 +164,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.url_prefix, "/foo")
         self.assertEqual(inst.ipv4, True)
         self.assertEqual(inst.ipv6, False)
+        self.assertEqual(inst.decode_path, True)
 
         bind_pairs = [
             sockaddr[:2]
@@ -398,6 +399,10 @@ class TestAdjustments(unittest.TestCase):
 
         inst = self._makeOne(ident="specific_header")
         self.assertEqual(inst.ident, "specific_header")
+
+    def test_decode_path_false(self):
+        inst = self._makeOne(decode_path="false")
+        self.assertEqual(inst.decode_path, False)
 
 
 class TestCLI(unittest.TestCase):

@@ -415,14 +415,14 @@ class TestHTTPRequestParser(unittest.TestCase):
 
 
 class Test_split_uri(unittest.TestCase):
-    def _callFUT(self, uri):
+    def _callFUT(self, uri, adj=None):
         (
             self.proxy_scheme,
             self.proxy_netloc,
             self.path,
             self.query,
             self.fragment,
-        ) = split_uri(uri)
+        ) = split_uri(uri, adj)
 
     def test_split_uri_unquoting_unneeded(self):
         self._callFUT(b"http://localhost:8080/abc def")
@@ -486,6 +486,11 @@ class Test_split_uri(unittest.TestCase):
         self.assertEqual(self.proxy_netloc, "")
         self.assertEqual(self.query, "a=1&b=2")
         self.assertEqual(self.fragment, "fragment")
+
+    def test_split_uri_without_decode_path(self):
+        adj = Adjustments(decode_path=False)
+        self._callFUT(b"http://localhost:8080/%2F/", adj=adj)
+        self.assertEqual(self.path, "/%2F/")
 
 
 class Test_get_header_lines(unittest.TestCase):

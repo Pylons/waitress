@@ -928,6 +928,7 @@ class DummyAdjustments:
     url_prefix = ""
     channel_request_lookahead = 0
     max_request_body_size = 1048576
+    decode_path = True
 
 
 class DummyServer:

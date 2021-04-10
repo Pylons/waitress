@@ -301,3 +301,12 @@ url_prefix
     be stripped of the prefix.
 
     Default: ``''``
+
+decode_path
+    Set to ``False`` to disable path decoding. When ``decode_path`` is true
+    (the default), waitress decodes the ``%XX`` escaped characters in the path.
+    If your app needs to distinguish between encoded and non-encoded characters
+    (especially slash characters), set this to ``False`` and add the path
+    decoding logic inside your app.
+
+    Default: ``True``
