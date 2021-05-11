@@ -1,3 +1,12 @@
+Next Release
+------------
+
+- Add REMOTE_URI to the WSGI environment.
+
+  REMOTE_URI is similar to ``remote_uri`` in nginx. It is a string that
+  contains the request path before separating the query string and
+  decoding ``%``-escaped characters. 
+
 2.0.0 (2021-03-07)
 ------------------
 

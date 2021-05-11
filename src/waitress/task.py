@@ -538,6 +538,7 @@ class WSGITask(Task):
             "SERVER_PROTOCOL": "HTTP/%s" % self.version,
             "SCRIPT_NAME": url_prefix,
             "PATH_INFO": path,
+            "REQUEST_URI": request.request_uri,
             "QUERY_STRING": request.query,
             "wsgi.url_scheme": request.url_scheme,
             # the following environment variables are required by the WSGI spec
