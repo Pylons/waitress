@@ -25,7 +25,7 @@ from . import wasyncore
 
 
 class ClientDisconnected(Exception):
-    """ Raised when attempting to write to a closed socket."""
+    """Raised when attempting to write to a closed socket."""
 
 
 class HTTPChannel(wasyncore.dispatcher):
@@ -480,7 +480,7 @@ class HTTPChannel(wasyncore.dispatcher):
         self.last_activity = time.time()
 
     def cancel(self):
-        """ Cancels all pending / active requests """
+        """Cancels all pending / active requests"""
         self.will_close = True
         self.connected = False
         self.last_activity = time.time()
