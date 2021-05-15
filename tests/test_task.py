@@ -797,6 +797,7 @@ class TestWSGITask(unittest.TestCase):
                 "REMOTE_HOST",
                 "REMOTE_PORT",
                 "REQUEST_METHOD",
+                "REQUEST_URI",
                 "SCRIPT_NAME",
                 "SERVER_NAME",
                 "SERVER_PORT",
@@ -982,6 +983,7 @@ class DummyParser:
     version = "1.0"
     command = "GET"
     path = "/"
+    request_uri = "/"
     query = ""
     url_scheme = "http"
     expect_continue = False

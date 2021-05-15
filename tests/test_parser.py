@@ -608,6 +608,11 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
             parser.path.encode("latin-1").decode("utf-8"),
             b"/foo/a++/\xc3\xa4=&a:int".decode("utf-8"),
         )
+        # parser.request_uri should preserve the % escape sequences and the query string.
+        self.assertEqual(
+            parser.request_uri,
+            "/foo/a+%2B%2F%C3%A4%3D%26a%3Aint?d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6",
+        )
         self.assertEqual(
             parser.query, "d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6"
         )

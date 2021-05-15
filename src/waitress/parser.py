@@ -248,6 +248,9 @@ class HTTPRequestParser:
 
         # command, uri, version will be bytes
         command, uri, version = crack_first_line(first_line)
+        # self.request_uri is like nginx's request_uri:
+        # "full original request URI (with arguments)"
+        self.request_uri = uri.decode("latin-1")
         version = version.decode("latin-1")
         command = command.decode("latin-1")
         self.command = command
