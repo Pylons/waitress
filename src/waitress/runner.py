@@ -96,7 +96,7 @@ Standard options:
     --url-scheme=STR
         Default wsgi.url_scheme value, default is 'http'.
 
-   --url-prefix=STR
+    --url-prefix=STR
         The ``SCRIPT_NAME`` WSGI environment value.  Setting this to anything
         except the empty string will cause the WSGI ``SCRIPT_NAME`` value to be
         the value passed minus any trailing slashes you add, and it will cause
