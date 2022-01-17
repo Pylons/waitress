@@ -1,6 +1,13 @@
 Next Release
 ------------
 
+Python Version Support
+~~~~~~~~~~~~~~~~~~~~~~
+
+- Python 3.6 is no longer supported by Waitress
+
+- Python 3.10 is fully supported by Waitress
+
 Bugfix
 ~~~~~~
 

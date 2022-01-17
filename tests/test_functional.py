@@ -52,6 +52,7 @@ class FixtureTcpWSGIServer(server.TcpWSGIServer):
 
     def __init__(self, application, queue, **kw):  # pragma: no cover
         # Coverage doesn't see this as it's ran in a separate process.
+        kw["host"] = "127.0.0.1"
         kw["port"] = 0  # Bind to any available port.
         super().__init__(application, **kw)
         host, port = self.socket.getsockname()
@@ -97,9 +98,20 @@ class SubprocessTests:
             self.proc.terminate()
         self.sock.close()
         # This give us one FD back ...
-        self.queue.close()
         self.proc.join()
         self.proc.close()
+        self.queue.close()
+        self.queue.join_thread()
+
+        # The following is for the benefit of PyPy 3, for some reason it is
+        # holding on to some resources way longer than necessary causing tests
+        # to fail with file desctriptor exceeded errors on macOS which defaults
+        # to 256 file desctriptors per process. While we could use ulimit to
+        # increase the limits before running tests, this works as well and
+        # means we don't need to remember to do that.
+        import gc
+
+        gc.collect()
 
     def assertline(self, line, status, reason, version):
         v, s, r = (x.strip() for x in line.split(None, 2))
