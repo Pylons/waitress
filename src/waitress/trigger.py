@@ -173,7 +173,7 @@ else:  # pragma: no cover
                     w.connect(connect_address)
                     break  # success
                 except OSError as detail:
-                    if detail[0] != errno.WSAEADDRINUSE:
+                    if getattr(detail, "winerror", None) != errno.WSAEADDRINUSE:
                         # "Address already in use" is the only error
                         # I've seen on two WinXP Pro SP2 boxes, under
                         # Pythons 2.3.5 and 2.4.1.
