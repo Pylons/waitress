@@ -4,6 +4,12 @@ Next Release
 Bugfix
 ~~~~~~
 
+- In Python 3 ``OSError`` is no longer subscriptable, this caused failures on
+  Windows attempting to loop to find an socket that would work for use in the
+  trigger.
+
+  See https://github.com/Pylons/waitress/pull/361
+
 - Fixed an issue whereby ``BytesIO`` objects were not properly closed, and
   thereby would not get cleaned up until garbage collection would get around to
   it.
