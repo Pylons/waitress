@@ -185,6 +185,8 @@ class TestReadOnlyFileBasedBuffer(unittest.TestCase):
     def test_prepare_not_seekable(self):
         f = KindaFilelike(b"abc")
         inst = self._makeOne(f)
+        self.assertFalse(hasattr(inst, "seek"))
+        self.assertFalse(hasattr(inst, "tell"))
         result = inst.prepare()
         self.assertEqual(result, False)
         self.assertEqual(inst.remain, 0)
@@ -200,6 +202,8 @@ class TestReadOnlyFileBasedBuffer(unittest.TestCase):
     def test_prepare_seekable_closeable(self):
         f = Filelike(b"abc", close=1, tellresults=[0, 10])
         inst = self._makeOne(f)
+        self.assertEqual(inst.seek, f.seek)
+        self.assertEqual(inst.tell, f.tell)
         result = inst.prepare()
         self.assertEqual(result, 10)
         self.assertEqual(inst.remain, 10)
