@@ -52,6 +52,7 @@ class FixtureTcpWSGIServer(server.TcpWSGIServer):
 
     def __init__(self, application, queue, **kw):  # pragma: no cover
         # Coverage doesn't see this as it's ran in a separate process.
+        kw["host"] = "127.0.0.1"
         kw["port"] = 0  # Bind to any available port.
         super().__init__(application, **kw)
         host, port = self.socket.getsockname()
