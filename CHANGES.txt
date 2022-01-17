@@ -1,6 +1,22 @@
 Next Release
 ------------
 
+Bugfix
+~~~~~~
+
+- Fixed an issue whereby ``BytesIO`` objects were not properly closed, and
+  thereby would not get cleaned up until garbage collection would get around to
+  it.
+
+  This led to potential for random memory spikes/memory issues, see
+  https://github.com/Pylons/waitress/pull/358 and
+  https://github.com/Pylons/waitress/issues/357 .
+
+  With thanks to Florian Schulze for testing/vaidating this fix!
+
+Features
+~~~~~~~~
+
 - Add REQUEST_URI to the WSGI environment.
 
   REQUEST_URI is similar to ``request_uri`` in nginx. It is a string that
