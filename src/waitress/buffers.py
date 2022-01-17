@@ -145,6 +145,16 @@ class ReadOnlyFileBasedBuffer(FileBasedBuffer):
         self.file = file
         self.block_size = block_size  # for __iter__
 
+        # This is for the benefit of anyone that is attempting to wrap this
+        # wsgi.file_wrapper in a WSGI middleware and wants to seek, this is
+        # useful for instance for support Range requests
+        if _is_seekable(self.file):
+            if hasattr(self.file, "seekable"):
+                self.seekable = self.file.seekable
+
+            self.seek = self.file.seek
+            self.tell = self.file.tell
+
     def prepare(self, size=None):
         if _is_seekable(self.file):
             start_pos = self.file.tell()
