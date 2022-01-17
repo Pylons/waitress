@@ -234,11 +234,23 @@ class OverflowableBuffer:
         return buf
 
     def _set_small_buffer(self):
-        self.buf = BytesIOBasedBuffer(self.buf)
+        oldbuf = self.buf
+        self.buf = BytesIOBasedBuffer(oldbuf)
+
+        # Attempt to close the old buffer
+        if hasattr(oldbuf, "close"):
+            oldbuf.close()
+
         self.overflowed = False
 
     def _set_large_buffer(self):
-        self.buf = TempfileBasedBuffer(self.buf)
+        oldbuf = self.buf
+        self.buf = TempfileBasedBuffer(oldbuf)
+
+        # Attempt to close the old buffer
+        if hasattr(oldbuf, "close"):
+            oldbuf.close()
+
         self.overflowed = True
 
     def append(self, s):

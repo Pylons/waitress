@@ -131,7 +131,6 @@ if os.name == "posix":
         def _physical_pull(self):
             os.write(self.trigger, b"x")
 
-
 else:  # pragma: no cover
     # Windows version; uses just sockets, because a pipe isn't select'able
     # on Windows.

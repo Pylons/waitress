@@ -405,7 +405,6 @@ if sys.platform.startswith("win"):  # pragma: no cover
     def _unlink(filename):
         _waitfor(os.unlink, filename)
 
-
 else:
     _unlink = os.unlink
 

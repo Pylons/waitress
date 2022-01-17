@@ -15,11 +15,13 @@ jobs:
         strategy:
             matrix:
                 py:
-                    - "3.6"
                     - "3.7"
                     - "3.8"
                     - "3.9"
-                    - "pypy3"
+                    - "3.10"
+                    - "pypy-3.8"
+                    # Pre-release
+                    - "3.11.0-alpha - 3.11.0"
                 os:
                     - "ubuntu-latest"
                     - "windows-latest"
@@ -27,16 +29,12 @@ jobs:
                 architecture:
                     - x64
                     - x86
-
                 exclude:
                     # Linux and macOS don't have x86 python
                     - os: "ubuntu-latest"
                       architecture: x86
                     - os: "macos-latest"
                       architecture: x86
-                    # Building on PyPy3 on Windows is broken
-                    - os: "windows-latest"
-                      py: "pypy3"
 
         name: "Python: ${{ matrix.py }}-${{ matrix.architecture }} on ${{ matrix.os }}"
         runs-on: ${{ matrix.os }}
