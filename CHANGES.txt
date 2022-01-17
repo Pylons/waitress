@@ -11,9 +11,9 @@ Python Version Support
 Bugfix
 ~~~~~~
 
-- ``wsgi.file_wrapper`` now sets the ``seekable``, ``seek``, and ``tell`` attributes from
-  the underlying file if the underlying file is seekable. This allows WSGI
-  middleware to implement things like range requests for example
+- ``wsgi.file_wrapper`` now sets the ``seekable``, ``seek``, and ``tell``
+  attributes from the underlying file if the underlying file is seekable. This
+  allows WSGI middleware to implement things like range requests for example
 
   See https://github.com/Pylons/waitress/issues/359 and
   https://github.com/Pylons/waitress/pull/363
