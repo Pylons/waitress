@@ -11,6 +11,13 @@ Python Version Support
 Bugfix
 ~~~~~~
 
+- ``wsgi.file_wrapper`` now sets the ``seekable``, ``seek``, and ``tell`` attributes from
+  the underlying file if the underlying file is seekable. This allows WSGI
+  middleware to implement things like range requests for example
+
+  See https://github.com/Pylons/waitress/issues/359 and
+  https://github.com/Pylons/waitress/pull/363
+
 - In Python 3 ``OSError`` is no longer subscriptable, this caused failures on
   Windows attempting to loop to find an socket that would work for use in the
   trigger.
