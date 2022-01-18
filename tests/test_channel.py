@@ -213,6 +213,13 @@ class TestHTTPChannel(unittest.TestCase):
 
     def test_write_soon_nonempty_byte(self):
         inst, sock, map = self._makeOneWithMap()
+
+        # _flush_some will no longer flush
+        def send(_):
+            return 0
+
+        sock.send = send
+
         wrote = inst.write_soon(b"a")
         self.assertEqual(wrote, 1)
         self.assertEqual(len(inst.outbufs[0]), 1)
@@ -224,14 +231,19 @@ class TestHTTPChannel(unittest.TestCase):
         wrapper = ReadOnlyFileBasedBuffer(f, 8192)
         wrapper.prepare()
         inst, sock, map = self._makeOneWithMap()
+
+        # _flush_some will no longer flush
+        def send(_):
+            return 0
+
+        sock.send = send
+
         outbufs = inst.outbufs
-        orig_outbuf = outbufs[0]
         wrote = inst.write_soon(wrapper)
         self.assertEqual(wrote, 3)
-        self.assertEqual(len(outbufs), 3)
-        self.assertEqual(outbufs[0], orig_outbuf)
-        self.assertEqual(outbufs[1], wrapper)
-        self.assertEqual(outbufs[2].__class__.__name__, "OverflowableBuffer")
+        self.assertEqual(len(outbufs), 2)
+        self.assertEqual(outbufs[0], wrapper)
+        self.assertEqual(outbufs[1].__class__.__name__, "OverflowableBuffer")
 
     def test_write_soon_disconnected(self):
         from waitress.channel import ClientDisconnected
@@ -253,16 +265,29 @@ class TestHTTPChannel(unittest.TestCase):
 
     def test_write_soon_rotates_outbuf_on_overflow(self):
         inst, sock, map = self._makeOneWithMap()
+
+        # _flush_some will no longer flush
+        def send(_):
+            return 0
+
+        sock.send = send
+
         inst.adj.outbuf_high_watermark = 3
         inst.current_outbuf_count = 4
         wrote = inst.write_soon(b"xyz")
         self.assertEqual(wrote, 3)
-        self.assertEqual(len(inst.outbufs), 2)
-        self.assertEqual(inst.outbufs[0].get(), b"")
-        self.assertEqual(inst.outbufs[1].get(), b"xyz")
+        self.assertEqual(len(inst.outbufs), 1)
+        self.assertEqual(inst.outbufs[0].get(), b"xyz")
 
     def test_write_soon_waits_on_backpressure(self):
         inst, sock, map = self._makeOneWithMap()
+
+        # _flush_some will no longer flush
+        def send(_):
+            return 0
+
+        sock.send = send
+
         inst.adj.outbuf_high_watermark = 3
         inst.total_outbufs_len = 4
         inst.current_outbuf_count = 4
@@ -275,10 +300,58 @@ class TestHTTPChannel(unittest.TestCase):
         inst.outbuf_lock = Lock()
         wrote = inst.write_soon(b"xyz")
         self.assertEqual(wrote, 3)
-        self.assertEqual(len(inst.outbufs), 2)
-        self.assertEqual(inst.outbufs[0].get(), b"")
-        self.assertEqual(inst.outbufs[1].get(), b"xyz")
+        self.assertEqual(len(inst.outbufs), 1)
+        self.assertEqual(inst.outbufs[0].get(), b"xyz")
         self.assertTrue(inst.outbuf_lock.waited)
+
+    def test_write_soon_attempts_flush_high_water_and_exception(self):
+        from waitress.channel import ClientDisconnected
+
+        inst, sock, map = self._makeOneWithMap()
+
+        # _flush_some will no longer flush, it will raise Exception, which
+        # disconnects the remote end
+        def send(_):
+            inst.connected = False
+            raise Exception()
+
+        sock.send = send
+
+        inst.adj.outbuf_high_watermark = 3
+        inst.total_outbufs_len = 4
+        inst.current_outbuf_count = 4
+
+        inst.outbufs[0].append(b"test")
+
+        class Lock(DummyLock):
+            def wait(self):
+                inst.total_outbufs_len = 0
+                super().wait()
+
+        inst.outbuf_lock = Lock()
+        self.assertRaises(ClientDisconnected, lambda: inst.write_soon(b"xyz"))
+
+        # Validate we woke up the main thread to deal with the exception of
+        # trying to send
+        self.assertTrue(inst.outbuf_lock.waited)
+        self.assertTrue(inst.server.trigger_pulled)
+
+    def test_write_soon_flush_and_exception(self):
+        inst, sock, map = self._makeOneWithMap()
+
+        # _flush_some will no longer flush, it will raise Exception, which
+        # disconnects the remote end
+        def send(_):
+            inst.connected = False
+            raise Exception()
+
+        sock.send = send
+
+        wrote = inst.write_soon(b"xyz")
+        self.assertEqual(wrote, 3)
+        # Validate we woke up the main thread to deal with the exception of
+        # trying to send
+        self.assertTrue(inst.server.trigger_pulled)
 
     def test_handle_write_notify_after_flush(self):
         inst, sock, map = self._makeOneWithMap()
