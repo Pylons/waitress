@@ -1,3 +1,60 @@
+2.0.0 (2021-03-07)
+------------------
+
+Friendly Reminder
+~~~~~~~~~~~~~~~~~
+
+This release still contains a variety of deprecation notices about defaults
+that can be set for a variety of options.
+
+Please note that this is your last warning, and you should update your
+configuration if you do NOT want to use the new defaults.
+
+See the arguments documentation page for all supported options, and pay
+attention to the warnings:
+
+https://docs.pylonsproject.org/projects/waitress/en/stable/arguments.html
+
+Without further ado, here's a short list of great changes thanks to our
+contributors!
+
+Bugfixes/Features
+~~~~~~~~~~~~~~~~~
+
+- Fix a crash on startup when listening to multiple interfaces.
+  See https://github.com/Pylons/waitress/pull/332
+
+- Waitress no longer attempts to guess at what the ``server_name`` should be for
+  a listen socket, instead it always use a new adjustment/argument named
+  ``server_name``.
+
+  Please see the documentation for ``server_name`` in
+  https://docs.pylonsproject.org/projects/waitress/en/latest/arguments.html and
+  see https://github.com/Pylons/waitress/pull/329
+
+- Allow tasks to notice if the client disconnected.
+
+  This inserts a callable ``waitress.client_disconnected`` into the environment
+  that allows the task to check if the client disconnected while waiting for
+  the response at strategic points in the execution and to cancel the
+  operation.
+
+  It requires setting the new adjustment ``channel_request_lookahead`` to a value
+  larger than 0, which continues to read requests from a channel even if a
+  request is already being processed on that channel, up to the given count,
+  since a client disconnect is detected by reading from a readable socket and
+  receiving an empty result.
+
+  See https://github.com/Pylons/waitress/pull/310
+
+- Drop Python 2.7 and 3.5 support
+
+- The server now issues warning output when it there are enough open
+  connections (controlled by "connection_limit"), that it is no longer
+  accepting new connections. This situation was previously difficult to
+  diagnose.
+  See https://github.com/Pylons/waitress/pull/322
+
 1.4.4 (2020-06-01)
 ------------------
 
