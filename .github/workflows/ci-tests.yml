@@ -29,6 +29,9 @@ jobs:
                 architecture:
                     - x64
                     - x86
+                include:
+                  - py: "pypy-3.8"
+                    toxenv: "pypy38"
                 exclude:
                     # Linux and macOS don't have x86 python
                     - os: "ubuntu-latest"
@@ -46,8 +49,15 @@ jobs:
                   python-version: ${{ matrix.py }}
                   architecture: ${{ matrix.architecture }}
             - run: pip install tox
-            - name: Running tox
+            - name: Running tox with specific toxenv
+              if: ${{ matrix.toxenv != '' }}
+              env:
+                TOXENV: ${{ matrix.toxenv }}
+              run: tox
+            - name: Running tox for current python version
+              if: ${{ matrix.toxenv == '' }}
               run: tox -e py
+
     coverage:
         runs-on: ubuntu-latest
         name: Validate coverage
