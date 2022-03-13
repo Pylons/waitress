@@ -23,6 +23,7 @@ from urllib.parse import unquote_to_bytes
 
 from waitress.buffers import OverflowableBuffer
 from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
+from waitress.rfc7230 import HEADER_FIELD_RE, ONLY_DIGIT_RE
 from waitress.utilities import (
     BadRequest,
     RequestEntityTooLarge,
@@ -30,8 +31,6 @@ from waitress.utilities import (
     ServerNotImplemented,
     find_double_newline,
 )
-
-from .rfc7230 import HEADER_FIELD
 
 
 def unquote_bytes_to_wsgi(bytestring):
@@ -221,7 +220,7 @@ class HTTPRequestParser:
         headers = self.headers
 
         for line in lines:
-            header = HEADER_FIELD.match(line)
+            header = HEADER_FIELD_RE.match(line)
 
             if not header:
                 raise ParsingError("Invalid header")
@@ -317,11 +316,12 @@ class HTTPRequestParser:
                 self.connection_close = True
 
         if not self.chunked:
-            try:
-                cl = int(headers.get("CONTENT_LENGTH", 0))
-            except ValueError:
+            cl = headers.get("CONTENT_LENGTH", "0")
+
+            if not ONLY_DIGIT_RE.match(cl.encode("latin-1")):
                 raise ParsingError("Content-Length is invalid")
 
+            cl = int(cl)
             self.content_length = cl
 
             if cl > 0:
