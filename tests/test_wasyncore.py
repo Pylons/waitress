@@ -1140,19 +1140,19 @@ class BaseTestAPI:
             join_thread(t, timeout=TIMEOUT)
 
 
-class TestAPI_UseIPv4Sockets(BaseTestAPI):
+class BaseTestAPI_UseIPv4Sockets(BaseTestAPI):
     family = socket.AF_INET
     addr = (HOST, 0)
 
 
 @unittest.skipUnless(IPV6_ENABLED, "IPv6 support required")
-class TestAPI_UseIPv6Sockets(BaseTestAPI):
+class BaseTestAPI_UseIPv6Sockets(BaseTestAPI):
     family = socket.AF_INET6
     addr = (HOSTv6, 0)
 
 
 @unittest.skipUnless(HAS_UNIX_SOCKETS, "Unix sockets required")
-class TestAPI_UseUnixSockets(BaseTestAPI):
+class BaseTestAPI_UseUnixSockets(BaseTestAPI):
     if HAS_UNIX_SOCKETS:
         family = socket.AF_UNIX
     addr = TESTFN
@@ -1162,30 +1162,30 @@ class TestAPI_UseUnixSockets(BaseTestAPI):
         BaseTestAPI.tearDown(self)
 
 
-class TestAPI_UseIPv4Select(TestAPI_UseIPv4Sockets, unittest.TestCase):
+class TestAPI_UseIPv4Select(BaseTestAPI_UseIPv4Sockets, unittest.TestCase):
     use_poll = False
 
 
 @unittest.skipUnless(hasattr(select, "poll"), "select.poll required")
-class TestAPI_UseIPv4Poll(TestAPI_UseIPv4Sockets, unittest.TestCase):
+class TestAPI_UseIPv4Poll(BaseTestAPI_UseIPv6Sockets, unittest.TestCase):
     use_poll = True
 
 
-class TestAPI_UseIPv6Select(TestAPI_UseIPv6Sockets, unittest.TestCase):
+class TestAPI_UseIPv6Select(BaseTestAPI_UseIPv6Sockets, unittest.TestCase):
     use_poll = False
 
 
 @unittest.skipUnless(hasattr(select, "poll"), "select.poll required")
-class TestAPI_UseIPv6Poll(TestAPI_UseIPv6Sockets, unittest.TestCase):
+class TestAPI_UseIPv6Poll(BaseTestAPI_UseIPv6Sockets, unittest.TestCase):
     use_poll = True
 
 
-class TestAPI_UseUnixSocketsSelect(TestAPI_UseUnixSockets, unittest.TestCase):
+class TestAPI_UseUnixSocketsSelect(BaseTestAPI_UseUnixSockets, unittest.TestCase):
     use_poll = False
 
 
 @unittest.skipUnless(hasattr(select, "poll"), "select.poll required")
-class TestAPI_UseUnixSocketsPoll(TestAPI_UseUnixSockets, unittest.TestCase):
+class TestAPI_UseUnixSocketsPoll(BaseTestAPI_UseUnixSockets, unittest.TestCase):
     use_poll = True
 
 
