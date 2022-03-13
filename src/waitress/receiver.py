@@ -135,7 +135,6 @@ class ChunkedReceiver:
                     line = s[:pos]
                     s = s[pos + 2 :]
                     self.control_line = b""
-                    line = line.strip()
 
                     if line:
                         # Begin a new chunk.
@@ -153,9 +152,6 @@ class ChunkedReceiver:
 
                             line = line[:semi]
 
-                        # Remove any whitespace
-                        line = line.strip()
-
                         if not ONLY_HEXDIG_RE.match(line):
                             self.error = BadRequest("Invalid chunk size")
                             self.all_chunks_received = True
@@ -164,7 +160,7 @@ class ChunkedReceiver:
 
                         # Can not fail due to matching against the regular
                         # expression above
-                        sz = int(line.strip(), 16)  # hexadecimal
+                        sz = int(line, 16)  # hexadecimal
 
                         if sz > 0:
                             # Start a new chunk.

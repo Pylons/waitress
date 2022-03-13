@@ -262,7 +262,9 @@ class TestChunkedReceiverParametrized:
         assert result == len(data)
         assert inst.error == None
 
-    @pytest.mark.parametrize("invalid_size", [b"0x04", b"+0x04", b"x04", b"+04"])
+    @pytest.mark.parametrize(
+        "invalid_size", [b"0x04", b"+0x04", b"x04", b"+04", b" 04", b" 0x04"]
+    )
     def test_received_invalid_size(self, invalid_size):
         from waitress.utilities import BadRequest
 
