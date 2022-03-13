@@ -155,7 +155,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             b"Transfer-Encoding: chunked\r\n"
             b"X-Foo: 1\r\n"
             b"\r\n"
-            b"1d;\r\n"
+            b"1d\r\n"
             b"This string has 29 characters\r\n"
             b"0\r\n\r\n"
         )

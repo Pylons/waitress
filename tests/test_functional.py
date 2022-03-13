@@ -322,7 +322,7 @@ class EchoTests:
             self.assertFalse("transfer-encoding" in headers)
 
     def test_chunking_request_with_content(self):
-        control_line = b"20;\r\n"  # 20 hex = 32 dec
+        control_line = b"20\r\n"  # 20 hex = 32 dec
         s = b"This string has 32 characters.\r\n"
         expected = s * 12
         header = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
@@ -341,7 +341,7 @@ class EchoTests:
             self.assertFalse("transfer-encoding" in headers)
 
     def test_broken_chunked_encoding(self):
-        control_line = b"20;\r\n"  # 20 hex = 32 dec
+        control_line = b"20\r\n"  # 20 hex = 32 dec
         s = b"This string has 32 characters.\r\n"
         to_send = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
         to_send += control_line + s + b"\r\n"
@@ -365,7 +365,7 @@ class EchoTests:
             self.assertRaises(ConnectionClosed, read_http, fp)
 
     def test_broken_chunked_encoding_missing_chunk_end(self):
-        control_line = b"20;\r\n"  # 20 hex = 32 dec
+        control_line = b"20\r\n"  # 20 hex = 32 dec
         s = b"This string has 32 characters.\r\n"
         to_send = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
         to_send += control_line + s
