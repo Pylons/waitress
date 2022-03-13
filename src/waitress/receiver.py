@@ -150,12 +150,21 @@ class ChunkedReceiver:
                                 self.all_chunks_received = True
 
                                 break
+
                             line = line[:semi]
-                        try:
-                            sz = int(line.strip(), 16)  # hexadecimal
-                        except ValueError:  # garbage in input
-                            self.error = BadRequest("garbage in chunked encoding input")
-                            sz = 0
+
+                        # Remove any whitespace
+                        line = line.strip()
+
+                        if not ONLY_HEXDIG_RE.match(line):
+                            self.error = BadRequest("Invalid chunk size")
+                            self.all_chunks_received = True
+
+                            break
+
+                        # Can not fail due to matching against the regular
+                        # expression above
+                        sz = int(line.strip(), 16)  # hexadecimal
 
                         if sz > 0:
                             # Start a new chunk.
