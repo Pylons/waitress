@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 
 class TestFixedStreamReceiver(unittest.TestCase):
     def _makeOne(self, cl, buf):
@@ -224,6 +226,41 @@ class TestChunkedReceiver(unittest.TestCase):
         self.assertEqual(inst.completed, True)
         self.assertEqual(b"".join(buf.data), b"Wikipedia in\r\n\r\nchunks.")
         self.assertEqual(inst.error, None)
+
+
+class TestChunkedReceiverParametrized:
+    def _makeOne(self, buf):
+        from waitress.receiver import ChunkedReceiver
+
+        return ChunkedReceiver(buf)
+
+    @pytest.mark.parametrize(
+        "invalid_extension", [b"\n", b"invalid=", b"\r", b"invalid = true"]
+    )
+    def test_received_invalid_extensions(self, invalid_extension):
+        from waitress.utilities import BadRequest
+
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        data = b"4;" + invalid_extension + b"\r\ntest\r\n"
+        result = inst.received(data)
+        assert result == len(data)
+        assert inst.error.__class__ == BadRequest
+        assert inst.error.body == "Invalid chunk extension"
+
+    @pytest.mark.parametrize(
+        "valid_extension", [b"test", b"valid=true", b"valid=true;other=true"]
+    )
+    def test_received_valid_extensions(self, valid_extension):
+        # While waitress may ignore extensions in Chunked Encoding, we do want
+        # to make sure that we don't fail when we do encounter one that is
+        # valid
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        data = b"4;" + valid_extension + b"\r\ntest\r\n"
+        result = inst.received(data)
+        assert result == len(data)
+        assert inst.error == None
 
 
 class DummyBuffer:

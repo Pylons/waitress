@@ -14,6 +14,7 @@
 """Data Chunk Receiver
 """
 
+from waitress.rfc7230 import CHUNK_EXT_RE, ONLY_HEXDIG_RE
 from waitress.utilities import BadRequest, find_double_newline
 
 
@@ -110,6 +111,7 @@ class ChunkedReceiver:
                     s = b""
                 else:
                     self.chunk_end = b""
+
                     if pos == 0:
                         # Chop off the terminating CR LF from the chunk
                         s = s[2:]
@@ -140,7 +142,14 @@ class ChunkedReceiver:
                         semi = line.find(b";")
 
                         if semi >= 0:
-                            # discard extension info.
+                            extinfo = line[semi:]
+                            valid_ext_info = CHUNK_EXT_RE.match(extinfo)
+
+                            if not valid_ext_info:
+                                self.error = BadRequest("Invalid chunk extension")
+                                self.all_chunks_received = True
+
+                                break
                             line = line[:semi]
                         try:
                             sz = int(line.strip(), 16)  # hexadecimal
