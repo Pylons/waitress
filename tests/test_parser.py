@@ -155,7 +155,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             b"Transfer-Encoding: chunked\r\n"
             b"X-Foo: 1\r\n"
             b"\r\n"
-            b"1d;\r\n"
+            b"1d\r\n"
             b"This string has 29 characters\r\n"
             b"0\r\n\r\n"
         )
@@ -185,6 +185,26 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_parse_header_bad_content_length(self):
         data = b"GET /foobar HTTP/8.4\r\ncontent-length: abc\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Content-Length is invalid", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_bad_content_length_plus(self):
+        data = b"GET /foobar HTTP/8.4\r\ncontent-length: +10\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Content-Length is invalid", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_parse_header_bad_content_length_minus(self):
+        data = b"GET /foobar HTTP/8.4\r\ncontent-length: -10\r\n"
 
         try:
             self.parser.parse_header(data)

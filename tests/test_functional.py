@@ -322,7 +322,7 @@ class EchoTests:
             self.assertFalse("transfer-encoding" in headers)
 
     def test_chunking_request_with_content(self):
-        control_line = b"20;\r\n"  # 20 hex = 32 dec
+        control_line = b"20\r\n"  # 20 hex = 32 dec
         s = b"This string has 32 characters.\r\n"
         expected = s * 12
         header = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
@@ -341,7 +341,7 @@ class EchoTests:
             self.assertFalse("transfer-encoding" in headers)
 
     def test_broken_chunked_encoding(self):
-        control_line = b"20;\r\n"  # 20 hex = 32 dec
+        control_line = b"20\r\n"  # 20 hex = 32 dec
         s = b"This string has 32 characters.\r\n"
         to_send = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
         to_send += control_line + s + b"\r\n"
@@ -364,8 +364,52 @@ class EchoTests:
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
 
+    def test_broken_chunked_encoding_invalid_hex(self):
+        control_line = b"0x20\r\n"  # 20 hex = 32 dec
+        s = b"This string has 32 characters.\r\n"
+        to_send = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
+        to_send += control_line + s + b"\r\n"
+        self.connect()
+        self.sock.send(to_send)
+        with self.sock.makefile("rb", 0) as fp:
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, "400", "Bad Request", "HTTP/1.1")
+            cl = int(headers["content-length"])
+            self.assertEqual(cl, len(response_body))
+            self.assertIn(b"Invalid chunk size", response_body)
+            self.assertEqual(
+                sorted(headers.keys()),
+                ["connection", "content-length", "content-type", "date", "server"],
+            )
+            self.assertEqual(headers["content-type"], "text/plain")
+            # connection has been closed
+            self.send_check_error(to_send)
+            self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_broken_chunked_encoding_invalid_extension(self):
+        control_line = b"20;invalid=\r\n"  # 20 hex = 32 dec
+        s = b"This string has 32 characters.\r\n"
+        to_send = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
+        to_send += control_line + s + b"\r\n"
+        self.connect()
+        self.sock.send(to_send)
+        with self.sock.makefile("rb", 0) as fp:
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, "400", "Bad Request", "HTTP/1.1")
+            cl = int(headers["content-length"])
+            self.assertEqual(cl, len(response_body))
+            self.assertIn(b"Invalid chunk extension", response_body)
+            self.assertEqual(
+                sorted(headers.keys()),
+                ["connection", "content-length", "content-type", "date", "server"],
+            )
+            self.assertEqual(headers["content-type"], "text/plain")
+            # connection has been closed
+            self.send_check_error(to_send)
+            self.assertRaises(ConnectionClosed, read_http, fp)
+
     def test_broken_chunked_encoding_missing_chunk_end(self):
-        control_line = b"20;\r\n"  # 20 hex = 32 dec
+        control_line = b"20\r\n"  # 20 hex = 32 dec
         s = b"This string has 32 characters.\r\n"
         to_send = b"GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"
         to_send += control_line + s
