@@ -175,7 +175,7 @@ class Adjustments:
     # sense to set when you have a trusted_proxy, and you expect the upstream
     # proxy server to filter invalid headers
     log_untrusted_proxy_headers = False
-    
+
     # Changed this parameter to True by default in 2.x
     clear_untrusted_proxy_headers = True
 
