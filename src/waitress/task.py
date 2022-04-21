@@ -355,7 +355,7 @@ class ErrorTask(Task):
         self.response_headers.append(("Connection", "close"))
         self.close_on_finish = True
         self.content_length = len(body)
-        self.write(body.encode("latin-1"))
+        self.write(body)
 
 
 class WSGITask(Task):
