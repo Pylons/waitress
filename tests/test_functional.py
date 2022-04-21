@@ -1269,6 +1269,49 @@ class InternalServerErrorTests:
             self.assertRaises(ConnectionClosed, read_http, fp)
 
 
+class InternalServerErrorTestsWithTraceback:
+    def setUp(self):
+        from tests.fixtureapps import error_traceback
+
+        self.start_subprocess(error_traceback.app, expose_tracebacks=True)
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def test_expose_tracebacks_http_10(self):
+        to_send = b"GET / HTTP/1.0\r\n\r\n"
+        self.connect()
+        self.sock.send(to_send)
+        with self.sock.makefile("rb", 0) as fp:
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, "500", "Internal Server Error", "HTTP/1.0")
+            cl = int(headers["content-length"])
+            self.assertEqual(cl, len(response_body))
+            self.assertTrue(response_body.startswith(b"Internal Server Error"))
+            self.assertEqual(headers["connection"], "close")
+            # connection has been closed
+            self.send_check_error(to_send)
+            self.assertRaises(ConnectionClosed, read_http, fp)
+
+    def test_expose_tracebacks_http_11(self):
+        to_send = b"GET / HTTP/1.1\r\n\r\n"
+        self.connect()
+        self.sock.send(to_send)
+        with self.sock.makefile("rb", 0) as fp:
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, "500", "Internal Server Error", "HTTP/1.1")
+            cl = int(headers["content-length"])
+            self.assertEqual(cl, len(response_body))
+            self.assertTrue(response_body.startswith(b"Internal Server Error"))
+            self.assertEqual(
+                sorted(headers.keys()),
+                ["connection", "content-length", "content-type", "date", "server"],
+            )
+            # connection has been closed
+            self.send_check_error(to_send)
+            self.assertRaises(ConnectionClosed, read_http, fp)
+
+
 class FileWrapperTests:
     def setUp(self):
         from tests.fixtureapps import filewrapper
@@ -1538,6 +1581,12 @@ class TcpInternalServerErrorTests(
     pass
 
 
+class TcpInternalServerErrorTestsWithTraceback(
+    InternalServerErrorTestsWithTraceback, TcpTests, unittest.TestCase
+):
+    pass
+
+
 class TcpFileWrapperTests(FileWrapperTests, TcpTests, unittest.TestCase):
     pass
 
@@ -1601,6 +1650,11 @@ if hasattr(socket, "AF_UNIX"):
 
     class UnixInternalServerErrorTests(
         InternalServerErrorTests, UnixTests, unittest.TestCase
+    ):
+        pass
+
+    class UnixInternalServerErrorTestsWithTraceback(
+        InternalServerErrorTestsWithTraceback, UnixTests, unittest.TestCase
     ):
         pass
 
