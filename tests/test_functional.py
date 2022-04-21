@@ -359,7 +359,7 @@ class EchoTests:
                 sorted(headers.keys()),
                 ["connection", "content-length", "content-type", "date", "server"],
             )
-            self.assertEqual(headers["content-type"], "text/plain")
+            self.assertEqual(headers["content-type"], "text/plain; charset=utf-8")
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -381,7 +381,7 @@ class EchoTests:
                 sorted(headers.keys()),
                 ["connection", "content-length", "content-type", "date", "server"],
             )
-            self.assertEqual(headers["content-type"], "text/plain")
+            self.assertEqual(headers["content-type"], "text/plain; charset=utf-8")
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -403,7 +403,7 @@ class EchoTests:
                 sorted(headers.keys()),
                 ["connection", "content-length", "content-type", "date", "server"],
             )
-            self.assertEqual(headers["content-type"], "text/plain")
+            self.assertEqual(headers["content-type"], "text/plain; charset=utf-8")
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -428,7 +428,7 @@ class EchoTests:
                 sorted(headers.keys()),
                 ["connection", "content-length", "content-type", "date", "server"],
             )
-            self.assertEqual(headers["content-type"], "text/plain")
+            self.assertEqual(headers["content-type"], "text/plain; charset=utf-8")
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1121,7 +1121,7 @@ class TooLargeTests:
             self.assertline(line, "413", "Request Entity Too Large", "HTTP/1.1")
             cl = int(headers["content-length"])
             self.assertEqual(cl, len(response_body))
-            self.assertEqual(headers["content-type"], "text/plain")
+            self.assertEqual(headers["content-type"], "text/plain; charset=utf-8")
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
