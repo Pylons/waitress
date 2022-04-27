@@ -106,6 +106,18 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(self.parser.completed)
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
 
+    def test_received_headers_not_too_large_multiple_chunks(self):
+
+        data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n"
+        data2 = b"X-Foo-Other: 3\r\n\r\n"
+        self.parser.adj.max_request_header_size = len(data) + len(data2) + 1
+        result = self.parser.received(data)
+        self.assertEqual(result, 32)
+        result = self.parser.received(data2)
+        self.assertEqual(result, 18)
+        self.assertTrue(self.parser.completed)
+        self.assertFalse(self.parser.error)
+
     def test_received_headers_too_large(self):
 
         self.parser.adj.max_request_header_size = 2

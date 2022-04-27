@@ -103,7 +103,7 @@ class HTTPRequestParser:
                 # If the headers have ended, and we also have part of the body
                 # message in data we still want to validate we aren't going
                 # over our limit for received headers.
-                self.header_bytes_received += index
+                self.header_bytes_received = index
                 consumed = datalen - (len(s) - index)
             else:
                 self.header_bytes_received += datalen
