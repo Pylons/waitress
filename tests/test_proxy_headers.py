@@ -16,7 +16,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
             response.headers = response_headers
 
         response.steps = list(app(environ, start_response))
-        response.body = b"".join(s.encode("latin-1") for s in response.steps)
+        response.body = b"".join(s for s in response.steps)
         return response
 
     def test_get_environment_values_w_scheme_override_untrusted(self):
@@ -727,7 +727,7 @@ class DummyApp:
     def __call__(self, environ, start_response):
         self.environ = environ
         start_response("200 OK", [("Content-Type", "text/plain")])
-        yield "hello"
+        yield b"hello"
 
 
 class DummyResponse:
