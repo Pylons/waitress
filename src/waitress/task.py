@@ -57,7 +57,7 @@ class ThreadedTaskDispatcher:
 
     def start_new_thread(self, target, thread_no):
         t = threading.Thread(
-            target=target, name="waitress-{}".format(thread_no), args=(thread_no,)
+            target=target, name=f"waitress-{thread_no}", args=(thread_no,)
         )
         t.daemon = True
         t.start()
@@ -266,7 +266,7 @@ class Task:
 
         self.response_headers = response_headers
 
-        first_line = "HTTP/%s %s" % (self.version, self.status)
+        first_line = f"HTTP/{self.version} {self.status}"
         # NB: sorting headers needs to preserve same-named-header order
         # as per RFC 2616 section 4.2; thus the key=lambda x: x[0] here;
         # rely on stable sort to keep relative position of same-named headers
@@ -400,11 +400,11 @@ class WSGITask(Task):
             for k, v in headers:
                 if not k.__class__ is str:
                     raise AssertionError(
-                        "Header name %r is not a string in %r" % (k, (k, v))
+                        f"Header name {k!r} is not a string in {(k, v)!r}"
                     )
                 if not v.__class__ is str:
                     raise AssertionError(
-                        "Header value %r is not a string in %r" % (v, (k, v))
+                        f"Header value {v!r} is not a string in {(k, v)!r}"
                     )
 
                 if "\n" in v or "\r" in v:
