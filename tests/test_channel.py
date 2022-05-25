@@ -376,7 +376,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.total_outbufs_len = len(inst.outbufs[0])
         inst.adj.send_bytes = 1
         inst.adj.outbuf_high_watermark = 2
-        sock.send = lambda x: False
+        sock.send = lambda x, do_close=True: False
         inst.will_close = False
         inst.last_activity = 0
         result = inst.handle_write()
@@ -453,7 +453,7 @@ class TestHTTPChannel(unittest.TestCase):
 
         buf = DummyHugeOutbuffer()
         inst.outbufs = [buf]
-        inst.send = lambda *arg: 0
+        inst.send = lambda *arg, do_close: 0
         result = inst._flush_some()
         # we are testing that _flush_some doesn't raise an OverflowError
         # when one of its outbufs has a __len__ that returns gt sys.maxint
