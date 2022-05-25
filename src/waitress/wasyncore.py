@@ -328,7 +328,7 @@ class dispatcher:
                 status.append("%s:%d" % self.addr)
             except TypeError:  # pragma: no cover
                 status.append(repr(self.addr))
-        return "<%s at %#x>" % (" ".join(status), id(self))
+        return "<{} at {:#x}>".format(" ".join(status), id(self))
 
     __str__ = __repr__
 

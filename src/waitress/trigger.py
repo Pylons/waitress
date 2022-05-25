@@ -106,9 +106,7 @@ class _triggerbase:
                     thunk()
                 except:
                     nil, t, v, tbinfo = wasyncore.compact_traceback()
-                    self.log_info(
-                        "exception in trigger thunk: (%s:%s %s)" % (t, v, tbinfo)
-                    )
+                    self.log_info(f"exception in trigger thunk: ({t}:{v} {tbinfo})")
             self.thunks = []
 
 

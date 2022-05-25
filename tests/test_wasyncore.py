@@ -31,7 +31,7 @@ if os.name == "java":  # pragma: no cover
 else:
     TESTFN = "@test"
 
-TESTFN = "{}_{}_tmp".format(TESTFN, os.getpid())
+TESTFN = f"{TESTFN}_{os.getpid()}_tmp"
 
 
 class DummyLogger:  # pragma: no cover
@@ -574,7 +574,7 @@ class HelperFunctionTests(unittest.TestCase):
         self.assertEqual(function, "test_compact_traceback")
         self.assertEqual(t, real_t)
         self.assertEqual(v, real_v)
-        self.assertEqual(info, "[%s|%s|%s]" % (f, function, line))
+        self.assertEqual(info, f"[{f}|{function}|{line}]")
 
 
 class DispatcherTests(unittest.TestCase):
