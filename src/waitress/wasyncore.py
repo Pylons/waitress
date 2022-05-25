@@ -426,7 +426,7 @@ class dispatcher:
         else:
             return conn, addr
 
-    def send(self, data):
+    def send(self, data, do_close=True):
         try:
             result = self.socket.send(data)
             return result
@@ -434,7 +434,8 @@ class dispatcher:
             if why.args[0] == EWOULDBLOCK:
                 return 0
             elif why.args[0] in _DISCONNECTED:
-                self.handle_close()
+                if do_close:
+                    self.handle_close()
                 return 0
             else:
                 raise
