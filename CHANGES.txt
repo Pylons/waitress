@@ -1,12 +1,6 @@
 2.1.2
 -----
 
-Updated Defaults
-~~~~~~~~~~~~~~~~
-
-- clear_untrusted_proxy_headers is set to True by default. See
-  https://github.com/Pylons/waitress/pull/370
-
 Bugfix
 ~~~~~~
 
