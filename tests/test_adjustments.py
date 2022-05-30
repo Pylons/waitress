@@ -354,6 +354,20 @@ class TestAdjustments(unittest.TestCase):
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
             self.assertIn("Implicitly trusting X-Forwarded-Proto", str(w[0]))
 
+    def test_clear_untrusted_proxy_headers(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.resetwarnings()
+            warnings.simplefilter("always")
+            self._makeOne(
+                trusted_proxy="localhost", trusted_proxy_headers={"x-forwarded-for"}
+            )
+
+            self.assertGreaterEqual(len(w), 1)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+            self.assertIn(
+                "clear_untrusted_proxy_headers will be set to True", str(w[0])
+            )
+
     def test_deprecated_send_bytes(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.resetwarnings()

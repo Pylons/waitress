@@ -158,11 +158,7 @@ clear_untrusted_proxy_headers
    "X-Forwared-For", "X-Forwarded-By", "X-Forwarded-Host", "X-Forwarded-Port",
    "X-Forwarded-Proto") not explicitly allowed by ``trusted_proxy_headers``.
 
-   Default: ``True``
-
-   .. versionchanged:: 2.1.2
-      In this version default value is set to ``True`` and deprecation warning
-      doesn't show up anymore.
+   Default: ``False``
 
    .. versionadded:: 1.2.0
 
