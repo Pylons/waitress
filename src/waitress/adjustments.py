@@ -95,10 +95,6 @@ class _int_marker(int):
     pass
 
 
-class _bool_marker:
-    pass
-
-
 class Adjustments:
     """This class contains tunable parameters."""
 
@@ -180,9 +176,8 @@ class Adjustments:
     # proxy server to filter invalid headers
     log_untrusted_proxy_headers = False
 
-    # Should waitress clear any proxy headers that are not deemed trusted from
-    # the environ? Change to True by default in 2.x
-    clear_untrusted_proxy_headers = _bool_marker
+    # Changed this parameter to True by default in 2.x
+    clear_untrusted_proxy_headers = True
 
     # default ``wsgi.url_scheme`` value
     url_scheme = "http"
@@ -444,15 +439,6 @@ class Adjustments:
                 DeprecationWarning,
             )
             self.trusted_proxy_headers = {"x-forwarded-proto"}
-
-        if self.clear_untrusted_proxy_headers is _bool_marker:
-            warnings.warn(
-                "In future versions of Waitress clear_untrusted_proxy_headers will be "
-                "set to True by default. You may opt-out by setting this value to "
-                "False, or opt-in explicitly by setting this to True.",
-                DeprecationWarning,
-            )
-            self.clear_untrusted_proxy_headers = False
 
         self.listen = wanted_sockets
 
