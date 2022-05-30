@@ -1,3 +1,34 @@
+2.1.2
+-----
+
+Updated Defaults
+~~~~~~~~~~~~~~~~
+
+- clear_untrusted_proxy_headers is set to True by default. See
+  https://github.com/Pylons/waitress/pull/370
+
+Bugfix
+~~~~~~
+
+- When expose_tracebacks is enabled waitress would fail to properly encode
+  unicode thereby causing another error during error handling. See
+  https://github.com/Pylons/waitress/pull/378
+
+- Header length checking had a calculation that was done incorrectly when the
+  data was received across multple socket reads. This calculation has been
+  corrected, and no longer will Waitress send back a 413 Request Entity Too
+  Large. See https://github.com/Pylons/waitress/pull/376
+
+Security Bugfix
+~~~~~~~~~~~~~~~
+
+- in 2.1.0 a new feature was introduced that allowed the WSGI thread to start
+  sending data to the socket. However this introduced a race condition whereby
+  a socket may be closed in the sending thread while the main thread is about
+  to call select() therey causing the entire application to be taken down.
+  Waitress will no longer close the socket in the WSGI thread, instead waking
+  up the main thread to cleanup. See https://github.com/Pylons/waitress/pull/377
+
 2.1.1
 -----
 
