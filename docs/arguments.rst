@@ -160,7 +160,7 @@ clear_untrusted_proxy_headers
 
    Default: ``True``
 
-   .. versionchanged:: 2.1.2
+   .. versionchanged:: 3.0.0
       In this version default value is set to ``True`` and deprecation warning
       doesn't show up anymore.
 

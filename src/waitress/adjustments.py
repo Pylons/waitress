@@ -176,7 +176,7 @@ class Adjustments:
     # proxy server to filter invalid headers
     log_untrusted_proxy_headers = False
 
-    # Changed this parameter to True by default in 2.x
+    # Changed this parameter to True by default in 3.x
     clear_untrusted_proxy_headers = True
 
     # default ``wsgi.url_scheme`` value
