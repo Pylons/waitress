@@ -105,8 +105,8 @@ class SubprocessTests:
 
         # The following is for the benefit of PyPy 3, for some reason it is
         # holding on to some resources way longer than necessary causing tests
-        # to fail with file desctriptor exceeded errors on macOS which defaults
-        # to 256 file desctriptors per process. While we could use ulimit to
+        # to fail with file descriptor exceeded errors on macOS which defaults
+        # to 256 file descriptors per process. While we could use ulimit to
         # increase the limits before running tests, this works as well and
         # means we don't need to remember to do that.
         import gc

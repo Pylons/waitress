@@ -57,7 +57,7 @@ Using ``host`` and ``port`` is also supported:
     host = 127.0.0.1
     port = 8080
 
-The :term:`PasteDeploy` syntax for UNIX domain sockets is analagous:
+The :term:`PasteDeploy` syntax for UNIX domain sockets is analogous:
 
 .. code-block:: ini
 
