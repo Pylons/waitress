@@ -126,7 +126,7 @@ class HTTPRequestParser:
                 # Header finished.
                 header_plus = s[:index]
 
-                # Remove preceeding blank lines. This is suggested by
+                # Remove preceding blank lines. This is suggested by
                 # https://tools.ietf.org/html/rfc7230#section-3.5 to support
                 # clients sending an extra CR LF after another request when
                 # using HTTP pipelining
