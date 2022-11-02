@@ -20,6 +20,7 @@ import time
 
 from .buffers import ReadOnlyFileBasedBuffer
 from .utilities import build_http_date, logger, queue_logger
+from .signals import signals
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
     "CONTENT_LENGTH": "CONTENT_LENGTH",
@@ -289,6 +290,7 @@ class Task:
         self.response_headers = response_headers
 
     def start(self):
+        signals.send("task_started", self.channel.server, task=self)
         self.start_time = time.time()
 
     def finish(self):
@@ -297,6 +299,8 @@ class Task:
         if self.chunked_response:
             # not self.write, it will chunk it!
             self.channel.write_soon(b"0\r\n\r\n")
+
+        signals.send("task_finished", self.channel.server, task=self)
 
     def write(self, data):
         if not self.complete:

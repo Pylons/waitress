@@ -23,6 +23,7 @@ from waitress.channel import HTTPChannel
 from waitress.compat import IPPROTO_IPV6, IPV6_V6ONLY
 from waitress.task import ThreadedTaskDispatcher
 from waitress.utilities import cleanup_unix_socket
+from waitress.signals import signals
 
 from . import wasyncore
 from .proxy_headers import proxy_headers_middleware
@@ -318,6 +319,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
         self.channel_class(self, conn, addr, self.adj, map=self._map)
 
     def run(self):
+        signals.send("server_started", self)
         try:
             self.asyncore.loop(
                 timeout=self.adj.asyncore_loop_timeout,
@@ -326,6 +328,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
             )
         except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
+            signals.send("server_finished", self)
 
     def pull_trigger(self):
         self.trigger.pull_trigger()

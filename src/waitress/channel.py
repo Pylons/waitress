@@ -20,6 +20,7 @@ from waitress.buffers import OverflowableBuffer, ReadOnlyFileBasedBuffer
 from waitress.parser import HTTPRequestParser
 from waitress.task import ErrorTask, WSGITask
 from waitress.utilities import InternalServerError
+from waitress.signals import signals
 
 from . import wasyncore
 
@@ -323,6 +324,7 @@ class HTTPChannel(wasyncore.dispatcher):
         """
         wasyncore.dispatcher.add_channel(self, map)
         self.server.active_channels[self._fileno] = self
+        signals.send("channel_added", self.server, channel=self)
 
     def del_channel(self, map=None):
         """See wasyncore.dispatcher
@@ -335,6 +337,8 @@ class HTTPChannel(wasyncore.dispatcher):
 
         if fd in ac:
             del ac[fd]
+
+        signals.send("channel_deleted", self.server, channel=self)
 
     #
     # SYNCHRONOUS METHODS
