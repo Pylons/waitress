@@ -551,6 +551,7 @@ class WSGITask(Task):
             "wsgi.input": request.get_body_stream(),
             "wsgi.file_wrapper": ReadOnlyFileBasedBuffer,
             "wsgi.input_terminated": True,  # wsgi.input is EOF terminated
+            "waitress.channel": channel,
         }
 
         for key, value in dict(request.headers).items():
