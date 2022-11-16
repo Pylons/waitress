@@ -146,3 +146,5 @@ Contributors
 - Jack Wearden, 2018-05-18
 
 - Frank Krick, 2018-10-29
+
+- Jonathan Vanasco, 2022-11-15

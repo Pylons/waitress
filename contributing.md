@@ -23,7 +23,7 @@ To respect both your time and ours, we emphasize the following points.
 Git branches
 ------------
 
-There is a single branch [master](https://github.com/Pylons/waitress/) on which development takes place and from which releases to PyPI are tagged. This is the default branch on GitHub.
+There is a single branch [main](https://github.com/Pylons/waitress/) on which development takes place and from which releases to PyPI are tagged. This is the default branch on GitHub.
 
 
 Running tests and building documentation
@@ -81,7 +81,7 @@ Contributing documentation
 
 6.  From this point forward, follow the typical [git workflow](https://help.github.com/articles/what-is-a-good-git-workflow/). Start by pulling from the upstream to get the most current changes.
 
-         git pull upstream master
+         git pull upstream main
 
 7.  Make a branch, make changes to the docs, and rebuild them as indicated in step 5.  To speed up the build process, you can omit `clean` from the above command to rebuild only those pages that depend on the files you have changed.
 
