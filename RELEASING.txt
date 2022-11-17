@@ -50,7 +50,7 @@ Prepare new release
 
 
 Prepare main for further development (major releases only)
-------------------------------------------------------------
+----------------------------------------------------------
 
 - In CHANGES.txt, preserve headings but clear out content. Add heading
   "unreleased" for the version number.
