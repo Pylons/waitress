@@ -44,10 +44,8 @@ class FileBasedBuffer:
     def __len__(self):
         return self.remain
 
-    def __nonzero__(self):
+    def __bool__(self):
         return True
-
-    __bool__ = __nonzero__  # py3
 
     def append(self, s):
         file = self.file
@@ -224,12 +222,10 @@ class OverflowableBuffer:
         else:
             return self.strbuf.__len__()
 
-    def __nonzero__(self):
+    def __bool__(self):
         # use self.__len__ rather than len(self) FBO of not getting
         # OverflowError on Python 2
         return self.__len__() > 0
-
-    __bool__ = __nonzero__  # py3
 
     def _create_buffer(self):
         strbuf = self.strbuf
