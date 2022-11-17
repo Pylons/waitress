@@ -62,7 +62,7 @@ To check out the trunk via ``git``, use this command:
 
   git clone git@github.com:Pylons/waitress.git
 
-To find out how to become a contributor to Waitress, please see the guidelines in `contributing.md <https://github.com/Pylons/waitress/blob/master/contributing.md>`_ and `How to Contribute Source Code and Documentation <https://pylonsproject.org/community-how-to-contribute.html>`_.
+To find out how to become a contributor to Waitress, please see the guidelines in `contributing.md <https://github.com/Pylons/waitress/blob/main/contributing.md>`_ and `How to Contribute Source Code and Documentation <https://pylonsproject.org/community-how-to-contribute.html>`_.
 
 Why?
 ----

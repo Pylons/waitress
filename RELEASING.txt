@@ -49,8 +49,8 @@ Prepare new release
   $ twine upload dist/waitress-X.X-*
 
 
-Prepare master for further development (major releases only)
-------------------------------------------------------------
+Prepare main for further development (major releases only)
+----------------------------------------------------------
 
 - In CHANGES.txt, preserve headings but clear out content. Add heading
   "unreleased" for the version number.
