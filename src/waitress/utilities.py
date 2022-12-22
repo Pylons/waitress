@@ -258,7 +258,7 @@ class Error:
     def __init__(self, body):
         self.body = body
 
-    def to_response(self,ident=None):
+    def to_response(self, ident=None):
         status = f"{self.code} {self.reason}"
         body = f"{self.reason}\r\n\r\n{self.body}"
         ident = ident if ident else "server"
