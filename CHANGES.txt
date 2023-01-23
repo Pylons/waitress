@@ -3,6 +3,13 @@
 
 - Rename "master" git branch to "main"
 
+- Fix a bug that would appear on macOS whereby if we accept() a socket that is
+  already gone, setting socket options would fail and take down the server. See
+  https://github.com/Pylons/waitress/pull/399
+
+- Fixed testing of vendored asyncore code to not rely on particular naming for
+  errno's. See https://github.com/Pylons/waitress/pull/397
+
 Updated Defaults
 ~~~~~~~~~~~~~~~~
 
