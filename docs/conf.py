@@ -18,7 +18,11 @@
 # sys.path.append(os.path.abspath('some/directory'))
 
 import datetime
-import pkg_resources
+
+try:
+    from importlib.metadata import version as metadata_version
+except ImportError:
+    from importlib_metadata import version as metadata_version
 import pylons_sphinx_themes
 
 # General configuration
@@ -53,7 +57,7 @@ copyright = "2012-%s, Agendaless Consulting <chrism@plope.com>" % thisyear
 # other places throughout the built documents.
 #
 # The short X.Y version.
-version = pkg_resources.get_distribution("waitress").version
+version = metadata_version("waitress")
 # The full version, including alpha/beta/rc tags.
 release = version
 
