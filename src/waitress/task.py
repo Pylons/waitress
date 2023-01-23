@@ -345,8 +345,9 @@ class ErrorTask(Task):
     complete = True
 
     def execute(self):
+        ident = self.channel.server.adj.ident
         e = self.request.error
-        status, headers, body = e.to_response()
+        status, headers, body = e.to_response(ident)
         self.status = status
         self.response_headers.extend(headers)
         # We need to explicitly tell the remote client we are closing the
