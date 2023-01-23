@@ -305,15 +305,19 @@ class BaseWSGIServer(wasyncore.dispatcher):
             if v is None:
                 return
             conn, addr = v
+            self.set_socket_options(conn)
         except OSError:
             # Linux: On rare occasions we get a bogus socket back from
             # accept.  socketmodule.c:makesockaddr complains that the
             # address family is unknown.  We don't want the whole server
             # to shut down because of this.
+            # macOS: On occasions when the remote has already closed the socket
+            # before we got around to accepting it, when we try to set the
+            # socket options it will fail. So instead just we log the error and
+            # continue
             if self.adj.log_socket_errors:
                 self.logger.warning("server accept() threw an exception", exc_info=True)
             return
-        self.set_socket_options(conn)
         addr = self.fix_addr(addr)
         self.channel_class(self, conn, addr, self.adj, map=self._map)
 
