@@ -1196,7 +1196,10 @@ class Test__strerror(unittest.TestCase):
         return _strerror(err)
 
     def test_gardenpath(self):
-        self.assertEqual(self._callFUT(1), "Operation not permitted")
+        from errno import EINVAL
+        from os import strerror
+
+        self.assertEqual(self._callFUT(EINVAL), strerror(EINVAL))
 
     def test_unknown(self):
         self.assertEqual(self._callFUT("wut"), "Unknown error wut")
