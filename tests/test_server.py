@@ -17,6 +17,7 @@ class TestWSGIServer(unittest.TestCase):
         _start=True,
         _sock=None,
         _server=None,
+        metrics_collector=None,
     ):
         from waitress.server import create_server
 
@@ -25,6 +26,7 @@ class TestWSGIServer(unittest.TestCase):
             host=host,
             port=port,
             map=map,
+            metrics_collector=metrics_collector,
             _dispatcher=_dispatcher,
             _start=_start,
             _sock=_sock,
@@ -108,6 +110,16 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(
             inst.task_dispatcher.__class__.__name__, "ThreadedTaskDispatcher"
         )
+
+    def test_ctor_passes_metrics_collector_to_dispatcher(self):
+        from waitress.observability import TasksMetricsCollector
+
+        class DummyMetricsCollector(TasksMetricsCollector):
+            pass
+
+        metrics_collector = DummyMetricsCollector()
+        inst = self._makeOne(_start=False, map={}, metrics_collector=metrics_collector)
+        self.assertEqual(inst.task_dispatcher.metrics_collector, metrics_collector)
 
     def test_ctor_start_false(self):
         inst = self._makeOneWithMap(_start=False)

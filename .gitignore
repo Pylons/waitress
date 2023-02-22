@@ -9,3 +9,4 @@ build/
 coverage.xml
 docs/_themes
 docs/_build
+*.swp

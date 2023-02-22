@@ -133,6 +133,7 @@ class Adjustments:
         ("sockets", as_socket_list),
         ("channel_request_lookahead", int),
         ("server_name", str),
+        ("metrics_collector", lambda x: x),
     )
 
     _param_map = dict(_params)
@@ -288,6 +289,9 @@ class Adjustments:
     # only ever used if the remote client sent a request without a Host header
     # (or when using the Proxy settings, without forwarding a Host header)
     server_name = "waitress.invalid"
+
+    # Metrics collector. This allow to provide the listener that collects metrics
+    metrics_collector = None
 
     def __init__(self, **kw):
 

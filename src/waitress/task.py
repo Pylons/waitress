@@ -47,13 +47,16 @@ class ThreadedTaskDispatcher:
     active_count = 0  # Number of currently active threads
     logger = logger
     queue_logger = queue_logger
+    metrics_collector = None
 
-    def __init__(self):
+    def __init__(self, metrics_collector=None):
         self.threads = set()
         self.queue = deque()
         self.lock = threading.Lock()
         self.queue_cv = threading.Condition(self.lock)
         self.thread_exit_cv = threading.Condition(self.lock)
+        self.metrics_collector = metrics_collector
+        self.report_queue_length(0)
 
     def start_new_thread(self, target, thread_no):
         t = threading.Thread(
@@ -80,6 +83,8 @@ class ThreadedTaskDispatcher:
                     break
 
                 task = self.queue.popleft()
+                self.report_queue_length(len(self.queue))
+                self.report_task_wait_time(task)
             try:
                 task.service()
             except BaseException:
@@ -109,6 +114,7 @@ class ThreadedTaskDispatcher:
             self.queue.append(task)
             self.queue_cv.notify()
             queue_size = len(self.queue)
+            self.report_queue_length(queue_size)
             idle_threads = len(self.threads) - self.stop_count - self.active_count
             if queue_size > idle_threads:
                 self.queue_logger.warning(
@@ -138,11 +144,22 @@ class ThreadedTaskDispatcher:
                 return True
         return False
 
+    def report_queue_length(self, length):
+        if self.metrics_collector:
+            self.metrics_collector.report_queue_length(length)
+
+    def report_task_wait_time(self, task):
+        if self.metrics_collector:
+            self.metrics_collector.report_task_wait_time(
+                time.time_ns() - task.create_time_ns
+            )
+
 
 class Task:
     close_on_finish = False
     status = "200 OK"
     wrote_header = False
+    create_time_ns = 0
     start_time = 0
     content_length = None
     content_bytes_written = 0
@@ -161,6 +178,7 @@ class Task:
             # fall back to a version we support.
             version = "1.0"
         self.version = version
+        self.create_time_ns = time.time_ns()
 
     def service(self):
         try:

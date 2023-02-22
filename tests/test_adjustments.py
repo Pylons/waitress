@@ -107,6 +107,7 @@ class TestAdjustments(unittest.TestCase):
         return Adjustments(**kw)
 
     def test_goodvars(self):
+        test_metrics_collector = object()
         inst = self._makeOne(
             host="localhost",
             port="8080",
@@ -135,6 +136,7 @@ class TestAdjustments(unittest.TestCase):
             url_prefix="///foo/",
             ipv4=True,
             ipv6=False,
+            metrics_collector=test_metrics_collector,
         )
 
         self.assertEqual(inst.host, "localhost")
@@ -164,6 +166,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.url_prefix, "/foo")
         self.assertEqual(inst.ipv4, True)
         self.assertEqual(inst.ipv6, False)
+        self.assertEqual(inst.metrics_collector, test_metrics_collector)
 
         bind_pairs = [
             sockaddr[:2]

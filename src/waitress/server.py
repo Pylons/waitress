@@ -34,7 +34,7 @@ def create_server(
     _start=True,  # test shim
     _sock=None,  # test shim
     _dispatcher=None,  # test shim
-    **kw  # adjustments
+    **kw,  # adjustments
 ):
     """
     if __name__ == '__main__':
@@ -53,7 +53,7 @@ def create_server(
 
     dispatcher = _dispatcher
     if dispatcher is None:
-        dispatcher = ThreadedTaskDispatcher()
+        dispatcher = ThreadedTaskDispatcher(metrics_collector=adj.metrics_collector)
         dispatcher.set_thread_count(adj.threads)
 
     if adj.unix_socket and hasattr(socket, "AF_UNIX"):
@@ -194,7 +194,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
         adj=None,  # adjustments
         sockinfo=None,  # opaque object
         bind_socket=True,
-        **kw
+        **kw,
     ):
         if adj is None:
             adj = Adjustments(**kw)
@@ -388,7 +388,7 @@ if hasattr(socket, "AF_UNIX"):
             dispatcher=None,  # dispatcher
             adj=None,  # adjustments
             sockinfo=None,  # opaque object
-            **kw
+            **kw,
         ):
             if sockinfo is None:
                 sockinfo = (socket.AF_UNIX, socket.SOCK_STREAM, None, None)
