@@ -75,7 +75,7 @@ import sys
 import time
 import warnings
 
-from . import compat, utilities
+from . import utilities
 
 _DISCONNECTED = frozenset({ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED, EPIPE, EBADF})
 
