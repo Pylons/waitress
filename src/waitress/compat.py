@@ -8,6 +8,7 @@ import warnings
 
 # True if we are running on Windows
 WIN = platform.system() == "Windows"
+LINUX = platform.system() == "Linux"
 
 MAXINT = sys.maxsize
 HAS_IPV6 = socket.has_ipv6

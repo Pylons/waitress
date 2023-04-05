@@ -3,7 +3,7 @@ import sys
 import unittest
 import warnings
 
-from waitress.compat import WIN
+from waitress.compat import LINUX, WIN
 
 
 class Test_asbool(unittest.TestCase):
@@ -272,6 +272,24 @@ class TestAdjustments(unittest.TestCase):
             ValueError, self._makeOne, unix_socket="./tmp/test", sockets=sockets
         )
         sockets[0].close()
+
+    def test_dont_mix_unix_and_vsock_socket(self):
+        if LINUX:
+            sockets = [
+                socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
+                socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM),
+            ]
+            self.assertRaises(ValueError, self._makeOne, sockets=sockets)
+            sockets[0].close()
+
+    def test_dont_mix_tcp_and_vsock_socket(self):
+        if LINUX:
+            sockets = [
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+                socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM),
+            ]
+            self.assertRaises(ValueError, self._makeOne, sockets=sockets)
+            sockets[0].close()
 
     def test_dont_mix_unix_socket_and_host_port(self):
         self.assertRaises(

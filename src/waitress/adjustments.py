@@ -17,7 +17,7 @@ import getopt
 import socket
 import warnings
 
-from .compat import HAS_IPV6, WIN
+from .compat import HAS_IPV6, LINUX, WIN
 from .proxy_headers import PROXY_HEADERS
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
@@ -290,7 +290,6 @@ class Adjustments:
     server_name = "waitress.invalid"
 
     def __init__(self, **kw):
-
         if "listen" in kw and ("host" in kw or "port" in kw):
             raise ValueError("host or port may not be set if listen is set.")
 
@@ -502,12 +501,12 @@ class Adjustments:
                 and sock.type == socket.SOCK_STREAM
             ):
                 has_unix_socket = True
-            elif (
+            elif LINUX and (
                 hasattr(socket, "AF_VSOCK")
                 and sock.family == socket.AF_VSOCK
                 and sock.type == socket.SOCK_STREAM
             ):
-                has_vsock_socket = True
+                has_vsock_socket = True  # pragma: no cover
             else:
                 has_unsupported_socket = True
         inet_and_unix = has_unix_socket and has_inet_socket
@@ -516,4 +515,6 @@ class Adjustments:
         if inet_and_unix or inet_and_vsock or unix_and_vsock:
             raise ValueError("Internet, UNIX, and VSOCK sockets may not be mixed.")
         if has_unsupported_socket:
-            raise ValueError("Only Internet, UNIX stream, or VSOCK stream sockets may be used.")
+            raise ValueError(
+                "Only Internet, UNIX stream, or VSOCK stream sockets may be used."
+            )
