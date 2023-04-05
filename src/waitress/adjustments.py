@@ -489,10 +489,11 @@ class Adjustments:
     def check_sockets(cls, sockets):
         has_unix_socket = False
         has_inet_socket = False
+        has_vsock_socket = False
         has_unsupported_socket = False
         for sock in sockets:
             if (
-                sock.family == socket.AF_INET or sock.family == socket.AF_INET6
+                sock.family in (socket.AF_INET, socket.AF_INET6)
             ) and sock.type == socket.SOCK_STREAM:
                 has_inet_socket = True
             elif (
@@ -501,9 +502,18 @@ class Adjustments:
                 and sock.type == socket.SOCK_STREAM
             ):
                 has_unix_socket = True
+            elif (
+                hasattr(socket, "AF_VSOCK")
+                and sock.family == socket.AF_VSOCK
+                and sock.type == socket.SOCK_STREAM
+            ):
+                has_vsock_socket = True
             else:
                 has_unsupported_socket = True
-        if has_unix_socket and has_inet_socket:
-            raise ValueError("Internet and UNIX sockets may not be mixed.")
+        inet_and_unix = has_unix_socket and has_inet_socket
+        inet_and_vsock = has_inet_socket and has_vsock_socket
+        unix_and_vsock = has_unix_socket and has_vsock_socket
+        if inet_and_unix or inet_and_vsock or unix_and_vsock:
+            raise ValueError("Internet, UNIX, and VSOCK sockets may not be mixed.")
         if has_unsupported_socket:
-            raise ValueError("Only Internet or UNIX stream sockets may be used.")
+            raise ValueError("Only Internet, UNIX stream, or VSOCK stream sockets may be used.")
