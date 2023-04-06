@@ -17,7 +17,7 @@ import getopt
 import socket
 import warnings
 
-from .compat import HAS_IPV6, WIN
+from .compat import CPYTHON, HAS_IPV6, LINUX, WIN
 from .proxy_headers import PROXY_HEADERS
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
@@ -130,6 +130,7 @@ class Adjustments:
         ("asyncore_use_poll", asbool),
         ("unix_socket", str),
         ("unix_socket_perms", asoctal),
+        ("vsock_socket", str),
         ("sockets", as_socket_list),
         ("channel_request_lookahead", int),
         ("server_name", str),
@@ -254,6 +255,9 @@ class Adjustments:
     # Path to a Unix domain socket to use.
     unix_socket_perms = 0o600
 
+    # Path to a vsock socket to use.
+    vsock_socket = None
+
     # The socket options to set on receiving a connection.  It is a list of
     # (level, optname, value) tuples.  TCP_NODELAY disables the Nagle
     # algorithm for writes (Waitress already buffers its writes).
@@ -302,11 +306,26 @@ class Adjustments:
         if "sockets" in kw and "unix_socket" in kw:
             raise ValueError("unix_socket may not be set if sockets is set")
 
+        if "sockets" in kw and "vsock_socket" in kw:
+            raise ValueError("vsock_socket may not be set if sockets is set")
+
         if "unix_socket" in kw and ("host" in kw or "port" in kw):
             raise ValueError("unix_socket may not be set if host or port is set")
 
         if "unix_socket" in kw and "listen" in kw:
             raise ValueError("unix_socket may not be set if listen is set")
+
+        if "vsock_socket" in kw and not (LINUX and CPYTHON):
+            raise ValueError("vsock_socket is not supported on this platform")
+
+        if "vsock_socket" in kw and ("host" in kw or "port" in kw):
+            raise ValueError("vsock_socket may not be set if host or port is set")
+
+        if "vsock_socket" in kw and "listen" in kw:
+            raise ValueError("vsock_socket may not be set if listen is set")
+
+        if "vsock_socket" in kw and "unix_socket" in kw:
+            raise ValueError("vsock_socket may not be set if unix_socket is set")
 
         if "send_bytes" in kw:
             warnings.warn(

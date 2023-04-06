@@ -68,6 +68,18 @@ def create_server(
             sockinfo=sockinfo,
         )
 
+    if adj.vsock_socket and hasattr(socket, "AF_VSOCK"):
+        sockinfo = (socket.AF_VSOCK, socket.SOCK_STREAM, None, None)
+        return VsockWSGIServer(
+            application,
+            map,
+            _start,
+            _sock,
+            dispatcher=dispatcher,
+            adj=adj,
+            sockinfo=sockinfo,
+        )
+
     effective_listen = []
     last_serv = None
     if not adj.sockets:
@@ -106,6 +118,20 @@ def create_server(
             )
         elif hasattr(socket, "AF_UNIX") and sock.family == socket.AF_UNIX:
             last_serv = UnixWSGIServer(
+                application,
+                map,
+                _start,
+                sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                bind_socket=False,
+                sockinfo=sockinfo,
+            )
+            effective_listen.append(
+                (last_serv.effective_host, last_serv.effective_port)
+            )
+        elif hasattr(socket, "AF_VSOCK") and sock.family == socket.AF_VSOCK:
+            last_serv = VsockWSGIServer(
                 application,
                 map,
                 _start,
@@ -376,7 +402,6 @@ class TcpWSGIServer(BaseWSGIServer):
 
 
 if hasattr(socket, "AF_UNIX"):
-
     class UnixWSGIServer(BaseWSGIServer):
         def __init__(
             self,
@@ -414,6 +439,39 @@ if hasattr(socket, "AF_UNIX"):
 
         def fix_addr(self, addr):
             return ("localhost", None)
+
+if hasattr(socket, "AF_VSOCK"):
+    class VsockWSGIServer(BaseWSGIServer):
+        def __init__(
+            self,
+            application,
+            map=None,
+            _start=True,  # test shim
+            _sock=None,  # test shim
+            dispatcher=None,  # dispatcher
+            adj=None,  # adjustments
+            sockinfo=None,  # opaque object
+            **kw
+        ):
+            if sockinfo is None:
+                sockinfo = (socket.AF_VSOCK, socket.SOCK_STREAM, None, None)
+
+            super().__init__(
+                application,
+                map=map,
+                _start=_start,
+                _sock=_sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                sockinfo=sockinfo,
+                **kw,
+            )
+
+        def bind_server_socket(self):
+            self.bind(self.adj.vsock_socket)
+
+        def getsockname(self):
+            return ("vsock", self.socket.getsockname())
 
 
 # Compatibility alias.
