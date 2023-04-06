@@ -491,20 +491,19 @@ class Adjustments:
         has_vsock_socket = False
         has_unsupported_socket = False
         for sock in sockets:
-            if (
-                sock.family in (socket.AF_INET, socket.AF_INET6)
-            ) and sock.type == socket.SOCK_STREAM:
+            if sock.type != socket.SOCK_STREAM:
+                has_unsupported_socket = True
+                continue
+            if sock.family in (socket.AF_INET, socket.AF_INET6):
                 has_inet_socket = True
             elif (
                 hasattr(socket, "AF_UNIX")
                 and sock.family == socket.AF_UNIX
-                and sock.type == socket.SOCK_STREAM
             ):
                 has_unix_socket = True
             elif CPYTHON and LINUX and (
                 hasattr(socket, "AF_VSOCK")
                 and sock.family == socket.AF_VSOCK
-                and sock.type == socket.SOCK_STREAM
             ):
                 has_vsock_socket = True  # pragma: no cover
             else:

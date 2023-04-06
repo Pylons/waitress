@@ -251,6 +251,11 @@ class TestAdjustments(unittest.TestCase):
         sockets[0].close()
         sockets[1].close()
 
+    def test_dont_use_dgram_sockets(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]
+        self.assertRaises(ValueError, self._makeOne, sockets=sockets)
+        sockets[0].close()
+
     def test_dont_mix_sockets_and_listen(self):
         sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
         self.assertRaises(
