@@ -486,28 +486,19 @@ class Adjustments:
 
     @classmethod
     def check_sockets(cls, sockets):
-        has_unix_socket = False
-        has_inet_socket = False
-        has_vsock_socket = False
-        has_unsupported_socket = False
+        supported_families = [socket.AF_INET, socket.AF_INET6]
+        if hasattr(socket, "AF_UNIX"):
+            supported_families.append(socket.AF_UNIX)
+        if hasattr(socket, "AF_VSOCK"):
+            supported_families.append(socket.AF_VSOCK)
+
+        family = None
         for sock in sockets:
-            if sock.type != socket.SOCK_STREAM:
-                has_unsupported_socket = True
-                continue
-            if sock.family in (socket.AF_INET, socket.AF_INET6):
-                has_inet_socket = True
-            elif hasattr(socket, "AF_UNIX") and sock.family == socket.AF_UNIX:
-                has_unix_socket = True
-            elif hasattr(socket, "AF_VSOCK") and sock.family == socket.AF_VSOCK:
-                has_vsock_socket = True
-            else:
-                has_unsupported_socket = True
-        inet_and_unix = has_unix_socket and has_inet_socket
-        inet_and_vsock = has_inet_socket and has_vsock_socket
-        unix_and_vsock = has_unix_socket and has_vsock_socket
-        if inet_and_unix or inet_and_vsock or unix_and_vsock:
-            raise ValueError("Internet, UNIX, and VSOCK sockets may not be mixed.")
-        if has_unsupported_socket:
-            raise ValueError(
-                "Only Internet, UNIX stream, or VSOCK stream sockets may be used."
-            )
+            if sock.type != socket.SOCK_STREAM or sock.family not in supported_families:
+                raise ValueError(
+                    "Only Internet, UNIX, or VSOCK stream sockets may be used."
+                )
+            if family is None:
+                family = sock.family
+            elif family != sock.family:
+                raise ValueError("All sockets must belong to the same family.")
