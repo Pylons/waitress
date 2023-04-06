@@ -17,7 +17,7 @@ import getopt
 import socket
 import warnings
 
-from .compat import CPYTHON, HAS_IPV6, LINUX, WIN
+from .compat import HAS_IPV6, WIN
 from .proxy_headers import PROXY_HEADERS
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
@@ -496,16 +496,10 @@ class Adjustments:
                 continue
             if sock.family in (socket.AF_INET, socket.AF_INET6):
                 has_inet_socket = True
-            elif (
-                hasattr(socket, "AF_UNIX")
-                and sock.family == socket.AF_UNIX
-            ):
+            elif hasattr(socket, "AF_UNIX") and sock.family == socket.AF_UNIX:
                 has_unix_socket = True
-            elif CPYTHON and LINUX and (
-                hasattr(socket, "AF_VSOCK")
-                and sock.family == socket.AF_VSOCK
-            ):
-                has_vsock_socket = True  # pragma: no cover
+            elif hasattr(socket, "AF_VSOCK") and sock.family == socket.AF_VSOCK:
+                has_vsock_socket = True
             else:
                 has_unsupported_socket = True
         inet_and_unix = has_unix_socket and has_inet_socket

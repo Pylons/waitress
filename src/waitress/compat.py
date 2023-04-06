@@ -6,10 +6,8 @@ import socket
 import sys
 import warnings
 
-# Detect platform and python implementation.
+# True if we are running on Windows
 WIN = platform.system() == "Windows"
-LINUX = platform.system() == "Linux"
-CPYTHON = platform.python_implementation() == "CPython"
 
 MAXINT = sys.maxsize
 HAS_IPV6 = socket.has_ipv6
