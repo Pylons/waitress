@@ -2,7 +2,7 @@ import socket
 import unittest
 import warnings
 
-from waitress.compat import LINUX, WIN
+from waitress.compat import CPYTHON, LINUX, WIN
 
 
 class Test_asbool(unittest.TestCase):
@@ -273,22 +273,24 @@ class TestAdjustments(unittest.TestCase):
         sockets[0].close()
 
     def test_dont_mix_unix_and_vsock_socket(self):
-        if LINUX:
+        if CPYTHON and LINUX:
             sockets = [
                 socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
                 socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM),
             ]
             self.assertRaises(ValueError, self._makeOne, sockets=sockets)
-            sockets[0].close()
+            for sock in sockets:
+                sock.close()
 
     def test_dont_mix_tcp_and_vsock_socket(self):
-        if LINUX:
+        if CPYTHON and LINUX:
             sockets = [
                 socket.socket(socket.AF_INET, socket.SOCK_STREAM),
                 socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM),
             ]
             self.assertRaises(ValueError, self._makeOne, sockets=sockets)
-            sockets[0].close()
+            for sock in sockets:
+                sock.close()
 
     def test_dont_mix_unix_socket_and_host_port(self):
         self.assertRaises(

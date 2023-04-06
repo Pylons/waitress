@@ -17,7 +17,7 @@ import getopt
 import socket
 import warnings
 
-from .compat import HAS_IPV6, LINUX, WIN
+from .compat import CPYTHON, HAS_IPV6, LINUX, WIN
 from .proxy_headers import PROXY_HEADERS
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
@@ -501,7 +501,7 @@ class Adjustments:
                 and sock.type == socket.SOCK_STREAM
             ):
                 has_unix_socket = True
-            elif LINUX and (
+            elif CPYTHON and LINUX and (
                 hasattr(socket, "AF_VSOCK")
                 and sock.family == socket.AF_VSOCK
                 and sock.type == socket.SOCK_STREAM
