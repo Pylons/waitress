@@ -1,8 +1,9 @@
+from re import L
 import socket
 import unittest
 import warnings
 
-from waitress.compat import WIN
+from waitress.compat import VSOCK, WIN
 
 
 class Test_asbool(unittest.TestCase):
@@ -106,35 +107,40 @@ class TestAdjustments(unittest.TestCase):
         return Adjustments(**kw)
 
     def test_goodvars(self):
-        inst = self._makeOne(
-            host="localhost",
-            port="8080",
-            threads="5",
-            trusted_proxy="192.168.1.1",
-            trusted_proxy_headers={"forwarded"},
-            trusted_proxy_count=2,
-            log_untrusted_proxy_headers=True,
-            url_scheme="https",
-            backlog="20",
-            recv_bytes="200",
-            send_bytes="300",
-            outbuf_overflow="400",
-            inbuf_overflow="500",
-            connection_limit="1000",
-            cleanup_interval="1100",
-            channel_timeout="1200",
-            log_socket_errors="true",
-            max_request_header_size="1300",
-            max_request_body_size="1400",
-            expose_tracebacks="true",
-            ident="abc",
-            asyncore_loop_timeout="5",
-            asyncore_use_poll=True,
-            unix_socket_perms="777",
-            url_prefix="///foo/",
-            ipv4=True,
-            ipv6=False,
-        )
+        kw = {
+            "host": "localhost",
+            "port": "8080",
+            "threads": "5",
+            "trusted_proxy": "192.168.1.1",
+            "trusted_proxy_headers": {"forwarded"},
+            "trusted_proxy_count": 2,
+            "log_untrusted_proxy_headers": True,
+            "url_scheme": "https",
+            "backlog": "20",
+            "recv_bytes": "200",
+            "send_bytes": "300",
+            "outbuf_overflow": "400",
+            "inbuf_overflow": "500",
+            "connection_limit": "1000",
+            "cleanup_interval": "1100",
+            "channel_timeout": "1200",
+            "log_socket_errors": "true",
+            "max_request_header_size": "1300",
+            "max_request_body_size": 1400,
+            "expose_tracebacks": "true",
+            "ident": "abc",
+            "asyncore_loop_timeout": "5",
+            "asyncore_use_poll": True,
+            "unix_socket_perms": "777",
+            "url_prefix": "///foo/",
+            "ipv4": True,
+            "ipv6": False,
+        }
+        if VSOCK:
+            kw["vsock_socket_cid"] = -1
+            kw["vsock_socket_port"] = -1
+
+        inst = self._makeOne(**kw)
 
         self.assertEqual(inst.host, "localhost")
         self.assertEqual(inst.port, 8080)
@@ -163,6 +169,10 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.url_prefix, "/foo")
         self.assertEqual(inst.ipv4, True)
         self.assertEqual(inst.ipv6, False)
+
+        if VSOCK:
+            self.assertEqual(inst.vsock_socket_cid, -1)
+            self.assertEqual(inst.vsock_socket_port, -1)
 
         bind_pairs = [
             sockaddr[:2]
@@ -278,7 +288,7 @@ class TestAdjustments(unittest.TestCase):
         sockets[0].close()
 
     def test_dont_mix_unix_and_vsock_socket(self):
-        if not hasattr(socket, "AF_VSOCK"):
+        if not VSOCK:
             return
         sockets = [
             socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
@@ -289,7 +299,7 @@ class TestAdjustments(unittest.TestCase):
             sock.close()
 
     def test_dont_mix_tcp_and_vsock_socket(self):
-        if not hasattr(socket, "AF_VSOCK"):
+        if not VSOCK:
             return
         sockets = [
             socket.socket(socket.AF_INET, socket.SOCK_STREAM),
@@ -504,6 +514,24 @@ if hasattr(socket, "AF_UNIX"):
             sockets = [
                 socket.socket(socket.AF_INET, socket.SOCK_STREAM),
                 socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
+            ]
+            self.assertRaises(ValueError, self._makeOne, sockets=sockets)
+            sockets[0].close()
+            sockets[1].close()
+
+
+if VSOCK:
+
+    class TestVsockSocket(unittest.TestCase):
+        def _makeOne(self, **kw):
+            from waitress.adjustments import Adjustments
+
+            return Adjustments(**kw)
+
+        def test_dont_mix_internet_and_unix_sockets(self):
+            sockets = [
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+                socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM),
             ]
             self.assertRaises(ValueError, self._makeOne, sockets=sockets)
             sockets[0].close()

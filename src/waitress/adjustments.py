@@ -17,7 +17,7 @@ import getopt
 import socket
 import warnings
 
-from .compat import CPYTHON, HAS_IPV6, LINUX, WIN
+from .compat import HAS_IPV6, VSOCK, WIN
 from .proxy_headers import PROXY_HEADERS
 
 truthy = frozenset(("t", "true", "y", "yes", "on", "1"))
@@ -81,6 +81,10 @@ def str_iftruthy(s):
     return str(s) if s else None
 
 
+def int_iftruthy(s):
+    return int(s) if s else None
+
+
 def as_socket_list(sockets):
     """Checks if the elements in the list are of type socket and
     removes them if not."""
@@ -130,7 +134,8 @@ class Adjustments:
         ("asyncore_use_poll", asbool),
         ("unix_socket", str),
         ("unix_socket_perms", asoctal),
-        ("vsock_socket", str),
+        ("vsock_socket_cid", int_iftruthy),
+        ("vsock_socket_port", int_iftruthy),
         ("sockets", as_socket_list),
         ("channel_request_lookahead", int),
         ("server_name", str),
@@ -255,8 +260,9 @@ class Adjustments:
     # Path to a Unix domain socket to use.
     unix_socket_perms = 0o600
 
-    # Path to a vsock socket to use.
-    vsock_socket = None
+    # The CID and port to use for a vsock socket.
+    vsock_socket_cid = None
+    vsock_socket_port = None
 
     # The socket options to set on receiving a connection.  It is a list of
     # (level, optname, value) tuples.  TCP_NODELAY disables the Nagle
@@ -306,8 +312,10 @@ class Adjustments:
         if "sockets" in kw and "unix_socket" in kw:
             raise ValueError("unix_socket may not be set if sockets is set")
 
-        if "sockets" in kw and "vsock_socket" in kw:
-            raise ValueError("vsock_socket may not be set if sockets is set")
+        if "sockets" in kw and ("vsock_socket_cid" in kw or "vsock_socket_port" in kw):
+            raise ValueError(
+                "vsock_socket_cid or vsock_socket_port may not be set if sockets is set"
+            )
 
         if "unix_socket" in kw and ("host" in kw or "port" in kw):
             raise ValueError("unix_socket may not be set if host or port is set")
@@ -315,17 +323,29 @@ class Adjustments:
         if "unix_socket" in kw and "listen" in kw:
             raise ValueError("unix_socket may not be set if listen is set")
 
-        if "vsock_socket" in kw and not (LINUX and CPYTHON):
-            raise ValueError("vsock_socket is not supported on this platform")
+        if ("vsock_socket_cid" in kw or "vsock_socket_port" in kw) and not VSOCK:
+            raise ValueError(
+                "vsock_socket_cid and vsock_socket_port are not supported on this platform"
+            )
 
-        if "vsock_socket" in kw and ("host" in kw or "port" in kw):
-            raise ValueError("vsock_socket may not be set if host or port is set")
+        if ("vsock_socket_cid" in kw or "vsock_socket_port" in kw) and (
+            "host" in kw or "port" in kw
+        ):
+            raise ValueError(
+                "vsock_socket_cid or vsock_socket_port may not be set if host or port is set"
+            )
 
-        if "vsock_socket" in kw and "listen" in kw:
-            raise ValueError("vsock_socket may not be set if listen is set")
+        if ("vsock_socket_cid" in kw or "vsock_socket_port" in kw) and "listen" in kw:
+            raise ValueError(
+                "vsock_socket_cid or vsock_socket_port may not be set if listen is set"
+            )
 
-        if "vsock_socket" in kw and "unix_socket" in kw:
-            raise ValueError("vsock_socket may not be set if unix_socket is set")
+        if (
+            "vsock_socket_cid" in kw or "vsock_socket_port" in kw
+        ) and "unix_socket" in kw:
+            raise ValueError(
+                "vsock_socket_cid or vsock_socket_port may not be set if unix_socket is set"
+            )
 
         if "send_bytes" in kw:
             warnings.warn(
@@ -372,10 +392,10 @@ class Adjustments:
                     # Try turning the port into an integer
                     port = int(port)
 
-                except Exception:
+                except Exception as exc:
                     raise ValueError(
                         "Windows does not support service names instead of port numbers"
-                    )
+                    ) from exc
 
             try:
                 if "[" in host and "]" in host:  # pragma: nocover
@@ -410,20 +430,20 @@ class Adjustments:
                         wanted_sockets.append((family, socktype, proto, sockaddr))
                         hp_pairs.append((sockaddr[0].split("%", 1)[0], sockaddr[1]))
 
-            except Exception:
-                raise ValueError("Invalid host/port specified.")
+            except Exception as exc:
+                raise ValueError("Invalid host/port specified.") from exc
 
         if self.trusted_proxy_count is not None and self.trusted_proxy is None:
             raise ValueError(
-                "trusted_proxy_count has no meaning without setting " "trusted_proxy"
+                "trusted_proxy_count has no meaning without setting trusted_proxy"
             )
 
-        elif self.trusted_proxy_count is None:
+        if self.trusted_proxy_count is None:
             self.trusted_proxy_count = 1
 
         if self.trusted_proxy_headers and self.trusted_proxy is None:
             raise ValueError(
-                "trusted_proxy_headers has no meaning without setting " "trusted_proxy"
+                "trusted_proxy_headers has no meaning without setting trusted_proxy"
             )
 
         if self.trusted_proxy_headers:
@@ -434,9 +454,9 @@ class Adjustments:
             unknown_values = self.trusted_proxy_headers - KNOWN_PROXY_HEADERS
             if unknown_values:
                 raise ValueError(
-                    "Received unknown trusted_proxy_headers value (%s) expected one "
-                    "of %s"
-                    % (", ".join(unknown_values), ", ".join(KNOWN_PROXY_HEADERS))
+                    "Received unknown trusted_proxy_headers value "
+                    f"({', '.join(unknown_values)}) expected one "
+                    f"of {', '.join(KNOWN_PROXY_HEADERS)}"
                 )
 
             if (
@@ -511,6 +531,7 @@ class Adjustments:
         if hasattr(socket, "AF_VSOCK"):
             supported_families.append(socket.AF_VSOCK)
 
+        inet_families = (socket.AF_INET, socket.AF_INET6)
         family = None
         for sock in sockets:
             if sock.type != socket.SOCK_STREAM or sock.family not in supported_families:
@@ -519,5 +540,7 @@ class Adjustments:
                 )
             if family is None:
                 family = sock.family
+            elif family in inet_families and sock.family in inet_families:
+                pass
             elif family != sock.family:
                 raise ValueError("All sockets must belong to the same family.")

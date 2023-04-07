@@ -25,6 +25,7 @@ from waitress.task import ThreadedTaskDispatcher
 from waitress.utilities import cleanup_unix_socket
 
 from . import wasyncore
+from .compat import VSOCK
 from .proxy_headers import proxy_headers_middleware
 
 
@@ -68,7 +69,11 @@ def create_server(
             sockinfo=sockinfo,
         )
 
-    if adj.vsock_socket and hasattr(socket, "AF_VSOCK"):
+    if (adj.vsock_socket_cid or adj.vsock_socket_port) and VSOCK:
+        if not adj.vsock_socket_cid:
+            adj.vsock_socket_cid = socket.VMADDR_CID_ANY
+        if not adj.vsock_socket_port:
+            adj.vsock_socket_port = socket.VMADDR_PORT_ANY
         sockinfo = (socket.AF_VSOCK, socket.SOCK_STREAM, None, None)
         return VsockWSGIServer(
             application,
@@ -102,7 +107,7 @@ def create_server(
 
     for sock in adj.sockets:
         sockinfo = (sock.family, sock.type, sock.proto, sock.getsockname())
-        if sock.family == socket.AF_INET or sock.family == socket.AF_INET6:
+        if sock.family in (socket.AF_INET, socket.AF_INET6):
             last_serv = TcpWSGIServer(
                 application,
                 map,
@@ -130,7 +135,7 @@ def create_server(
             effective_listen.append(
                 (last_serv.effective_host, last_serv.effective_port)
             )
-        elif hasattr(socket, "AF_VSOCK") and sock.family == socket.AF_VSOCK:
+        elif VSOCK and sock.family == socket.AF_VSOCK:
             last_serv = VsockWSGIServer(
                 application,
                 map,
@@ -402,6 +407,7 @@ class TcpWSGIServer(BaseWSGIServer):
 
 
 if hasattr(socket, "AF_UNIX"):
+
     class UnixWSGIServer(BaseWSGIServer):
         def __init__(
             self,
@@ -440,7 +446,9 @@ if hasattr(socket, "AF_UNIX"):
         def fix_addr(self, addr):
             return ("localhost", None)
 
-if hasattr(socket, "AF_VSOCK"):
+
+if VSOCK:
+
     class VsockWSGIServer(BaseWSGIServer):
         def __init__(
             self,
@@ -468,7 +476,7 @@ if hasattr(socket, "AF_VSOCK"):
             )
 
         def bind_server_socket(self):
-            self.bind(self.adj.vsock_socket)
+            self.bind((self.adj.vsock_socket_cid, self.adj.vsock_socket_port))
 
         def getsockname(self):
             return ("vsock", self.socket.getsockname())

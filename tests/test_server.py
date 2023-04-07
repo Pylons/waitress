@@ -2,6 +2,8 @@ import errno
 import socket
 import unittest
 
+from waitress.compat import VSOCK
+
 dummy_app = object()
 
 
@@ -413,6 +415,112 @@ if hasattr(socket, "AF_UNIX"):
             )
             self.assertTrue(isinstance(server[0], UnixWSGIServer))
             self.assertTrue(isinstance(server[1], UnixWSGIServer))
+
+
+if VSOCK:
+
+    class TestVsockWSGIServer(unittest.TestCase):
+        vsock_socket_cid = 2
+        vsock_socket_port = -1
+
+        def _makeOne(self, _start=True, _sock=None):
+            from waitress.server import create_server
+
+            self.inst = create_server(
+                dummy_app,
+                map={},
+                _start=_start,
+                _sock=_sock,
+                _dispatcher=DummyTaskDispatcher(),
+                vsock_socket_cid=self.vsock_socket_cid,
+                vsock_socket_port=self.vsock_socket_port,
+            )
+            return self.inst
+
+        def _makeWithSockets(
+            self,
+            application=dummy_app,
+            _dispatcher=None,
+            map=None,
+            _start=True,
+            _sock=None,
+            _server=None,
+            sockets=None,
+        ):
+            from waitress.server import create_server
+
+            _sockets = []
+            if sockets is not None:
+                _sockets = sockets
+            self.inst = create_server(
+                application,
+                map=map,
+                _dispatcher=_dispatcher,
+                _start=_start,
+                _sock=_sock,
+                sockets=_sockets,
+            )
+            return self.inst
+
+        def tearDown(self):
+            self.inst.close()
+
+        def _makeDummy(self, *args, **kwargs):
+            sock = DummySock(*args, **kwargs)
+            sock.family = socket.AF_VSOCK
+            return sock
+
+        def test_unix(self):
+            inst = self._makeOne(_start=False)
+            self.assertEqual(inst.socket.family, socket.AF_VSOCK)
+            self.assertEqual(inst.socket.getsockname(), self.vsock_socket_cid)
+
+        def test_handle_accept(self):
+            # Working on the assumption that we only have to test the happy path
+            # for Unix domain sockets as the other paths should've been covered
+            # by inet sockets.
+            client = self._makeDummy()
+            listen = self._makeDummy(acceptresult=(client, None))
+            inst = self._makeOne(_sock=listen)
+            self.assertEqual(inst.accepting, True)
+            self.assertEqual(inst.socket.listened, 1024)
+            L = []
+            inst.channel_class = lambda *arg, **kw: L.append(arg)
+            inst.handle_accept()
+            self.assertEqual(inst.socket.accepted, True)
+            self.assertEqual(client.opts, [])
+            self.assertEqual(L, [(inst, client, ("localhost", None), inst.adj)])
+
+        def test_creates_new_sockinfo(self):
+            from waitress.server import VsockWSGIServer
+
+            self.inst = VsockWSGIServer(
+                dummy_app,
+                vsock_socket_cid=self.vsock_socket_cid,
+                vsock_socket_port=self.vsock_socket_port,
+            )
+
+            self.assertEqual(self.inst.sockinfo[0], socket.AF_UNIX)
+
+        def test_create_with_unix_socket(self):
+            from waitress.server import (
+                BaseWSGIServer,
+                MultiSocketServer,
+                TcpWSGIServer,
+                VsockWSGIServer,
+            )
+
+            sockets = [
+                socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM),
+                socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM),
+            ]
+            inst = self._makeWithSockets(sockets=sockets, _start=False)
+            self.assertTrue(isinstance(inst, MultiSocketServer))
+            server = list(
+                filter(lambda s: isinstance(s, BaseWSGIServer), inst.map.values())
+            )
+            self.assertTrue(isinstance(server[0], VsockWSGIServer))
+            self.assertTrue(isinstance(server[1], VsockWSGIServer))
 
 
 class DummySock(socket.socket):
