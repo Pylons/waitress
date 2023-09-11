@@ -94,6 +94,8 @@ class HTTPChannel(wasyncore.dispatcher):
 
         if not self.connected:
             # we dont want to close the channel twice
+            # But we shouldn't be written to if we really are closed so unregister from loop
+            self.del_channel()
 
             return
 
