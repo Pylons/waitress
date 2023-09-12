@@ -86,7 +86,7 @@ class HTTPChannel(wasyncore.dispatcher):
         # the channel (possibly by our server maintenance logic), run
         # handle_write
 
-        return self.total_outbufs_len or self.will_close or self.close_when_flushed
+        return self.connected and (self.total_outbufs_len or self.will_close or self.close_when_flushed)
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
@@ -95,8 +95,8 @@ class HTTPChannel(wasyncore.dispatcher):
         if not self.connected:
             # we dont want to close the channel twice
             # But we shouldn't be written to if we really are closed so unregister from loop
-            self.del_channel()
-
+            # self.del_channel()
+            #self.close_when_flushed = True
             return
 
         # try to flush any pending output

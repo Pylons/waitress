@@ -778,8 +778,9 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertRaises(OSError, sock.getpeername)
         self.assertFalse(inst.connected)
         self.assertTrue(inst._map)  # still processing
-        inst.handle_write()   # but still half connected so select will say it can write
-        self.assertFalse(inst._map, "channel should be removed so we don't loop and select socket again")
+        # inst.handle_write()   # but still half connected so select will say it can write
+        # self.assertFalse(inst._map, "channel should be removed so we don't loop and select socket again")
+        self.assertTrue(all(not c.writable() for c in inst._map.values()), "if our channel is writable we can get into a loop")
         # self.assertTrue(sock.closed, "Should be close the channel instead?")
 
 class TestHTTPChannelLookahead(TestHTTPChannel):
