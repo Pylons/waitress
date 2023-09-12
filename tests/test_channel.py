@@ -1,4 +1,6 @@
+from errno import EINVAL
 import io
+import socket
 import unittest
 
 import pytest
@@ -11,10 +13,10 @@ class TestHTTPChannel(unittest.TestCase):
         server = DummyServer()
         return HTTPChannel(server, sock, addr, adj=adj, map=map)
 
-    def _makeOneWithMap(self, adj=None):
+    def _makeOneWithMap(self, adj=None, sock_shutdown=False):
         if adj is None:
             adj = DummyAdjustments()
-        sock = DummySock()
+        sock = DummySock(shutdown=sock_shutdown)
         map = {}
         inst = self._makeOne(sock, "127.0.0.1", adj, map=map)
         inst.outbuf_lock = DummyLock()
@@ -770,6 +772,15 @@ class TestHTTPChannel(unittest.TestCase):
         inst.cancel()
         self.assertEqual(inst.requests, [])
 
+    def test_shutdown_quick_loop(self):
+        inst, sock, map = self._makeOneWithMap(sock_shutdown=True)
+        # if sock.shutdown(socket.SHUT_RD) creating the dispatcher we will get a connected == False
+        self.assertRaises(OSError, sock.getpeername)
+        self.assertFalse(inst.connected)
+        self.assertTrue(inst._map)  # still processing
+        inst.handle_write()   # but still half connected so select will say it can write
+        self.assertFalse(inst._map, "channel should be removed so we don't loop and select socket again")
+        # self.assertTrue(sock.closed, "Should be close the channel instead?")
 
 class TestHTTPChannelLookahead(TestHTTPChannel):
     def app_check_disconnect(self, environ, start_response):
@@ -906,8 +917,9 @@ class DummySock:
     blocking = False
     closed = False
 
-    def __init__(self):
+    def __init__(self, shutdown=False):
         self.sent = b""
+        self.shutdown = shutdown
 
     def setblocking(self, *arg):
         self.blocking = True
@@ -916,6 +928,8 @@ class DummySock:
         return 100
 
     def getpeername(self):
+        if self.shutdown:
+            raise OSError(EINVAL)
         return "127.0.0.1"
 
     def getsockopt(self, level, option):
