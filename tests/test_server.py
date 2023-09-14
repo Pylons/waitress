@@ -1,6 +1,7 @@
 import errno
 import select
 import socket
+from time import sleep
 import unittest
 
 dummy_app = object()
@@ -316,19 +317,24 @@ class TestWSGIServer(unittest.TestCase):
         sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
         sockets[0].bind(("127.0.0.1", 8000))
         sockets[0].listen()
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         inst = self._makeWithSockets(_start=False, sockets=sockets)
         from waitress.channel import HTTPChannel
-        inst.channel_class = HTTPChannel
+        class ShutdownChannel(HTTPChannel):
+            def __init__(self, server, sock, addr, adj, map=None):
+                client.shutdown(socket.SHUT_RD)
+                client.close()
+                sleep(3)
+                return HTTPChannel.__init__(self, server, sock, addr, adj, map)
+        inst.channel_class = ShutdownChannel
 
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect(("127.0.0.1", 8000))
-        client.shutdown(socket.SHUT_RD)
         inst.handle_accept()
 
         channel = list(iter(inst._map.values()))[-1]
-        self.assertEqual(channel.__class__, HTTPChannel)
-        self.assertEqual(channel.socket.getpeername(), "")
+        self.assertEqual(channel.__class__, ShutdownChannel)
+        # self.assertEqual(channel.socket.getpeername(), "")
         self.assertRaises(OSError, channel.socket.getpeername)
         self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
 
