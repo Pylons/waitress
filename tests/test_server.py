@@ -1,4 +1,5 @@
 import errno
+import select
 import socket
 import unittest
 
@@ -310,6 +311,50 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(sockets[0].accepted, True)
         self.assertEqual(innersock.opts, [("level", "optname", "value")])
         self.assertEqual(L, [(inst, innersock, None, inst.adj)])
+
+    def test_quick_shutdown(self):
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        sockets[0].bind(("127.0.0.1", 8000))
+        sockets[0].listen()
+
+        inst = self._makeWithSockets(_start=False, sockets=sockets)
+        from waitress.channel import HTTPChannel
+        inst.channel_class = HTTPChannel
+
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(("127.0.0.1", 8000))
+        client.shutdown(socket.SHUT_RD)
+        inst.handle_accept()
+
+        channel = list(iter(inst._map.values()))[-1]
+        self.assertEqual(channel.__class__, HTTPChannel)
+        self.assertEqual(channel.socket.getpeername(), "")
+        self.assertRaises(OSError, channel.socket.getpeername)
+        self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
+
+        inst.task_dispatcher = DummyTaskDispatcher()
+        selects = 0
+        orig_select = select.select
+
+        def counting_select(r, w, e, timeout):
+            nonlocal selects 
+            rr, wr, er = orig_select(r, w, e, timeout)
+            if rr or wr or er:
+                selects += 1
+            return rr, wr, er
+
+        select.select = counting_select
+
+        # Modified server run
+        inst.asyncore.loop(
+            timeout=inst.adj.asyncore_loop_timeout,
+            map=inst._map,
+            use_poll=inst.adj.asyncore_use_poll,
+            count=2
+        )
+        select.select = orig_select
+        sockets[0].close()
+        self.assertEqual(selects, 0, "ensure we aren't in a loop trying to write but can't")
 
 
 if hasattr(socket, "AF_UNIX"):
