@@ -330,11 +330,17 @@ class TestWSGIServer(unittest.TestCase):
         from waitress.channel import HTTPChannel
         class ShutdownChannel(HTTPChannel):
             def __init__(self, server, sock, addr, adj, map=None):
+                self.count_writes = 0
                 client.shutdown(socket.SHUT_WR)
-                # client.close()
+                client.close()
                 sleep(3)
                 return HTTPChannel.__init__(self, server, sock, addr, adj, map)
+            def handle_write(self):
+                self.count_writes += 1
+                return HTTPChannel.handle_write(self)
+
         inst.channel_class = ShutdownChannel
+        inst.task_dispatcher = DummyTaskDispatcher()
 
         client.connect(("127.0.0.1", 8000))
         inst.handle_accept()
@@ -345,18 +351,7 @@ class TestWSGIServer(unittest.TestCase):
         self.assertRaises(Exception, channel.socket.getpeername)
         self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
 
-        inst.task_dispatcher = DummyTaskDispatcher()
-        selects = 0
-        orig_select = select.select
-
-        def counting_select(r, w, e, timeout):
-            nonlocal selects 
-            rr, wr, er = orig_select(r, w, e, timeout)
-            if rr or wr or er:
-                selects += 1
-            return rr, wr, er
-
-        select.select = counting_select
+ 
 
         # Modified server run
         inst.asyncore.loop(
@@ -365,9 +360,8 @@ class TestWSGIServer(unittest.TestCase):
             use_poll=inst.adj.asyncore_use_poll,
             count=2
         )
-        select.select = orig_select
         sockets[0].close()
-        self.assertEqual(selects, 0, "ensure we aren't in a loop trying to write but can't")
+        self.assertEqual(channel.count_writes, 0, "ensure we aren't in a loop trying to write but can't")
 
 
 if hasattr(socket, "AF_UNIX"):
