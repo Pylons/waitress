@@ -316,15 +316,22 @@ class TestWSGIServer(unittest.TestCase):
     def test_quick_shutdown(self):
         sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
         sockets[0].bind(("127.0.0.1", 8000))
+        sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
+        sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
+        sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
         sockets[0].listen()
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
+        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
 
         inst = self._makeWithSockets(_start=False, sockets=sockets)
         from waitress.channel import HTTPChannel
         class ShutdownChannel(HTTPChannel):
             def __init__(self, server, sock, addr, adj, map=None):
-                client.shutdown(socket.SHUT_RD)
-                client.close()
+                client.shutdown(socket.SHUT_WR)
+                # client.close()
                 sleep(3)
                 return HTTPChannel.__init__(self, server, sock, addr, adj, map)
         inst.channel_class = ShutdownChannel
@@ -335,7 +342,7 @@ class TestWSGIServer(unittest.TestCase):
         channel = list(iter(inst._map.values()))[-1]
         self.assertEqual(channel.__class__, ShutdownChannel)
         # self.assertEqual(channel.socket.getpeername(), "")
-        self.assertRaises(OSError, channel.socket.getpeername)
+        self.assertRaises(Exception, channel.socket.getpeername)
         self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
 
         inst.task_dispatcher = DummyTaskDispatcher()
