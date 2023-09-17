@@ -1,7 +1,10 @@
 import errno
 import select
 import socket
+import struct
+from threading import Event
 from time import sleep
+import time
 import unittest
 
 dummy_app = object()
@@ -314,30 +317,50 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(L, [(inst, innersock, None, inst.adj)])
 
     def test_quick_shutdown(self):
+        """ Issue found in production that led to 100% useage because getpeername failed after accept but before channel setup.
+        """
         sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        # # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
+        # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
+        # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
         sockets[0].bind(("127.0.0.1", 8000))
-        sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
-        sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
-        sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
         sockets[0].listen()
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
-        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+        # client.settimeout(.2)
+        client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+        # 
+        # client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        # client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
+        # client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 1)
 
         inst = self._makeWithSockets(_start=False, sockets=sockets)
         from waitress.channel import HTTPChannel
+
         class ShutdownChannel(HTTPChannel):
             def __init__(self, server, sock, addr, adj, map=None):
-                self.count_writes = 0
-                client.shutdown(socket.SHUT_WR)
-                client.close()
-                sleep(3)
+                self.count_writes = self.count_close = 0
+                # client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
+                client.close()  # has to be here to reproduce
+                # sleep(1)  # has to be at least 65s to reproduce
+                # start = time.time()
+                # with open("/dev/tty", "w") as out:
+                #   while True:
+                #     try: sock.getpeername()
+                #     except OSError:
+                #         print("broken", int(time.time() - start), file=out)
+                #         break
+                #     else: print("not yet broken", int(time.time() - start), file=out); sleep(1)
                 return HTTPChannel.__init__(self, server, sock, addr, adj, map)
+            
             def handle_write(self):
                 self.count_writes += 1
                 return HTTPChannel.handle_write(self)
+
+            def handle_close(self):
+                self.count_close += 1
+                return HTTPChannel.handle_close(self)
 
         inst.channel_class = ShutdownChannel
         inst.task_dispatcher = DummyTaskDispatcher()
@@ -345,23 +368,23 @@ class TestWSGIServer(unittest.TestCase):
         client.connect(("127.0.0.1", 8000))
         inst.handle_accept()
 
+        self.assertEqual(len(inst._map.values()), 3)
         channel = list(iter(inst._map.values()))[-1]
         self.assertEqual(channel.__class__, ShutdownChannel)
         # self.assertEqual(channel.socket.getpeername(), "")
         self.assertRaises(Exception, channel.socket.getpeername)
         self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
 
- 
-
-        # Modified server run
+        # Modified server run to prevent infinite loop
         inst.asyncore.loop(
             timeout=inst.adj.asyncore_loop_timeout,
             map=inst._map,
             use_poll=inst.adj.asyncore_use_poll,
-            count=2
+            count=5
         )
         sockets[0].close()
         self.assertEqual(channel.count_writes, 0, "ensure we aren't in a loop trying to write but can't")
+        self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
 
 
 if hasattr(socket, "AF_UNIX"):
