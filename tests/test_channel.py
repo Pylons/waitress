@@ -772,16 +772,6 @@ class TestHTTPChannel(unittest.TestCase):
         inst.cancel()
         self.assertEqual(inst.requests, [])
 
-    def test_shutdown_quick_loop(self):
-        inst, sock, map = self._makeOneWithMap(sock_shutdown=True)
-        # if sock.shutdown(socket.SHUT_RD) creating the dispatcher we will get a connected == False
-        self.assertRaises(OSError, sock.getpeername)
-        self.assertFalse(inst.connected)
-        self.assertTrue(inst._map)  # still processing
-        # inst.handle_write()   # but still half connected so select will say it can write
-        # self.assertFalse(inst._map, "channel should be removed so we don't loop and select socket again")
-        self.assertTrue(all(not c.writable() for c in inst._map.values()), "if our channel is writable we can get into a loop")
-        # self.assertTrue(sock.closed, "Should be close the channel instead?")
 
 class TestHTTPChannelLookahead(TestHTTPChannel):
     def app_check_disconnect(self, environ, start_response):

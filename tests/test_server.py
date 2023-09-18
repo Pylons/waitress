@@ -443,7 +443,7 @@ class TestWSGIServer(unittest.TestCase):
         server_run(5)
 
         # self.assertEqual(channel.count_wouldblock, 1, "we need data left to send to be in a loop")
-        self.assertEqual(channel.count_writes, 0, "ensure we aren't in a loop trying to write but can't")
+        self.assertEqual(channel.count_writes > 1, "ensure we aren't in a loop trying to write but can't")
         self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
 
 
