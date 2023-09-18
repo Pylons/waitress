@@ -345,8 +345,8 @@ class TestWSGIServer(unittest.TestCase):
             data = None
             completed = True
             empty = False
-            headers_finished = False
-            expect_continue = False
+            headers_finished = True
+            expect_continue = True
             retval = None
             error = False
             connection_close = False
@@ -360,7 +360,7 @@ class TestWSGIServer(unittest.TestCase):
                 return len(data)
 
         class ShutdownChannel(HTTPChannel):
-            # parser_class = DummyParser
+            parser_class = DummyParser
             def __init__(self, server, sock, addr, adj, map=None):
                 self.count_writes = self.count_close = 0
                 # sleep(5)
@@ -383,15 +383,21 @@ class TestWSGIServer(unittest.TestCase):
                 return HTTPChannel.handle_write(self)
 
             def received(self, data):
+                #import pdb; pdb.set_trace()
                 res = HTTPChannel.received(self, data)
                 if data:
                     # Fake app returning data fast
-                    self.total_outbufs_len = 1
-                    # import pdb; pdb.set_trace()
+                    # self.total_outbufs_len = 1
+                    # Happens if send can't send all the data
+                    #import pdb; pdb.set_trace()
+                    #self.write_soon(b"1"*11025)
+                    #assert self.total_outbufs_len
                     # self.request.completed = True
                     # self.requests.append(DummyParser())
                     pass
                 return res
+            def send(self, data, do_close=True):
+                return 0
 
             def handle_close(self):
                 self.count_close += 1
@@ -401,6 +407,7 @@ class TestWSGIServer(unittest.TestCase):
         inst.task_dispatcher = DummyTaskDispatcher()
 
         client.connect(("127.0.0.1", 8000))
+        client.send(b"1")
         client.send(b"1")
         inst.handle_accept()
 
