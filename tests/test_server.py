@@ -368,7 +368,7 @@ class TestWSGIServer(unittest.TestCase):
             def __init__(self, server, sock, addr, adj, map=None):
                 self.count_writes = self.count_close = self.count_wouldblock = 0
                 # sleep(5)
-                #client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
+                # client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
                 #client.recv(1)
                 client.close()  # simulate race condition where close happens between accept adn getpeername
                 # sleep(1)  # has to be at least 65s to reproduce
@@ -438,7 +438,7 @@ class TestWSGIServer(unittest.TestCase):
         self.assertRaises(Exception, channel.socket.getpeername)
         self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
 
-        server_run(1)
+        server_run(5)
         channel.service()  # Our error request sets close_after_flushed
         server_run(5)
 

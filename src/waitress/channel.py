@@ -67,6 +67,9 @@ class HTTPChannel(wasyncore.dispatcher):
         self.outbuf_lock = threading.Condition()
 
         wasyncore.dispatcher.__init__(self, sock, map=map)
+        if not self.connected:
+            # Sometimes can be closed quickly and getpeername fails.
+            self.handle_close()
 
         # Don't let wasyncore.dispatcher throttle self.addr on us.
         self.addr = addr
@@ -86,17 +89,14 @@ class HTTPChannel(wasyncore.dispatcher):
         # the channel (possibly by our server maintenance logic), run
         # handle_write
 
-        return self.connected and (self.total_outbufs_len or self.will_close or self.close_when_flushed)
+        return (self.total_outbufs_len or self.will_close or self.close_when_flushed)
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
         # there's a pending will_close request
 
-        if not self.connected:
+        if not self.connected and not self.close_when_flushed:
             # we dont want to close the channel twice
-            # But we shouldn't be written to if we really are closed so unregister from loop
-            # self.del_channel()
-            #self.close_when_flushed = True
             return
 
         # try to flush any pending output
@@ -152,7 +152,6 @@ class HTTPChannel(wasyncore.dispatcher):
         # 3. There are not too many tasks already queued
         # 4. There's no data in the output buffer that needs to be sent
         #    before we potentially create a new task.
-
         return not (
             self.will_close
             or self.close_when_flushed
