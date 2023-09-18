@@ -346,9 +346,9 @@ class TestWSGIServer(unittest.TestCase):
             completed = True
             empty = False
             headers_finished = True
-            expect_continue = True
+            expect_continue = False
             retval = None
-            error = False
+            error = True
             connection_close = False
             def __init__(self, adj):
                 pass
@@ -357,12 +357,16 @@ class TestWSGIServer(unittest.TestCase):
                 self.data = data
                 if self.retval is not None:
                     return self.retval
-                return len(data)
+                #self.expect_continue = not self.expect_continue
+                #self.completed = not self.completed
+                return 1
+            def close(self):
+                pass
 
         class ShutdownChannel(HTTPChannel):
             parser_class = DummyParser
             def __init__(self, server, sock, addr, adj, map=None):
-                self.count_writes = self.count_close = 0
+                self.count_writes = self.count_close = self.count_wouldblock = 0
                 # sleep(5)
                 client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
                 #client.recv(1)
@@ -383,7 +387,7 @@ class TestWSGIServer(unittest.TestCase):
                 return HTTPChannel.handle_write(self)
 
             def received(self, data):
-                #import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 res = HTTPChannel.received(self, data)
                 if data:
                     # Fake app returning data fast
@@ -397,9 +401,16 @@ class TestWSGIServer(unittest.TestCase):
                     pass
                 return res
             def send(self, data, do_close=True):
-                return 0
+                # fake EWOULDBLOCK where socket buffers are filled up. but how?
+                # return 0
+                res = HTTPChannel.send(self, data, do_close)
+                if res < len(data) and not self.count_close:
+                    self.count_wouldblock += 1
+                #    import pdb; pdb.set_trace()
+                return res
 
             def handle_close(self):
+                # import pdb; pdb.set_trace()
                 self.count_close += 1
                 return HTTPChannel.handle_close(self)
 
@@ -407,8 +418,8 @@ class TestWSGIServer(unittest.TestCase):
         inst.task_dispatcher = DummyTaskDispatcher()
 
         client.connect(("127.0.0.1", 8000))
-        client.send(b"1")
-        client.send(b"1")
+        for i in range(0, 1):
+            client.send(b"1")
         inst.handle_accept()
 
         self.assertEqual(len(inst._map.values()), 3)
@@ -425,7 +436,15 @@ class TestWSGIServer(unittest.TestCase):
             use_poll=inst.adj.asyncore_use_poll,
             count=5
         )
-        sockets[0].close()
+        channel.service()
+        inst.asyncore.loop(
+            timeout=inst.adj.asyncore_loop_timeout,
+            map=inst._map,
+            use_poll=inst.adj.asyncore_use_poll,
+            count=5
+        )
+        #sockets[0].close()
+        # self.assertEqual(channel.count_wouldblock, 1, "we need data left to send to be in a loop")
         self.assertEqual(channel.count_writes, 0, "ensure we aren't in a loop trying to write but can't")
         self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
 
