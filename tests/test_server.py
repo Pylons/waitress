@@ -368,51 +368,60 @@ class TestWSGIServer(unittest.TestCase):
             def __init__(self, server, sock, addr, adj, map=None):
                 self.count_writes = self.count_close = self.count_wouldblock = 0
                 # sleep(5)
-                client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
+                #client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
                 #client.recv(1)
-                client.close()  # has to be here to reproduce
+                client.close()  # simulate race condition where close happens between accept adn getpeername
                 # sleep(1)  # has to be at least 65s to reproduce
-                start = time.time()
-                with open("/dev/tty", "w") as out:
-                  while True:
-                    try: sock.getpeername()
-                    except OSError:
-                        print("broken", int(time.time() - start), file=out)
-                        break
-                    else: print("not yet broken", int(time.time() - start), file=out); sleep(1)
+                # start = time.time()
+                # with open("/dev/tty", "w") as out:
+                #   while True:
+                #     try: sock.getpeername()
+                #     except OSError:
+                #         print("broken", int(time.time() - start), file=out)
+                #         break
+                #     else: print("not yet broken", int(time.time() - start), file=out); sleep(1)
                 return HTTPChannel.__init__(self, server, sock, addr, adj, map)
             
             def handle_write(self):
                 self.count_writes += 1
                 return HTTPChannel.handle_write(self)
 
-            def received(self, data):
-                # import pdb; pdb.set_trace()
-                res = HTTPChannel.received(self, data)
-                if data:
-                    # Fake app returning data fast
-                    # self.total_outbufs_len = 1
-                    # Happens if send can't send all the data
-                    #import pdb; pdb.set_trace()
-                    #self.write_soon(b"1"*11025)
-                    #assert self.total_outbufs_len
-                    # self.request.completed = True
-                    # self.requests.append(DummyParser())
-                    pass
-                return res
-            def send(self, data, do_close=True):
-                # fake EWOULDBLOCK where socket buffers are filled up. but how?
-                # return 0
-                res = HTTPChannel.send(self, data, do_close)
-                if res < len(data) and not self.count_close:
-                    self.count_wouldblock += 1
-                #    import pdb; pdb.set_trace()
-                return res
+            # def received(self, data):
+            #     # import pdb; pdb.set_trace()
+            #     res = HTTPChannel.received(self, data)
+            #     if data:
+            #         # Fake app returning data fast
+            #         # self.total_outbufs_len = 1
+            #         # Happens if send can't send all the data
+            #         #import pdb; pdb.set_trace()
+            #         #self.write_soon(b"1"*11025)
+            #         #assert self.total_outbufs_len
+            #         # self.request.completed = True
+            #         # self.requests.append(DummyParser())
+            #         pass
+            #     return res
+            # def send(self, data, do_close=True):
+            #     # fake EWOULDBLOCK where socket buffers are filled up. but how?
+            #     # return 0
+            #     res = HTTPChannel.send(self, data, do_close)
+            #     if res < len(data) and not self.count_close:
+            #         self.count_wouldblock += 1
+            #     #    import pdb; pdb.set_trace()
+            #     return res
 
             def handle_close(self):
                 # import pdb; pdb.set_trace()
                 self.count_close += 1
                 return HTTPChannel.handle_close(self)
+
+        def server_run(count=1):
+            # Modified server run to prevent infinite loop
+            inst.asyncore.loop(
+                timeout=inst.adj.asyncore_loop_timeout,
+                map=inst._map,
+                use_poll=inst.adj.asyncore_use_poll,
+                count=count
+            )
 
         inst.channel_class = ShutdownChannel
         inst.task_dispatcher = DummyTaskDispatcher()
@@ -429,21 +438,10 @@ class TestWSGIServer(unittest.TestCase):
         self.assertRaises(Exception, channel.socket.getpeername)
         self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
 
-        # Modified server run to prevent infinite loop
-        inst.asyncore.loop(
-            timeout=inst.adj.asyncore_loop_timeout,
-            map=inst._map,
-            use_poll=inst.adj.asyncore_use_poll,
-            count=5
-        )
-        channel.service()
-        inst.asyncore.loop(
-            timeout=inst.adj.asyncore_loop_timeout,
-            map=inst._map,
-            use_poll=inst.adj.asyncore_use_poll,
-            count=5
-        )
-        #sockets[0].close()
+        server_run(1)
+        channel.service()  # Our error request sets close_after_flushed
+        server_run(5)
+
         # self.assertEqual(channel.count_wouldblock, 1, "we need data left to send to be in a loop")
         self.assertEqual(channel.count_writes, 0, "ensure we aren't in a loop trying to write but can't")
         self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
