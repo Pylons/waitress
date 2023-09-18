@@ -7,6 +7,8 @@ from time import sleep
 import time
 import unittest
 
+from tests.test_channel import DummyParser
+
 dummy_app = object()
 
 
@@ -320,7 +322,8 @@ class TestWSGIServer(unittest.TestCase):
         """ Issue found in production that led to 100% useage because getpeername failed after accept but before channel setup.
         """
         sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
-        sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+        # sockets[0].settimeout(.2)
         # sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         # # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
         # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
@@ -337,26 +340,58 @@ class TestWSGIServer(unittest.TestCase):
 
         inst = self._makeWithSockets(_start=False, sockets=sockets)
         from waitress.channel import HTTPChannel
+        class DummyParser:
+            version = 1
+            data = None
+            completed = True
+            empty = False
+            headers_finished = False
+            expect_continue = False
+            retval = None
+            error = False
+            connection_close = False
+            def __init__(self, adj):
+                pass
+
+            def received(self, data):
+                self.data = data
+                if self.retval is not None:
+                    return self.retval
+                return len(data)
 
         class ShutdownChannel(HTTPChannel):
+            # parser_class = DummyParser
             def __init__(self, server, sock, addr, adj, map=None):
                 self.count_writes = self.count_close = 0
-                # client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
+                # sleep(5)
+                client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
+                #client.recv(1)
                 client.close()  # has to be here to reproduce
                 # sleep(1)  # has to be at least 65s to reproduce
-                # start = time.time()
-                # with open("/dev/tty", "w") as out:
-                #   while True:
-                #     try: sock.getpeername()
-                #     except OSError:
-                #         print("broken", int(time.time() - start), file=out)
-                #         break
-                #     else: print("not yet broken", int(time.time() - start), file=out); sleep(1)
+                start = time.time()
+                with open("/dev/tty", "w") as out:
+                  while True:
+                    try: sock.getpeername()
+                    except OSError:
+                        print("broken", int(time.time() - start), file=out)
+                        break
+                    else: print("not yet broken", int(time.time() - start), file=out); sleep(1)
                 return HTTPChannel.__init__(self, server, sock, addr, adj, map)
             
             def handle_write(self):
                 self.count_writes += 1
                 return HTTPChannel.handle_write(self)
+
+            def received(self, data):
+                res = HTTPChannel.received(self, data)
+                if data:
+                    # Fake app returning data fast
+                    self.total_outbufs_len = 1
+                    # import pdb; pdb.set_trace()
+                    # self.request.completed = True
+                    # self.requests.append(DummyParser())
+                    pass
+                return res
 
             def handle_close(self):
                 self.count_close += 1
@@ -366,6 +401,7 @@ class TestWSGIServer(unittest.TestCase):
         inst.task_dispatcher = DummyTaskDispatcher()
 
         client.connect(("127.0.0.1", 8000))
+        client.send(b"1")
         inst.handle_accept()
 
         self.assertEqual(len(inst._map.values()), 3)
