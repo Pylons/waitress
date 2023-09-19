@@ -387,7 +387,7 @@ class TestWSGIServer(unittest.TestCase):
         client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
         client.connect(("127.0.0.1", 8000))
         client.send(b"1")  # Send our fake request before we accept and close the connection
-        inst.handle_accept()  # ShutdownServer will close the connection after access but before getpeername
+        inst.handle_accept()  # ShutdownServer will close the connection after acceot but before getpeername
         self.assertRaises(OSError, sockets[0].getpeername)
         self.assertEqual(len(inst._map.values()), 2, "3 means we didn't get an automatic close")
 
@@ -398,11 +398,13 @@ class TestWSGIServer(unittest.TestCase):
 
         # server_run(5)  # Read the request
         # self.assertTrue(channel.request.error, "Error will cause a close")
+        # # channel_request_lookahead > 0 would avoid this bug
+        # self.assertTrue(len(channel.requests) <= channel.adj.channel_request_lookahead, "channel_request_lookahead == 0 means we don't read the disconnect")
+        # # simulate thread processing the request
         # channel.service()
-        # self.assertTrue(channel.close_after_flushed, "This prevents reads and loops trying to write but can't")
+        # self.assertTrue(channel.close_after_flushed, "This prevents reads (which lead to close) and loops on handle_write (with 100% CPU)")
         # server_run(5)  # Our loop
-        # # self.assertEqual(channel.count_wouldblock, 1, "we need data left to send to be in a loop")
-        # self.assertEqual(channel.count_writes > 1, "ensure we aren't in a loop trying to write but can't")
+        # self.assertEqual(channel.count_writes > 1, "We're supposed to be in a loop trying to write but can't")
         # self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
 
 
