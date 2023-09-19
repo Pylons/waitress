@@ -321,26 +321,10 @@ class TestWSGIServer(unittest.TestCase):
     def test_quick_shutdown(self):
         """ Issue found in production that led to 100% useage because getpeername failed after accept but before channel setup.
         """
-        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
-        sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
-        # sockets[0].settimeout(.2)
-        # sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        # # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
-        # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
-        # sockets[0].setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
-        sockets[0].bind(("127.0.0.1", 8000))
-        sockets[0].listen()
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # client.settimeout(.2)
-        client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
-        # 
-        # client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        # client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
-        # client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 1)
 
-        inst = self._makeWithSockets(_start=False, sockets=sockets)
-        from waitress.channel import HTTPChannel
         class DummyParser:
+            error = True  # We are simulating a header parsing error
+
             version = 1
             data = None
             completed = True
@@ -348,8 +332,8 @@ class TestWSGIServer(unittest.TestCase):
             headers_finished = True
             expect_continue = False
             retval = None
-            error = True
             connection_close = False
+
             def __init__(self, adj):
                 pass
 
@@ -357,57 +341,25 @@ class TestWSGIServer(unittest.TestCase):
                 self.data = data
                 if self.retval is not None:
                     return self.retval
-                #self.expect_continue = not self.expect_continue
-                #self.completed = not self.completed
-                return 1
+                return len(data)
+
             def close(self):
                 pass
 
+        from waitress.channel import HTTPChannel
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         class ShutdownChannel(HTTPChannel):
             parser_class = DummyParser
+
             def __init__(self, server, sock, addr, adj, map=None):
                 self.count_writes = self.count_close = self.count_wouldblock = 0
-                # sleep(5)
-                # client.shutdown(socket.SHUT_RDWR)  # has to be here to reproduce. just RD or WR won't work
-                #client.recv(1)
                 client.close()  # simulate race condition where close happens between accept adn getpeername
-                # sleep(1)  # has to be at least 65s to reproduce
-                # start = time.time()
-                # with open("/dev/tty", "w") as out:
-                #   while True:
-                #     try: sock.getpeername()
-                #     except OSError:
-                #         print("broken", int(time.time() - start), file=out)
-                #         break
-                #     else: print("not yet broken", int(time.time() - start), file=out); sleep(1)
                 return HTTPChannel.__init__(self, server, sock, addr, adj, map)
             
             def handle_write(self):
                 self.count_writes += 1
                 return HTTPChannel.handle_write(self)
-
-            # def received(self, data):
-            #     # import pdb; pdb.set_trace()
-            #     res = HTTPChannel.received(self, data)
-            #     if data:
-            #         # Fake app returning data fast
-            #         # self.total_outbufs_len = 1
-            #         # Happens if send can't send all the data
-            #         #import pdb; pdb.set_trace()
-            #         #self.write_soon(b"1"*11025)
-            #         #assert self.total_outbufs_len
-            #         # self.request.completed = True
-            #         # self.requests.append(DummyParser())
-            #         pass
-            #     return res
-            # def send(self, data, do_close=True):
-            #     # fake EWOULDBLOCK where socket buffers are filled up. but how?
-            #     # return 0
-            #     res = HTTPChannel.send(self, data, do_close)
-            #     if res < len(data) and not self.count_close:
-            #         self.count_wouldblock += 1
-            #     #    import pdb; pdb.set_trace()
-            #     return res
 
             def handle_close(self):
                 # import pdb; pdb.set_trace()
@@ -423,28 +375,35 @@ class TestWSGIServer(unittest.TestCase):
                 count=count
             )
 
+        sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
+        sockets[0].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+        sockets[0].bind(("127.0.0.1", 8000))
+        sockets[0].listen()
+        inst = self._makeWithSockets(_start=False, sockets=sockets)
         inst.channel_class = ShutdownChannel
         inst.task_dispatcher = DummyTaskDispatcher()
 
+        # This will make getpeername fail fast with EINVAL OSError
+        client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
         client.connect(("127.0.0.1", 8000))
-        for i in range(0, 1):
-            client.send(b"1")
-        inst.handle_accept()
+        client.send(b"1")  # Send our fake request before we accept and close the connection
+        inst.handle_accept()  # ShutdownServer will close the connection after access but before getpeername
+        self.assertRaises(OSError, sockets[0].getpeername)
+        self.assertEqual(len(inst._map.values()), 2, "3 means we didn't get an automatic close")
 
-        self.assertEqual(len(inst._map.values()), 3)
-        channel = list(iter(inst._map.values()))[-1]
-        self.assertEqual(channel.__class__, ShutdownChannel)
-        # self.assertEqual(channel.socket.getpeername(), "")
-        self.assertRaises(Exception, channel.socket.getpeername)
-        self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
+        # To reproduce previous looping behaviour uncomment
+        # channel = list(iter(inst._map.values()))[3]
+        # self.assertEqual(channel.__class__, ShutdownChannel)
+        # self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
 
-        server_run(5)
-        channel.service()  # Our error request sets close_after_flushed
-        server_run(5)
-
-        # self.assertEqual(channel.count_wouldblock, 1, "we need data left to send to be in a loop")
-        self.assertEqual(channel.count_writes > 1, "ensure we aren't in a loop trying to write but can't")
-        self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
+        # server_run(5)  # Read the request
+        # self.assertTrue(channel.request.error, "Error will cause a close")
+        # channel.service()
+        # self.assertTrue(channel.close_after_flushed, "This prevents reads and loops trying to write but can't")
+        # server_run(5)  # Our loop
+        # # self.assertEqual(channel.count_wouldblock, 1, "we need data left to send to be in a loop")
+        # self.assertEqual(channel.count_writes > 1, "ensure we aren't in a loop trying to write but can't")
+        # self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
 
 
 if hasattr(socket, "AF_UNIX"):
