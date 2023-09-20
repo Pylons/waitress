@@ -7,8 +7,6 @@ from time import sleep
 import time
 import unittest
 
-from tests.test_channel import DummyParser
-
 dummy_app = object()
 
 
@@ -321,10 +319,8 @@ class TestWSGIServer(unittest.TestCase):
     def test_quick_shutdown(self):
         """ Issue found in production that led to 100% useage because getpeername failed after accept but before channel setup.
         """
-
         class DummyParser:
             error = True  # We are simulating a header parsing error
-
             version = 1
             data = None
             completed = True
@@ -348,12 +344,15 @@ class TestWSGIServer(unittest.TestCase):
 
         from waitress.channel import HTTPChannel
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        channel = None
 
         class ShutdownChannel(HTTPChannel):
             parser_class = DummyParser
 
             def __init__(self, server, sock, addr, adj, map=None):
                 self.count_writes = self.count_close = self.count_wouldblock = 0
+                nonlocal channel
+                channel = self
                 client.close()  # simulate race condition where close happens between accept adn getpeername
                 return HTTPChannel.__init__(self, server, sock, addr, adj, map)
             
@@ -389,23 +388,30 @@ class TestWSGIServer(unittest.TestCase):
         client.send(b"1")  # Send our fake request before we accept and close the connection
         inst.handle_accept()  # ShutdownServer will close the connection after acceot but before getpeername
         self.assertRaises(OSError, sockets[0].getpeername)
-        self.assertEqual(len(inst._map.values()), 2, "3 means we didn't get an automatic close")
+        self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
+        self.assertNotIn(channel, inst._map.values(), "we should get an automatic close")
 
-        # To reproduce previous looping behaviour uncomment
-        # channel = list(iter(inst._map.values()))[3]
-        # self.assertEqual(channel.__class__, ShutdownChannel)
-        # self.assertFalse(channel.connected, "race condition means our socket is marked not connected")
+        # UNCOMMENT: To reproduce previous 100% CPU looping behaviour
+        # self.assertIn(channel, inst._map.values(), "broken request still active to get this bug")
 
-        # server_run(5)  # Read the request
-        # self.assertTrue(channel.request.error, "Error will cause a close")
+        # server_run(1)  # Read the request
+        # self.assertTrue(channel.requests[0].error, "for this bug we need the request to have a parsing error")
+        # server_run(5)  
+        # self.assertIn(channel, inst._map.values(), "our rchannel doesn't get read and closed")
         # # channel_request_lookahead > 0 would avoid this bug
-        # self.assertTrue(len(channel.requests) <= channel.adj.channel_request_lookahead, "channel_request_lookahead == 0 means we don't read the disconnect")
+        # self.assertTrue(len(channel.requests) > channel.adj.channel_request_lookahead, "channel_request_lookahead == 0 means we don't read the disconnect")
         # # simulate thread processing the request
         # channel.service()
-        # self.assertTrue(channel.close_after_flushed, "This prevents reads (which lead to close) and loops on handle_write (with 100% CPU)")
+        # self.assertTrue(channel.close_when_flushed, "This prevents reads (which lead to close) and loops on handle_write (with 100% CPU)")
         # server_run(5)  # Our loop
-        # self.assertEqual(channel.count_writes > 1, "We're supposed to be in a loop trying to write but can't")
+        # self.assertEqual(channel.count_writes, 5, "We're supposed to be in a loop trying to write but can't")
         # self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
+        # # But shouldn't maintenance clear this up?
+        # channel.last_activity = 0
+        # inst.maintenance(1000)
+        # self.assertEqual(channel.will_close, 1, "maintenance will try to close it")
+        # server_run(5)  # Our loop
+        # self.assertEqual(channel.count_writes, 10, "But we still get our loop")
 
 
 if hasattr(socket, "AF_UNIX"):

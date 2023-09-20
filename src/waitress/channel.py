@@ -95,8 +95,9 @@ class HTTPChannel(wasyncore.dispatcher):
         # Precondition: there's data in the out buffer to be sent, or
         # there's a pending will_close request
 
-        if not self.connected and not self.close_when_flushed:
-            # we dont want to close the channel twice
+        if not self.connected and not (self.will_close or self.close_when_flushed):
+            # we dont want to close the channel twice.
+            # but we need let the channel close if it's marked to close
             return
 
         # try to flush any pending output
