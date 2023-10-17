@@ -571,6 +571,14 @@ class Test_crack_first_line(unittest.TestCase):
         result = self._callFUT(b"GET /")
         self.assertEqual(result, (b"GET", b"/", b""))
 
+    def test_crack_first_line_bad_method(self):
+        result = self._callFUT(b"GE\x00 /foobar HTTP/8.4")
+        self.assertEqual(result, (b"", b"", b""))
+
+    def test_crack_first_line_bad_version(self):
+        result = self._callFUT(b"GET /foobar HTTP/.1.")
+        self.assertEqual(result, (b"", b"", b""))
+
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
     def setUp(self):
