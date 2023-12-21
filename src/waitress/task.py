@@ -474,17 +474,18 @@ class WSGITask(Task):
 
             cl = self.content_length
             if cl is not None:
-                if self.content_bytes_written != cl:
+                if self.content_bytes_written != cl and self.request.command != "HEAD":
                     # close the connection so the client isn't sitting around
                     # waiting for more data when there are too few bytes
                     # to service content-length
+                    # unless it's a HEAD request in which case we don't expect
+                    # to return any bytes regardless of the content length
                     self.close_on_finish = True
-                    if self.request.command != "HEAD":
-                        self.logger.warning(
-                            "application returned too few bytes (%s) "
-                            "for specified Content-Length (%s) via app_iter"
-                            % (self.content_bytes_written, cl),
-                        )
+                    self.logger.warning(
+                        "application returned too few bytes (%s) "
+                        "for specified Content-Length (%s) via app_iter"
+                        % (self.content_bytes_written, cl),
+                    )
         finally:
             if can_close_app_iter and hasattr(app_iter, "close"):
                 app_iter.close()
