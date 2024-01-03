@@ -35,7 +35,6 @@ from waitress.utilities import (
 
 class TestHTTPRequestParser(unittest.TestCase):
     def setUp(self):
-
         my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)
 
@@ -98,7 +97,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(result, 0)
 
     def test_received_cl_too_large(self):
-
         self.parser.adj.max_request_body_size = 2
         data = b"GET /foobar HTTP/8.4\r\nContent-Length: 10\r\n\r\n"
         result = self.parser.received(data)
@@ -107,7 +105,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
 
     def test_received_headers_not_too_large_multiple_chunks(self):
-
         data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n"
         data2 = b"X-Foo-Other: 3\r\n\r\n"
         self.parser.adj.max_request_header_size = len(data) + len(data2) + 1
@@ -119,7 +116,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertFalse(self.parser.error)
 
     def test_received_headers_too_large(self):
-
         self.parser.adj.max_request_header_size = 2
         data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n\r\n"
         result = self.parser.received(data)
@@ -252,7 +248,6 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_transfer_encoding_invalid_multiple(self):
-
         data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\ntransfer-encoding: chunked\r\n"
 
         try:
@@ -721,7 +716,6 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
 
 class Test_unquote_bytes_to_wsgi(unittest.TestCase):
     def _callFUT(self, v):
-
         return unquote_bytes_to_wsgi(v)
 
     def test_highorder(self):

@@ -63,7 +63,6 @@ class FixtureTcpWSGIServer(server.TcpWSGIServer):
 
 
 class SubprocessTests:
-
     exe = sys.executable
 
     server = None
@@ -133,7 +132,6 @@ class SubprocessTests:
 
 
 class TcpTests(SubprocessTests):
-
     server = FixtureTcpWSGIServer
 
     def make_http_connection(self):
@@ -924,7 +922,6 @@ class WriteCallbackTests:
 
 
 class TooLargeTests:
-
     toobig = 1050
 
     def setUp(self):
@@ -1606,7 +1603,6 @@ if hasattr(socket, "AF_UNIX"):
             queue.put(self.socket.getsockname())
 
     class UnixTests(SubprocessTests):
-
         server = FixtureUnixWSGIServer
 
         def make_http_connection(self):

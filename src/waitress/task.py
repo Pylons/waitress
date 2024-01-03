@@ -190,7 +190,7 @@ class Task:
         server_header = None
         connection_close_header = None
 
-        for (headername, headerval) in self.response_headers:
+        for headername, headerval in self.response_headers:
             headername = "-".join([x.capitalize() for x in headername.split("-")])
 
             if headername == "Content-Length":
