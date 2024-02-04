@@ -177,7 +177,6 @@ class MultiSocketServer:
 
 
 class BaseWSGIServer(wasyncore.dispatcher):
-
     channel_class = HTTPChannel
     next_channel_cleanup = 0
     socketmod = socket  # test shim
@@ -372,7 +371,7 @@ class TcpWSGIServer(BaseWSGIServer):
         )
 
     def set_socket_options(self, conn):
-        for (level, optname, value) in self.adj.socket_options:
+        for level, optname, value in self.adj.socket_options:
             conn.setsockopt(level, optname, value)
 
 

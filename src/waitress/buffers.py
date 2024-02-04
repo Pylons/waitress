@@ -23,7 +23,6 @@ STRBUF_LIMIT = 8192
 
 
 class FileBasedBuffer:
-
     remain = 0
 
     def __init__(self, file, from_buffer=None):

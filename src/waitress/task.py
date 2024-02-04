@@ -202,7 +202,7 @@ class Task:
         date_header = None
         server_header = None
 
-        for (headername, headerval) in self.response_headers:
+        for headername, headerval in self.response_headers:
             headername = "-".join([x.capitalize() for x in headername.split("-")])
 
             if headername == "Content-Length":
@@ -249,7 +249,7 @@ class Task:
                     response_headers.append(("Transfer-Encoding", "chunked"))
                     self.chunked_response = True
 
-                if not self.self.set_close_on_finish:
+                if not self.close_on_finish:
                     self.set_close_on_finish()
 
             # under HTTP 1.1 keep-alive is default, no need to set the header
@@ -389,7 +389,7 @@ class WSGITask(Task):
 
             self.complete = True
 
-            if not status.__class__ is str:
+            if status.__class__ is not str:
                 raise AssertionError("status %s is not a string" % status)
             if "\n" in status or "\r" in status:
                 raise ValueError(
@@ -400,11 +400,11 @@ class WSGITask(Task):
 
             # Prepare the headers for output
             for k, v in headers:
-                if not k.__class__ is str:
+                if k.__class__ is not str:
                     raise AssertionError(
                         f"Header name {k!r} is not a string in {(k, v)!r}"
                     )
-                if not v.__class__ is str:
+                if v.__class__ is not str:
                     raise AssertionError(
                         f"Header value {v!r} is not a string in {(k, v)!r}"
                     )
@@ -475,7 +475,7 @@ class WSGITask(Task):
 
             cl = self.content_length
             if cl is not None:
-                if self.content_bytes_written != cl:
+                if self.content_bytes_written != cl and self.request.command != "HEAD":
                     # close the connection so the client isn't sitting around
                     # waiting for more data when there are too few bytes
                     # to service content-length
@@ -484,7 +484,7 @@ class WSGITask(Task):
                         self.logger.warning(
                             "application returned too few bytes (%s) "
                             "for specified Content-Length (%s) via app_iter"
-                            % (self.content_bytes_written, cl),
+                            , self.content_bytes_written, cl
                         )
         finally:
             if can_close_app_iter and hasattr(app_iter, "close"):
