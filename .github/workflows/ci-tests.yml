@@ -34,6 +34,10 @@ jobs:
                 include:
                   - py: "pypy-3.8"
                     toxenv: "pypy38"
+                  - py: "pypy-3.9"
+                    toxenv: "pypy39"
+                  - py: "pypy-3.10"
+                    toxenv: "pypy310"
                 exclude:
                     # Linux and macOS don't have x86 python
                     - os: "ubuntu-latest"
