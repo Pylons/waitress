@@ -44,6 +44,16 @@ jobs:
                       architecture: x86
                     - os: "macos-latest"
                       architecture: x86
+                    # Don't run all PyPy versions except latest on
+                    # Windows/macOS. They are expensive to run.
+                    - os: "windows-latest"
+                      py: "pypy-3.8"
+                    - os: "macos-latest"
+                      py: "pypy-3.8"
+                    - os: "windows-latest"
+                      py: "pypy-3.9"
+                    - os: "macos-latest"
+                      py: "pypy-3.9"
 
         name: "Python: ${{ matrix.py }}-${{ matrix.architecture }} on ${{ matrix.os }}"
         runs-on: ${{ matrix.os }}
