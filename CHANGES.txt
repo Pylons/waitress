@@ -10,6 +10,23 @@
 - Fixed testing of vendored asyncore code to not rely on particular naming for
   errno's. See https://github.com/Pylons/waitress/pull/397
 
+- HTTP Request methods and versions are now validated to meet the HTTP
+  standards thereby dropping invalid requests on the floor. See
+  https://github.com/Pylons/waitress/pull/423
+
+- No longer close the connection when sending a HEAD request response. See
+  https://github.com/Pylons/waitress/pull/428
+
+- Always attempt to send the Connection: close response header when we are
+  going to close the connection to let the remote know in more instances.
+  https://github.com/Pylons/waitress/pull/429
+
+- Python 3.7 is no longer supported. Add support for Python 3.11, 3.12 and
+  PyPy 3.9, 3.10. See https://github.com/Pylons/waitress/pull/412
+
+- Document that trusted_proxy may be set to a wildcard value to trust all
+  proxies. See https://github.com/Pylons/waitress/pull/431
+
 Updated Defaults
 ~~~~~~~~~~~~~~~~
 
