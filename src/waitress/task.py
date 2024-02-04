@@ -185,9 +185,8 @@ class Task:
         # client we are closing the connection
         if not self.wrote_header:
             connection_close_header = None
-            for (headername, headerval) in self.response_headers:
-                headername = "-".join([x.capitalize() for x in headername.split("-")])
-                if headername == "Connection":
+            for headername, headerval in self.response_headers:
+                if headername.capitalize() == "Connection":
                     connection_close_header = headerval.lower()
             if connection_close_header is None:
                 self.response_headers.append(("Connection", "close"))
@@ -220,20 +219,23 @@ class Task:
             # replace with properly capitalized version
             response_headers.append((headername, headerval))
 
+        # Overwrite the response headers we have with normalized ones
+        self.response_headers = response_headers
+
         if (
             content_length_header is None
             and self.content_length is not None
             and self.has_body
         ):
             content_length_header = str(self.content_length)
-            response_headers.append(("Content-Length", content_length_header))
+            self.response_headers.append(("Content-Length", content_length_header))
 
         if version == "1.0":
             if connection == "keep-alive":
                 if not content_length_header:
                     self.set_close_on_finish()
                 else:
-                    response_headers.append(("Connection", "Keep-Alive"))
+                    self.response_headers.append(("Connection", "Keep-Alive"))
             else:
                 self.set_close_on_finish()
 
@@ -246,7 +248,7 @@ class Task:
                 # for any response with a status code of 1xx, 204 or 304.
 
                 if self.has_body:
-                    response_headers.append(("Transfer-Encoding", "chunked"))
+                    self.response_headers.append(("Transfer-Encoding", "chunked"))
                     self.chunked_response = True
 
                 if not self.close_on_finish:
@@ -262,14 +264,12 @@ class Task:
 
         if not server_header:
             if ident:
-                response_headers.append(("Server", ident))
+                self.response_headers.append(("Server", ident))
         else:
-            response_headers.append(("Via", ident or "waitress"))
+            self.response_headers.append(("Via", ident or "waitress"))
 
         if not date_header:
-            response_headers.append(("Date", build_http_date(self.start_time)))
-
-        self.response_headers = response_headers
+            self.response_headers.append(("Date", build_http_date(self.start_time)))
 
         first_line = f"HTTP/{self.version} {self.status}"
         # NB: sorting headers needs to preserve same-named-header order
@@ -483,8 +483,9 @@ class WSGITask(Task):
                     if self.request.command != "HEAD":
                         self.logger.warning(
                             "application returned too few bytes (%s) "
-                            "for specified Content-Length (%s) via app_iter"
-                            , self.content_bytes_written, cl
+                            "for specified Content-Length (%s) via app_iter",
+                            self.content_bytes_written,
+                            cl,
                         )
         finally:
             if can_close_app_iter and hasattr(app_iter, "close"):
