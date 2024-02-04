@@ -57,7 +57,9 @@ class Test_resolve(unittest.TestCase):
 
     def test_complex_happy_path(self):
         # Ensure we can recursively resolve object attributes if necessary.
-        self.assertEqual(runner.resolve("os.path", "exists.__name__"), "exists")
+        from os.path import exists
+
+        self.assertEqual(runner.resolve("os.path", "exists.__name__"), exists.__name__)
 
 
 class Test_run(unittest.TestCase):
