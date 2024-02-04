@@ -290,7 +290,6 @@ class Adjustments:
     server_name = "waitress.invalid"
 
     def __init__(self, **kw):
-
         if "listen" in kw and ("host" in kw or "port" in kw):
             raise ValueError("host or port may not be set if listen is set.")
 
