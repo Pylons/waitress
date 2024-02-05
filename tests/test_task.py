@@ -590,7 +590,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(inst.close_on_finish, True)
         self.assertEqual(len(inst.logger.logged), 1)
 
-    def test_execute_app_do_not_warn_on_head(self):
+    def test_execute_app_head_with_content_length(self):
         def app(environ, start_response):
             start_response("200 OK", [("Content-Length", "3")])
             return [b""]
@@ -600,7 +600,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.logger = DummyLogger()
         inst.execute()
-        self.assertEqual(inst.close_on_finish, True)
+        self.assertEqual(inst.close_on_finish, False)
         self.assertEqual(len(inst.logger.logged), 0)
 
     def test_execute_app_without_body_204_logged(self):

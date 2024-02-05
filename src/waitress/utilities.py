@@ -143,6 +143,8 @@ rfc850_date = join(
 )
 
 rfc850_reg = re.compile(rfc850_date)
+
+
 # they actually unpack the same way
 def unpack_rfc850(m):
     g = m.group

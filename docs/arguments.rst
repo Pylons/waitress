@@ -95,6 +95,15 @@ trusted_proxy
 
     For unix sockets, set this value to ``localhost`` instead of an IP address.
 
+    The value ``*`` (wildcard) may be used to signify that all remote peers are
+    to be trusted.
+
+    .. warning::
+       Using the wildcard is a security issue if Waitress is receiving
+       connections from untrusted locations as well as trusted locations. Make
+       sure that waitress is adequately deployed behind an additional layer of
+       security, such as a firewall only allowing traffic from known proxies.
+
     Default: ``None``
 
 trusted_proxy_count
