@@ -13,7 +13,6 @@
 ##############################################################################
 
 from collections import deque
-import socket
 import sys
 import threading
 import time

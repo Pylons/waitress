@@ -1,8 +1,6 @@
 import io
 import unittest
 
-import pytest
-
 
 class TestHTTPChannel(unittest.TestCase):
     def _makeOne(self, sock, addr, adj, map=None):

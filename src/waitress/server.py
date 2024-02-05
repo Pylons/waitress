@@ -25,6 +25,7 @@ from waitress.task import ThreadedTaskDispatcher
 from waitress.utilities import cleanup_unix_socket
 
 from . import wasyncore
+from .compat import VSOCK
 from .proxy_headers import proxy_headers_middleware
 
 
@@ -68,6 +69,22 @@ def create_server(
             sockinfo=sockinfo,
         )
 
+    if (adj.vsock_socket_cid or adj.vsock_socket_port) and VSOCK:
+        if not adj.vsock_socket_cid:
+            adj.vsock_socket_cid = socket.VMADDR_CID_ANY
+        if not adj.vsock_socket_port:
+            adj.vsock_socket_port = socket.VMADDR_PORT_ANY
+        sockinfo = (socket.AF_VSOCK, socket.SOCK_STREAM, None, None)
+        return VsockWSGIServer(
+            application,
+            map,
+            _start,
+            _sock,
+            dispatcher=dispatcher,
+            adj=adj,
+            sockinfo=sockinfo,
+        )
+
     effective_listen = []
     last_serv = None
     if not adj.sockets:
@@ -90,7 +107,7 @@ def create_server(
 
     for sock in adj.sockets:
         sockinfo = (sock.family, sock.type, sock.proto, sock.getsockname())
-        if sock.family == socket.AF_INET or sock.family == socket.AF_INET6:
+        if sock.family in (socket.AF_INET, socket.AF_INET6):
             last_serv = TcpWSGIServer(
                 application,
                 map,
@@ -106,6 +123,20 @@ def create_server(
             )
         elif hasattr(socket, "AF_UNIX") and sock.family == socket.AF_UNIX:
             last_serv = UnixWSGIServer(
+                application,
+                map,
+                _start,
+                sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                bind_socket=False,
+                sockinfo=sockinfo,
+            )
+            effective_listen.append(
+                (last_serv.effective_host, last_serv.effective_port)
+            )
+        elif VSOCK and sock.family == socket.AF_VSOCK:
+            last_serv = VsockWSGIServer(
                 application,
                 map,
                 _start,
@@ -414,6 +445,41 @@ if hasattr(socket, "AF_UNIX"):
 
         def fix_addr(self, addr):
             return ("localhost", None)
+
+
+if VSOCK:
+
+    class VsockWSGIServer(BaseWSGIServer):
+        def __init__(
+            self,
+            application,
+            map=None,
+            _start=True,  # test shim
+            _sock=None,  # test shim
+            dispatcher=None,  # dispatcher
+            adj=None,  # adjustments
+            sockinfo=None,  # opaque object
+            **kw
+        ):
+            if sockinfo is None:
+                sockinfo = (socket.AF_VSOCK, socket.SOCK_STREAM, None, None)
+
+            super().__init__(
+                application,
+                map=map,
+                _start=_start,
+                _sock=_sock,
+                dispatcher=dispatcher,
+                adj=adj,
+                sockinfo=sockinfo,
+                **kw,
+            )
+
+        def bind_server_socket(self):
+            self.bind((self.adj.vsock_socket_cid, self.adj.vsock_socket_port))
+
+        def getsockname(self):
+            return ("vsock", self.socket.getsockname())
 
 
 # Compatibility alias.
