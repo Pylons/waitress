@@ -45,6 +45,7 @@ class HTTPChannel(wasyncore.dispatcher):
     last_activity = 0  # Time of last activity
     will_close = False  # set to True to close the socket.
     close_when_flushed = False  # set to True to close the socket when flushed
+    closed = False  # set to True when closed not just due to being disconnected at the start
     sent_continue = False  # used as a latch after sending 100 continue
     total_outbufs_len = 0  # total bytes ready to send
     current_outbuf_count = 0  # total bytes written to current outbuf
@@ -95,7 +96,7 @@ class HTTPChannel(wasyncore.dispatcher):
         # Precondition: there's data in the out buffer to be sent, or
         # there's a pending will_close request
 
-        if not self.connected and not (self.will_close or self.close_when_flushed):
+        if self.closed:
             # we dont want to close the channel twice.
             # but we need let the channel close if it's marked to close
             return
@@ -316,6 +317,7 @@ class HTTPChannel(wasyncore.dispatcher):
             self.total_outbufs_len = 0
             self.connected = False
             self.outbuf_lock.notify()
+        self.closed = True
         wasyncore.dispatcher.close(self)
 
     def add_channel(self, map=None):

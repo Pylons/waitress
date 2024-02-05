@@ -67,7 +67,17 @@ class TestHTTPChannel(unittest.TestCase):
     def test_handle_write_not_connected(self):
         inst, sock, map = self._makeOneWithMap()
         inst.connected = False
+        # TODO: handle_write never returns anything anyway
         self.assertFalse(inst.handle_write())
+
+    def test_handle_write_not_connected_but_will_close(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.connected = False
+        inst.will_close = True
+        # https://github.com/Pylons/waitress/issues/418
+        # Ensure we actually handle_close even if not connected
+        self.assertFalse(inst.handle_write())
+        self.assertEqual(len(map), 0)
 
     def test_handle_write_with_requests(self):
         inst, sock, map = self._makeOneWithMap()

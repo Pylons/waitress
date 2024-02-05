@@ -319,7 +319,7 @@ class TestWSGIServer(unittest.TestCase):
     def test_quick_shutdown(self):
         """ Issue found in production that led to 100% useage because getpeername failed after accept but before channel setup.
         """
-        class DummyParser:
+        class ErrorRequest:
             error = True  # We are simulating a header parsing error
             version = 1
             data = None
@@ -347,7 +347,7 @@ class TestWSGIServer(unittest.TestCase):
         channel = None
 
         class ShutdownChannel(HTTPChannel):
-            parser_class = DummyParser
+            parser_class = ErrorRequest
 
             def __init__(self, server, sock, addr, adj, map=None):
                 self.count_writes = self.count_close = self.count_wouldblock = 0
@@ -365,7 +365,7 @@ class TestWSGIServer(unittest.TestCase):
                 self.count_close += 1
                 return HTTPChannel.handle_close(self)
 
-        def server_run(count=1):
+        def server_run_for_count(count=1):
             # Modified server run to prevent infinite loop
             inst.asyncore.loop(
                 timeout=inst.adj.asyncore_loop_timeout,
@@ -396,21 +396,21 @@ class TestWSGIServer(unittest.TestCase):
 
         # server_run(1)  # Read the request
         # self.assertTrue(channel.requests[0].error, "for this bug we need the request to have a parsing error")
-        # server_run(5)  
+        # server_run_for_count(5)  
         # self.assertIn(channel, inst._map.values(), "our rchannel doesn't get read and closed")
         # # channel_request_lookahead > 0 would avoid this bug
         # self.assertTrue(len(channel.requests) > channel.adj.channel_request_lookahead, "channel_request_lookahead == 0 means we don't read the disconnect")
         # # simulate thread processing the request
         # channel.service()
         # self.assertTrue(channel.close_when_flushed, "This prevents reads (which lead to close) and loops on handle_write (with 100% CPU)")
-        # server_run(5)  # Our loop
+        # server_run_for_count(5)  # Our loop
         # self.assertEqual(channel.count_writes, 5, "We're supposed to be in a loop trying to write but can't")
         # self.assertEqual(channel.count_close, 0, "but also this connection never gets closed")
         # # But shouldn't maintenance clear this up?
         # channel.last_activity = 0
         # inst.maintenance(1000)
         # self.assertEqual(channel.will_close, 1, "maintenance will try to close it")
-        # server_run(5)  # Our loop
+        # server_run_for_count(5)  # Our loop
         # self.assertEqual(channel.count_writes, 10, "But we still get our loop")
 
 
