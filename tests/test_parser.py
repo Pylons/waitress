@@ -384,6 +384,11 @@ class TestHTTPRequestParser(unittest.TestCase):
         else:  # pragma: nocover
             self.assertTrue(False)
 
+    def test_parse_header_other_whitespace(self):
+        data = b"GET /foobar HTTP/1.1\r\nfoo: \xa0something\x85\r\n"
+        self.parser.parse_header(data)
+        self.assertEqual(self.parser.headers["FOO"], "\xa0something\x85")
+
     def test_parse_header_empty(self):
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nempty:\r\n"
         self.parser.parse_header(data)

@@ -1,3 +1,10 @@
+3.0.1 (unreleased)
+------------------
+
+- No longer strip the header values before passing them to the WSGI environ.
+  See https://github.com/Pylons/waitress/pull/434 and
+  https://github.com/Pylons/waitress/issues/432
+
 3.0.0 (2024-02-04)
 ------------------
 

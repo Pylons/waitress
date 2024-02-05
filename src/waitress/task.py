@@ -557,7 +557,6 @@ class WSGITask(Task):
         }
 
         for key, value in dict(request.headers).items():
-            value = value.strip()
             mykey = rename_headers.get(key, None)
             if mykey is None:
                 mykey = "HTTP_" + key

@@ -776,7 +776,7 @@ class TestWSGITask(unittest.TestCase):
         request.headers = {
             "CONTENT_TYPE": "abc",
             "CONTENT_LENGTH": "10",
-            "X_FOO": "BAR",
+            "X_FOO": "\xa0BAR\x85",
             "CONNECTION": "close",
         }
         request.query = "abc"
@@ -830,7 +830,8 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ["REMOTE_PORT"], "39830")
         self.assertEqual(environ["CONTENT_TYPE"], "abc")
         self.assertEqual(environ["CONTENT_LENGTH"], "10")
-        self.assertEqual(environ["HTTP_X_FOO"], "BAR")
+        # Make sure we don't strip non RFC compliant whitespace
+        self.assertEqual(environ["HTTP_X_FOO"], "\xa0BAR\x85")
         self.assertEqual(environ["wsgi.version"], (1, 0))
         self.assertEqual(environ["wsgi.url_scheme"], "http")
         self.assertEqual(environ["wsgi.errors"], sys.stderr)
