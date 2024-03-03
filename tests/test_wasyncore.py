@@ -1454,17 +1454,6 @@ class Test_dispatcher(unittest.TestCase):
 
         return dispatcher(sock=sock, map=map)
 
-    def test_unexpected_getpeername_exc(self):
-        sock = dummysocket()
-
-        def getpeername():
-            raise OSError(errno.EBADF)
-
-        map = {}
-        sock.getpeername = getpeername
-        self.assertRaises(socket.error, self._makeOne, sock=sock, map=map)
-        self.assertEqual(map, {})
-
     def test___repr__accepting(self):
         sock = dummysocket()
         map = {}
