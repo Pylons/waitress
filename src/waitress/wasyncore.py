@@ -378,23 +378,6 @@ class dispatcher:
         self.addr = addr
         return self.socket.bind(addr)
 
-    def connect(self, address):
-        self.connected = False
-        self.connecting = True
-        err = self.socket.connect_ex(address)
-        if (
-            err in (EINPROGRESS, EALREADY, EWOULDBLOCK)
-            or err == EINVAL
-            and os.name == "nt"
-        ):  # pragma: no cover
-            self.addr = address
-            return
-        if err in (0, EISCONN):
-            self.addr = address
-            self.handle_connect_event()
-        else:
-            raise OSError(err, errorcode[err])
-
     def accept(self):
         # XXX can return either an address pair or None
         try:
@@ -554,34 +537,6 @@ class dispatcher:
     def handle_close(self):
         self.log_info("unhandled close event", "warning")
         self.close()
-
-
-# ---------------------------------------------------------------------------
-# adds simple buffered output capability, useful for simple clients.
-# [for more sophisticated usage use asynchat.async_chat]
-# ---------------------------------------------------------------------------
-
-
-class dispatcher_with_send(dispatcher):
-    def __init__(self, sock=None, map=None):
-        dispatcher.__init__(self, sock, map)
-        self.out_buffer = b""
-
-    def initiate_send(self):
-        num_sent = 0
-        num_sent = dispatcher.send(self, self.out_buffer[:65536])
-        self.out_buffer = self.out_buffer[num_sent:]
-
-    handle_write = initiate_send
-
-    def writable(self):
-        return (not self.connected) or len(self.out_buffer)
-
-    def send(self, data):
-        if self.debug:  # pragma: no cover
-            self.log_info("sending %s" % repr(data))
-        self.out_buffer = self.out_buffer + data
-        self.initiate_send()
 
 
 def close_all(map=None, ignore_all=False):

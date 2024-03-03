@@ -1,6 +1,7 @@
 import _thread as thread
 import contextlib
 import errno
+from errno import EALREADY, EINPROGRESS, EINVAL, EISCONN, EWOULDBLOCK, errorcode
 import functools
 import gc
 from io import BytesIO
@@ -641,62 +642,6 @@ class DispatcherTests(unittest.TestCase):
         self.assertTrue(err != "")
 
 
-class dispatcherwithsend_noread(asyncore.dispatcher_with_send):  # pragma: no cover
-    def readable(self):
-        return False
-
-    def handle_connect(self):
-        pass
-
-
-class DispatcherWithSendTests(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        asyncore.close_all()
-
-    @reap_threads
-    def test_send(self):
-        evt = threading.Event()
-        sock = socket.socket()
-        sock.settimeout(3)
-        port = bind_port(sock)
-
-        cap = BytesIO()
-        args = (evt, cap, sock)
-        t = threading.Thread(target=capture_server, args=args)
-        t.start()
-        try:
-            # wait a little longer for the server to initialize (it sometimes
-            # refuses connections on slow machines without this wait)
-            time.sleep(0.2)
-
-            data = b"Suppose there isn't a 16-ton weight?"
-            d = dispatcherwithsend_noread()
-            d.create_socket()
-            d.connect((HOST, port))
-
-            # give time for socket to connect
-            time.sleep(0.1)
-
-            d.send(data)
-            d.send(data)
-            d.send(b"\n")
-
-            n = 1000
-
-            while d.out_buffer and n > 0:  # pragma: no cover
-                asyncore.poll()
-                n -= 1
-
-            evt.wait()
-
-            self.assertEqual(cap.getvalue(), data * 2)
-        finally:
-            join_thread(t, timeout=TIMEOUT)
-
-
 @unittest.skipUnless(
     hasattr(asyncore, "file_wrapper"), "asyncore.file_wrapper required"
 )
@@ -838,6 +783,23 @@ class BaseClient(BaseTestHandler):
         BaseTestHandler.__init__(self)
         self.create_socket(family)
         self.connect(address)
+
+    def connect(self, address):
+        self.connected = False
+        self.connecting = True
+        err = self.socket.connect_ex(address)
+        if (
+            err in (EINPROGRESS, EALREADY, EWOULDBLOCK)
+            or err == EINVAL
+            and os.name == "nt"
+        ):  # pragma: no cover
+            self.addr = address
+            return
+        if err in (0, EISCONN):
+            self.addr = address
+            self.handle_connect_event()
+        else:
+            raise OSError(err, errorcode[err])
 
     def handle_connect(self):
         pass
@@ -1489,13 +1451,6 @@ class Test_dispatcher(unittest.TestCase):
         inst.set_reuse_addr()
         self.assertTrue(sock.errored)
 
-    def test_connect_raise_socket_error(self):
-        sock = dummysocket()
-        map = {}
-        sock.connect_ex = lambda *arg: 1
-        inst = self._makeOne(sock=sock, map=map)
-        self.assertRaises(socket.error, inst.connect, 0)
-
     def test_accept_raise_TypeError(self):
         sock = dummysocket()
         map = {}
@@ -1662,21 +1617,6 @@ class Test_dispatcher(unittest.TestCase):
         inst = self._makeOne(sock=sock, map=map)
         inst.handle_accepted(sock, "1")
         self.assertTrue(sock.closed)
-
-
-class Test_dispatcher_with_send(unittest.TestCase):
-    def _makeOne(self, sock=None, map=None):
-        from waitress.wasyncore import dispatcher_with_send
-
-        return dispatcher_with_send(sock=sock, map=map)
-
-    def test_writable(self):
-        sock = dummysocket()
-        map = {}
-        inst = self._makeOne(sock=sock, map=map)
-        inst.out_buffer = b"123"
-        inst.connected = True
-        self.assertTrue(inst.writable())
 
 
 class Test_close_all(unittest.TestCase):
