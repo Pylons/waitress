@@ -436,6 +436,8 @@ class dispatcher:
                 if why.args[0] not in (ENOTCONN, EBADF):
                     raise
 
+            self.socket = None
+
     # log and log_info may be overridden to provide more sophisticated
     # logging and warning methods. In general, log is for 'hit' logging
     # and 'log_info' is for informational, warning and error logging.
@@ -486,7 +488,11 @@ class dispatcher:
         # handle_expt_event() is called if there might be an error on the
         # socket, or if there is OOB data
         # check for the error condition first
-        err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        err = (
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+            if self.socket is not None
+            else 1
+        )
         if err != 0:
             # we can get here when select.select() says that there is an
             # exceptional condition on the socket
