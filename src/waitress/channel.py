@@ -67,8 +67,7 @@ class HTTPChannel(wasyncore.dispatcher):
         self.outbuf_lock = threading.Condition()
 
         wasyncore.dispatcher.__init__(self, sock, map=map)
-
-        # Don't let wasyncore.dispatcher throttle self.addr on us.
+        self.connected = True
         self.addr = addr
         self.requests = []
 
@@ -92,13 +91,7 @@ class HTTPChannel(wasyncore.dispatcher):
         # Precondition: there's data in the out buffer to be sent, or
         # there's a pending will_close request
 
-        if not self.connected:
-            # we dont want to close the channel twice
-
-            return
-
         # try to flush any pending output
-
         if not self.requests:
             # 1. There are no running tasks, so we don't need to try to lock
             #    the outbuf before sending
