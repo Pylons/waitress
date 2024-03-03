@@ -297,22 +297,6 @@ class dispatcher:
             # get a socket from a blocking source.
             sock.setblocking(0)
             self.set_socket(sock, map)
-            self.connected = True
-            # The constructor no longer requires that the socket
-            # passed be connected.
-            try:
-                self.addr = sock.getpeername()
-            except OSError as err:
-                if err.args[0] in (ENOTCONN, EINVAL):
-                    # To handle the case where we got an unconnected
-                    # socket.
-                    self.connected = False
-                else:
-                    # The socket is broken in some unknown way, alert
-                    # the user and remove it from the map (to prevent
-                    # polling of broken sockets).
-                    self.del_channel(map)
-                    raise
         else:
             self.socket = None
 
