@@ -67,8 +67,7 @@ class HTTPChannel(wasyncore.dispatcher):
         self.outbuf_lock = threading.Condition()
 
         wasyncore.dispatcher.__init__(self, sock, map=map)
-
-        # Don't let wasyncore.dispatcher throttle self.addr on us.
+        self.connected = True
         self.addr = addr
         self.requests = []
 
