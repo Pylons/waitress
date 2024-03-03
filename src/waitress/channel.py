@@ -91,13 +91,7 @@ class HTTPChannel(wasyncore.dispatcher):
         # Precondition: there's data in the out buffer to be sent, or
         # there's a pending will_close request
 
-        if not self.connected:
-            # we dont want to close the channel twice
-
-            return
-
         # try to flush any pending output
-
         if not self.requests:
             # 1. There are no running tasks, so we don't need to try to lock
             #    the outbuf before sending
