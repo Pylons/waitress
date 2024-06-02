@@ -10,6 +10,11 @@ else:  # pragma: no cover
 from waitress import runner
 
 
+def test_valid_socket():
+    assert runner._valid_socket('0.0.0.0:42') == ('0.0.0.0', 42)
+    assert runner._valid_socket('[2001:db8::1]:42') == ('2001:db8::1', 42)
+
+
 class Test_match(unittest.TestCase):
     def test_empty(self):
         self.assertRaisesRegex(

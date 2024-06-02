@@ -17,10 +17,15 @@
 
 import getopt
 import logging
+import operator as op
 import os
 import os.path
-import re
+import pathlib
 import sys
+from argparse import ArgumentParser, BooleanOptionalAction
+from dataclasses import dataclass
+from ipaddress import ip_address
+from urllib.parse import urlparse
 
 from waitress import serve
 from waitress.adjustments import Adjustments
@@ -29,9 +34,12 @@ from waitress.utilities import logger
 HELP = """\
 Usage:
 
-    {0} [OPTS] MODULE:OBJECT
+    {0} --app=MODULE:OBJECT [OPTS]
 
 Standard options:
+
+    --app=MODULE:OBJECT
+        Specify WSGI application to run. Required. Can be passed at any position.
 
     --help
         Show this information.
@@ -179,28 +187,6 @@ Tuning options:
 
 """
 
-RUNNER_PATTERN = re.compile(
-    r"""
-    ^
-    (?P<module>
-        [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
-    )
-    :
-    (?P<object>
-        [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
-    )
-    $
-    """,
-    re.I | re.X,
-)
-
-
-def match(obj_name):
-    matches = RUNNER_PATTERN.match(obj_name)
-    if not matches:
-        raise ValueError(f"Malformed application '{obj_name}'")
-    return matches.group("module"), matches.group("object")
-
 
 def resolve(module_name, object_name):
     """Resolve a named object in a module."""
@@ -221,12 +207,6 @@ def resolve(module_name, object_name):
     return obj
 
 
-def show_help(stream, name, error=None):  # pragma: no cover
-    if error is not None:
-        print(f"Error: {error}\n", file=stream)
-    print(HELP.format(name), file=stream)
-
-
 def show_exception(stream):
     exc_type, exc_value = sys.exc_info()[:2]
     args = getattr(exc_value, "args", None)
@@ -244,7 +224,118 @@ def show_exception(stream):
         print("It had no arguments.", file=stream)
 
 
+host_and_port = op.attrgetter("hostname", "port")
+
+
+def _valid_socket(value):
+    # NOTE: without dummy scheme, `urlparse` will not pick up netloc cerrectly
+    res = urlparse(f'scheme://{value}')
+
+    if not all(host_and_port(res)):
+        raise ValueError("Not a socket! Should HOST:PORT", value)
+
+    return str(ip_address(res.hostname)), res.port
+
+
+@dataclass(frozen=True)
+class DEFAULTS:
+    HOST = "0.0.0.0"
+
+
 def run(argv=sys.argv, _serve=serve):
+    parser = ArgumentParser()
+    # Standard options
+    parser.add_argument(
+        "--app",
+        required=True,
+        help="Specify WSGI application to run. Required. Can be passed at any position.",
+    )
+    parser.add_argument(
+        "--call",
+        action="store_false",
+        help="Call the given object to get the WSGI application.",
+    )
+    parser.add_argument(
+        "--host",
+        type=ip_address,
+        default=DEFAULTS.HOST,
+        help="""Hostname or IP address on which to listen, default is %(default)s,
+which means "all IP addresses on this host".
+
+Note: may not be used together with --listen.""",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        help="""TCP port on which to listen, default is %(default)s.
+
+Note: may not be used together with --listen""",
+    )
+    parser.add_argument(
+        "--listen",
+        type=_valid_socket,
+        help="Tell waitress to listen on an ip port combination.",
+    )
+    parser.add_argument(
+        "-4", "--ipv4", action=BooleanOptionalAction, help="Toggle on/off IPv4 support."
+    )
+    parser.add_argument(
+        "-6", "--ipv6", action=BooleanOptionalAction, help="Toggle on/off IPv6 support."
+    )
+    parser.add_argument(
+        "--unix-socket",
+        type=pathlib.Path,
+        help="""Path of Unix socket. If a socket path is specified, a Unix domain
+socket is made instead of the usual inet domain socket. Not available on Windows.""",
+    )
+    parser.add_argument(
+        "--unix-socket-perms",
+        type=lambda v: int(v, base=8),
+        default="600",
+        help="Octal permissions to use for the Unix domain socket, default is %(default)s",
+    )
+    parser.add_argument(
+        "--url-scheme",
+        default="http",
+        help="Default wsgi.url_scheme value, default is %(default)s.",
+    )
+    parser.add_argument(
+        "--url-prefix",
+        help="""The `SCRIPT_NAME` WSGI environment value. Setting this to anything
+except the empty string will cause the WSGI `SCRIPT_NAME` value to be
+the value passed minus any trailing slashes you add, and it will cause
+the `PATH_INFO` of any request which is prefixed with this value to be
+stripped of the prefix.""",
+    )
+    parser.add_argument(
+        "--ident",
+        default="waitress",
+        help="Server identity used in the 'Server' header in responses. Default is %(default)s",
+    )
+    # Tuning options
+    parser.add_argument("--threads", type=int, default="4")
+    parser.add_argument("--backlog", type=int, default="1024")
+    parser.add_argument("--recv-bytes", type=int)
+    parser.add_argument("--send-bytes", type=int)
+    parser.add_argument("--outbuf-overflow", type=int)
+    parser.add_argument("--outbuf-high-watermark", type=int)
+    parser.add_argument("--inbuf-overflow", type=int)
+    parser.add_argument("--connection-limit", type=int)
+    parser.add_argument("--cleanup-interval", type=int)
+    parser.add_argument("--channel-timeout", type=int)
+    parser.add_argument("--log-socket-errors", action=BooleanOptionalAction)
+    parser.add_argument("--max-request-header-size", type=int)
+    parser.add_argument("--max-request-body-size", type=int)
+    parser.add_argument("--expose-tracebacks", action=BooleanOptionalAction)
+    parser.add_argument("--asyncore-loop-timeout", type=int)
+    parser.add_argument("--asyncore-use-pool", action="store_true")
+    parser.add_argument("--channel-request-lookahead", type=int)
+
+    args = parser.parse_args()
+    print(args)
+
+    sys.exit(0)
+
     """Command line runner."""
     name = os.path.basename(argv[0])
 
