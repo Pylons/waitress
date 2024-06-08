@@ -7,6 +7,7 @@ on:
             - main
             - "[0-9].[0-9]+-branch"
         tags:
+            - "*"
     # Build pull requests
     pull_request:
 
@@ -25,34 +26,55 @@ jobs:
                     - "pypy-3.10"
                     # Pre-release
                 os:
-                    - "ubuntu-latest"
+                    - "ubuntu-22.04"
                     - "windows-latest"
-                    - "macos-latest"
+                    - "macos-14" # arm64
+                    - "macos-13" # x64
                 architecture:
                     - x64
                     - x86
+                    - arm64
                 include:
-                  - py: "pypy-3.8"
-                    toxenv: "pypy38"
-                  - py: "pypy-3.9"
-                    toxenv: "pypy39"
-                  - py: "pypy-3.10"
-                    toxenv: "pypy310"
+                    - py: "pypy-3.8"
+                      toxenv: "pypy38"
+                    - py: "pypy-3.9"
+                      toxenv: "pypy39"
+                    - py: "pypy-3.10"
+                      toxenv: "pypy310"
                 exclude:
-                    # Linux and macOS don't have x86 python
-                    - os: "ubuntu-latest"
+                    # Ubuntu does not have x86/arm64 Python
+                    - os: "ubuntu-22.04"
                       architecture: x86
-                    - os: "macos-latest"
+                    - os: "ubuntu-22.04"
+                      architecture: arm64
+                    # MacOS we need to make sure to remove x86 on all, but x64
+                    # on the arm runners and arm64 on the x64 runners
+                    - os: "macos-13"
                       architecture: x86
+                    - os: "macos-13"
+                      architecture: arm64
+                    - os: "macos-14"
+                      architecture: x86
+                    - os: "macos-14"
+                      architecture: x64
+                    - os: "macos-14"
+                      py: "3.8"
+                    # Windows does not have arm64 releases
+                    - os: "windows-latest"
+                      architecture: arm64
                     # Don't run all PyPy versions except latest on
                     # Windows/macOS. They are expensive to run.
                     - os: "windows-latest"
                       py: "pypy-3.8"
-                    - os: "macos-latest"
+                    - os: "macos-13"
                       py: "pypy-3.8"
                     - os: "windows-latest"
                       py: "pypy-3.9"
-                    - os: "macos-latest"
+                    - os: "macos-13"
+                      py: "pypy-3.9"
+                    - os: "macos-14"
+                      py: "pypy-3.8"
+                    - os: "macos-14"
                       py: "pypy-3.9"
 
         name: "Python: ${{ matrix.py }}-${{ matrix.architecture }} on ${{ matrix.os }}"
@@ -75,7 +97,7 @@ jobs:
               run: tox -e py
 
     coverage:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         name: Validate coverage
         steps:
             - uses: actions/checkout@v4
@@ -88,7 +110,7 @@ jobs:
             - run: pip install tox
             - run: tox -e py310,coverage
     docs:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         name: Build the documentation
         steps:
             - uses: actions/checkout@v4
@@ -100,7 +122,7 @@ jobs:
             - run: pip install tox
             - run: tox -e docs
     lint:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         name: Lint the package
         steps:
             - uses: actions/checkout@v4
