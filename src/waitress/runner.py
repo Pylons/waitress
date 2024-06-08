@@ -187,6 +187,28 @@ Tuning options:
 
 """
 
+RUNNER_PATTERN = re.compile(
+    r"""
+    ^
+    (?P<module>
+        [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
+    )
+    :
+    (?P<object>
+        [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
+    )
+    $
+    """,
+    re.I | re.X,
+)
+
+
+def match(obj_name):
+    matches = RUNNER_PATTERN.match(obj_name)
+    if not matches:
+        raise ValueError(f"Malformed application '{obj_name}'")
+    return matches.group("module"), matches.group("object")
+
 
 def resolve(module_name, object_name):
     """Resolve a named object in a module."""
