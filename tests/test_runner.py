@@ -11,8 +11,8 @@ from waitress import runner
 
 
 def test_valid_socket():
-    assert runner._valid_socket('0.0.0.0:42') == ('0.0.0.0', 42)
-    assert runner._valid_socket('[2001:db8::1]:42') == ('2001:db8::1', 42)
+    assert runner._valid_socket('0.0.0.0:42') == ('0.0.0.0', '42')
+    assert runner._valid_socket('[2001:db8::1]:42') == ('2001:db8::1', '42')
 
 
 class Test_match(unittest.TestCase):
@@ -76,25 +76,25 @@ class Test_run(unittest.TestCase):
         captured.close()
 
     def test_bad(self):
-        self.match_output(["--bad-opt"], 1, "^Error: option --bad-opt not recognized")
+        self.match_output(["--app=foo:bar", "--bad-opt"], 2, "error: unrecognized arguments: waitress-serve --bad-opt")
 
     def test_help(self):
-        self.match_output(["--help"], 0, "^Usage:\n\n    waitress-serve")
+        self.match_output(["--help"], 0, "^usage: waitress-serve")
 
     def test_no_app(self):
-        self.match_output([], 1, "^Error: Specify one application only")
+        self.match_output([], 2, "error: the following arguments are required: --app")
 
     def test_multiple_apps_app(self):
-        self.match_output(["a:a", "b:b"], 1, "^Error: Specify one application only")
+        self.match_output(["--app", "a:a", "--app", "b:b"], 1, "^Error: Specify one application only")
 
     def test_bad_apps_app(self):
-        self.match_output(["a"], 1, "^Error: Malformed application 'a'")
+        self.match_output(["--app", "a"], 1, "^Error: Malformed application 'a'")
 
     def test_bad_app_module(self):
-        self.match_output(["nonexistent:a"], 1, "^Error: Bad module 'nonexistent'")
+        self.match_output(["--app", "nonexistent:a"], 1, "^Error: Bad module 'nonexistent'")
 
         self.match_output(
-            ["nonexistent:a"],
+            ["--app", "nonexistent:a"],
             1,
             (
                 r"There was an exception \((ImportError|ModuleNotFoundError)\) "
@@ -113,7 +113,7 @@ class Test_run(unittest.TestCase):
             os.chdir(os.path.dirname(__file__))
             argv = [
                 "waitress-serve",
-                "fixtureapps.runner:app",
+                "--app", "fixtureapps.runner:app",
             ]
             self.assertEqual(runner.run(argv=argv, _serve=null_serve), 0)
         finally:
@@ -135,7 +135,7 @@ class Test_run(unittest.TestCase):
         argv = [
             "waitress-serve",
             "--port=80",
-            "tests.fixtureapps.runner:app",
+            "--app=tests.fixtureapps.runner:app",
         ]
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
 
@@ -150,7 +150,7 @@ class Test_run(unittest.TestCase):
             "waitress-serve",
             "--port=80",
             "--call",
-            "tests.fixtureapps.runner:returns_app",
+            "--app=tests.fixtureapps.runner:returns_app",
         ]
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
 

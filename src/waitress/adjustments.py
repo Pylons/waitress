@@ -289,7 +289,7 @@ class Adjustments:
     # (or when using the Proxy settings, without forwarding a Host header)
     server_name = "waitress.invalid"
 
-    def __init__(self, **kw):
+    def __init__(self, opts, **kw):
         if "listen" in kw and ("host" in kw or "port" in kw):
             raise ValueError("host or port may not be set if listen is set.")
 
@@ -312,6 +312,12 @@ class Adjustments:
             warnings.warn(
                 "send_bytes will be removed in a future release", DeprecationWarning
             )
+
+        # opts are already validated, so that we set them as is
+        for k, v in opts.items():
+            if k not in self._param_map:
+                raise ValueError("Unknown adjustment %r" % k)
+            setattr(self, k, v)
 
         for k, v in kw.items():
             if k not in self._param_map:
@@ -346,7 +352,10 @@ class Adjustments:
                 if "]" in port:  # pragma: nocover
                     (host, port) = (i, str(self.port))
             else:
-                (host, port) = (i, str(self.port))
+                if isinstance(i, tuple):
+                    host, port = i
+                else:
+                    host, port = (i, str(self.port))
 
             if WIN:  # pragma: no cover
                 try:
