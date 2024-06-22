@@ -345,7 +345,7 @@ client.
 Default is 'no'.""",
     )
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv[1:])
 
     """Command line runner."""
 
