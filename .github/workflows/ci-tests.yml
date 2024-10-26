@@ -44,8 +44,12 @@ jobs:
                       architecture: x86
                     - os: "ubuntu-22.04"
                       architecture: arm64
-                    # MacOS we need to make sure to remove x86 on all, but x64
-                    # on the arm runners and arm64 on the x64 runners
+                    # MacOS we need to make sure to remove x86 on all
+                    # We need to run no arm64 on macos-13 (Intel), but some
+                    # Python versions: 3.9/3.10
+                    #
+                    # From 3.11 onward, there is support for running x64 and
+                    # arm64 on Apple Silicon based systems (macos-14)
                     - os: "macos-13"
                       architecture: x86
                     - os: "macos-13"
@@ -54,6 +58,10 @@ jobs:
                       architecture: x86
                     - os: "macos-14"
                       architecture: x64
+                      py: "3.9"
+                    - os: "macos-14"
+                      architecture: x64
+                      py: "3.10"
                     # Windows does not have arm64 releases
                     - os: "windows-latest"
                       architecture: arm64
