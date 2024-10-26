@@ -16,12 +16,11 @@ jobs:
         strategy:
             matrix:
                 py:
-                    - "3.8"
                     - "3.9"
                     - "3.10"
                     - "3.11"
                     - "3.12"
-                    - "pypy-3.8"
+                    - "3.13"
                     - "pypy-3.9"
                     - "pypy-3.10"
                     # Pre-release
@@ -35,8 +34,6 @@ jobs:
                     - x86
                     - arm64
                 include:
-                    - py: "pypy-3.8"
-                      toxenv: "pypy38"
                     - py: "pypy-3.9"
                       toxenv: "pypy39"
                     - py: "pypy-3.10"
@@ -47,8 +44,12 @@ jobs:
                       architecture: x86
                     - os: "ubuntu-22.04"
                       architecture: arm64
-                    # MacOS we need to make sure to remove x86 on all, but x64
-                    # on the arm runners and arm64 on the x64 runners
+                    # MacOS we need to make sure to remove x86 on all
+                    # We need to run no arm64 on macos-13 (Intel), but some
+                    # Python versions: 3.9/3.10
+                    #
+                    # From 3.11 onward, there is support for running x64 and
+                    # arm64 on Apple Silicon based systems (macos-14)
                     - os: "macos-13"
                       architecture: x86
                     - os: "macos-13"
@@ -57,23 +58,19 @@ jobs:
                       architecture: x86
                     - os: "macos-14"
                       architecture: x64
+                      py: "3.9"
                     - os: "macos-14"
-                      py: "3.8"
+                      architecture: x64
+                      py: "3.10"
                     # Windows does not have arm64 releases
                     - os: "windows-latest"
                       architecture: arm64
                     # Don't run all PyPy versions except latest on
                     # Windows/macOS. They are expensive to run.
                     - os: "windows-latest"
-                      py: "pypy-3.8"
-                    - os: "macos-13"
-                      py: "pypy-3.8"
-                    - os: "windows-latest"
                       py: "pypy-3.9"
                     - os: "macos-13"
                       py: "pypy-3.9"
-                    - os: "macos-14"
-                      py: "pypy-3.8"
                     - os: "macos-14"
                       py: "pypy-3.9"
 
@@ -101,14 +98,14 @@ jobs:
         name: Validate coverage
         steps:
             - uses: actions/checkout@v4
-            - name: Setup python 3.10
+            - name: Setup python
               uses: actions/setup-python@v5
               with:
-                  python-version: "3.10"
+                  python-version: "3.13"
                   architecture: x64
 
             - run: pip install tox
-            - run: tox -e py310,coverage
+            - run: tox -e py313,coverage
     docs:
         runs-on: ubuntu-22.04
         name: Build the documentation
@@ -117,7 +114,7 @@ jobs:
             - name: Setup python
               uses: actions/setup-python@v5
               with:
-                  python-version: "3.10"
+                  python-version: "3.13"
                   architecture: x64
             - run: pip install tox
             - run: tox -e docs
@@ -129,7 +126,7 @@ jobs:
             - name: Setup python
               uses: actions/setup-python@v5
               with:
-                  python-version: "3.10"
+                  python-version: "3.13"
                   architecture: x64
             - run: pip install tox
             - run: tox -e lint
