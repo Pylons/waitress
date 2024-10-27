@@ -18,7 +18,7 @@ class TestHTTPChannel(unittest.TestCase):
         map = {}
         inst = self._makeOne(sock, "127.0.0.1", adj, map=map)
         inst.outbuf_lock = DummyLock()
-        return inst, sock, map
+        return inst, sock.local(), map
 
     def test_ctor(self):
         inst, _, map = self._makeOneWithMap()
@@ -218,7 +218,7 @@ class TestHTTPChannel(unittest.TestCase):
         def send(_):
             return 0
 
-        sock.send = send
+        sock.remote.send = send
 
         wrote = inst.write_soon(b"a")
         self.assertEqual(wrote, 1)
@@ -236,7 +236,7 @@ class TestHTTPChannel(unittest.TestCase):
         def send(_):
             return 0
 
-        sock.send = send
+        sock.remote.send = send
 
         outbufs = inst.outbufs
         wrote = inst.write_soon(wrapper)
@@ -270,7 +270,7 @@ class TestHTTPChannel(unittest.TestCase):
         def send(_):
             return 0
 
-        sock.send = send
+        sock.remote.send = send
 
         inst.adj.outbuf_high_watermark = 3
         inst.current_outbuf_count = 4
@@ -286,7 +286,7 @@ class TestHTTPChannel(unittest.TestCase):
         def send(_):
             return 0
 
-        sock.send = send
+        sock.remote.send = send
 
         inst.adj.outbuf_high_watermark = 3
         inst.total_outbufs_len = 4
@@ -315,7 +315,7 @@ class TestHTTPChannel(unittest.TestCase):
             inst.connected = False
             raise Exception()
 
-        sock.send = send
+        sock.remote.send = send
 
         inst.adj.outbuf_high_watermark = 3
         inst.total_outbufs_len = 4
@@ -345,7 +345,7 @@ class TestHTTPChannel(unittest.TestCase):
             inst.connected = False
             raise Exception()
 
-        sock.send = send
+        sock.remote.send = send
 
         wrote = inst.write_soon(b"xyz")
         self.assertEqual(wrote, 3)
@@ -376,7 +376,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.total_outbufs_len = len(inst.outbufs[0])
         inst.adj.send_bytes = 1
         inst.adj.outbuf_high_watermark = 2
-        sock.send = lambda x, do_close=True: False
+        sock.remote.send = lambda x, do_close=True: False
         inst.will_close = False
         inst.last_activity = 0
         result = inst.handle_write()
@@ -400,7 +400,7 @@ class TestHTTPChannel(unittest.TestCase):
 
     def test__flush_some_full_outbuf_socket_returns_zero(self):
         inst, sock, map = self._makeOneWithMap()
-        sock.send = lambda x: False
+        sock.remote.send = lambda x: False
         inst.outbufs[0].append(b"abc")
         inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         result = inst._flush_some()
@@ -907,7 +907,8 @@ class DummySock:
     closed = False
 
     def __init__(self):
-        self.sent = b""
+        self.local_sent = b""
+        self.remote_sent = b""
 
     def setblocking(self, *arg):
         self.blocking = True
@@ -925,13 +926,43 @@ class DummySock:
         self.closed = True
 
     def send(self, data):
-        self.sent += data
+        self.remote_sent += data
         return len(data)
 
     def recv(self, buffer_size):
-        result = self.sent[:buffer_size]
-        self.sent = self.sent[buffer_size:]
+        result = self.local_sent[:buffer_size]
+        self.local_sent = self.local_sent[buffer_size:]
         return result
+
+    def local(self):
+        outer = self
+
+        class LocalDummySock:
+            def send(self, data):
+                outer.local_sent += data
+                return len(data)
+
+            def recv(self, buffer_size):
+                result = outer.remote_sent[:buffer_size]
+                outer.remote_sent = outer.remote_sent[buffer_size:]
+                return result
+
+            def close(self):
+                outer.closed = True
+
+            @property
+            def sent(self):
+                return outer.remote_sent
+
+            @property
+            def closed(self):
+                return outer.closed
+
+            @property
+            def remote(self):
+                return outer
+
+        return LocalDummySock()
 
 
 class DummyLock:
