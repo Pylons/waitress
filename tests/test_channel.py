@@ -805,11 +805,12 @@ class TestHTTPChannelLookahead(TestHTTPChannel):
         )
         return [body]
 
-    def _make_app_with_lookahead(self):
+    def _make_app_with_lookahead(self, recv_bytes=8192):
         """
         Setup a channel with lookahead and store it and the socket in self
         """
         adj = DummyAdjustments()
+        adj.recv_bytes = recv_bytes
         adj.channel_request_lookahead = 5
         channel, sock, map = self._makeOneWithMap(adj=adj)
         channel.server.application = self.app_check_disconnect
@@ -900,6 +901,58 @@ class TestHTTPChannelLookahead(TestHTTPChannel):
         data = self.sock.recv(256).decode("ascii")
         self.assertEqual(data.split("\r\n")[-1], "finished")
         self.assertEqual(self.request_body, b"x")
+
+    def test_lookahead_bad_request_drop_extra_data(self):
+        """
+        Send two requests, the first one being bad, split on the recv_bytes
+        limit, then emulate a race that could happen whereby we read data from
+        the socket while the service thread is cleaning up due to an error
+        processing the request.
+        """
+
+        invalid_request = [
+            "GET / HTTP/1.1",
+            "Host: localhost:8080",
+            "Content-length: -1",
+            "",
+        ]
+
+        invalid_request_len = len("".join([x + "\r\n" for x in invalid_request]))
+
+        second_request = [
+            "POST / HTTP/1.1",
+            "Host: localhost:8080",
+            "Content-Length: 1",
+            "",
+            "x",
+        ]
+
+        full_request = invalid_request + second_request
+
+        self._make_app_with_lookahead(recv_bytes=invalid_request_len)
+        self._send(*full_request)
+        self.channel.handle_read()
+        self.assertEqual(len(self.channel.requests), 1)
+        self.channel.server.tasks[0].service()
+        self.assertTrue(self.channel.close_when_flushed)
+        # Read all of the next request
+        self.channel.handle_read()
+        self.channel.handle_read()
+        # Validate that there is no more data to be read
+        self.assertEqual(self.sock.remote.local_sent, b"")
+        # Validate that we dropped the data from the second read, and did not
+        # create a new request
+        self.assertEqual(len(self.channel.requests), 0)
+        data = self.sock.recv(256).decode("ascii")
+        self.assertFalse(self.channel.readable())
+        self.assertTrue(self.channel.writable())
+
+        # Handle the write, which will close the socket
+        self.channel.handle_write()
+        self.assertTrue(self.sock.closed)
+
+        data = self.sock.recv(256)
+        self.assertEqual(len(data), 0)
 
 
 class DummySock:
