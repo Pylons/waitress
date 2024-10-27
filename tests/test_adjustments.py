@@ -104,7 +104,7 @@ class TestAdjustments(unittest.TestCase):
     def _makeOne(self, **kw):
         from waitress.adjustments import Adjustments
 
-        return Adjustments(**kw)
+        return Adjustments({}, **kw)
 
     def test_goodvars(self):
         inst = self._makeOne(
@@ -472,7 +472,7 @@ if hasattr(socket, "AF_UNIX"):
         def _makeOne(self, **kw):
             from waitress.adjustments import Adjustments
 
-            return Adjustments(**kw)
+            return Adjustments({}, **kw)
 
         def test_dont_mix_internet_and_unix_sockets(self):
             sockets = [
