@@ -163,7 +163,7 @@ class Test_helper(unittest.TestCase):
             try:
                 raise ImportError("My reason")
             except ImportError:
-                self.assertEqual(show_exception(sys.stderr), None)
+                self.assertIsNone(show_exception(sys.stderr))
             self.assertRegex(captured.getvalue(), regex)
         captured.close()
 
@@ -176,7 +176,7 @@ class Test_helper(unittest.TestCase):
             try:
                 raise ImportError
             except ImportError:
-                self.assertEqual(show_exception(sys.stderr), None)
+                self.assertIsNone(show_exception(sys.stderr))
             self.assertRegex(captured.getvalue(), regex)
         captured.close()
 

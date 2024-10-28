@@ -56,7 +56,7 @@ class Test_unpack_rfc850(unittest.TestCase):
     def test_it(self):
         val = "Tuesday, 08-Feb-94 14:15:29 GMT"
         result = self._callFUT(val)
-        self.assertEqual(result, (1994, 2, 8, 14, 15, 29, 0, 0, 0))
+        self.assertTupleEqual(result, (1994, 2, 8, 14, 15, 29, 0, 0, 0))
 
 
 class Test_unpack_rfc_822(unittest.TestCase):
@@ -68,7 +68,7 @@ class Test_unpack_rfc_822(unittest.TestCase):
     def test_it(self):
         val = "Sun, 08 Feb 1994 14:15:29 GMT"
         result = self._callFUT(val)
-        self.assertEqual(result, (1994, 2, 8, 14, 15, 29, 0, 0, 0))
+        self.assertTupleEqual(result, (1994, 2, 8, 14, 15, 29, 0, 0, 0))
 
 
 class Test_find_double_newline(unittest.TestCase):

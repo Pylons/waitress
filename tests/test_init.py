@@ -12,8 +12,8 @@ class Test_serve(unittest.TestCase):
         app = object()
         result = self._callFUT(app, _server=server, _quiet=True)
         self.assertEqual(server.app, app)
-        self.assertEqual(result, None)
-        self.assertEqual(server.ran, True)
+        self.assertIsNone(result)
+        self.assertTrue(server.ran)
 
 
 class Test_serve_paste(unittest.TestCase):
@@ -28,7 +28,7 @@ class Test_serve_paste(unittest.TestCase):
         result = self._callFUT(app, _server=server, _quiet=True)
         self.assertEqual(server.app, app)
         self.assertEqual(result, 0)
-        self.assertEqual(server.ran, True)
+        self.assertTrue(server.ran)
 
 
 class DummyServerFactory:
