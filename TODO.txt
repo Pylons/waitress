@@ -5,8 +5,6 @@
 - Anticipate multivalue and single-value-only headers in request headers in
   parser.py.
 
-- Timeout functests.
-
 - Complex pipelining functests (with intermediate connection: close).
 
 - Killthreads support.
