@@ -98,7 +98,10 @@ class SubprocessTests:
         self.sock.close()
         # This give us one FD back ...
         self.proc.join(timeout=5)
-        self.proc.close()
+        if self.proc.is_alive():
+            self.proc.terminate()
+        else:
+            self.proc.close()
         self.queue.close()
         self.queue.join_thread()
 
