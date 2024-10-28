@@ -4,7 +4,6 @@ import errno
 from errno import EALREADY, EINPROGRESS, EINVAL, EISCONN, EWOULDBLOCK, errorcode
 import functools
 import gc
-from io import BytesIO
 import os
 import re
 import select
