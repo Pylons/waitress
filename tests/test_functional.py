@@ -97,11 +97,8 @@ class SubprocessTests:
             self.proc.terminate()
         self.sock.close()
         # This give us one FD back ...
-        self.proc.join(timeout=5)
-        if self.proc.is_alive():
-            self.proc.terminate()
-        else:
-            self.proc.close()
+        self.proc.join()
+        self.proc.close()
         self.queue.close()
         self.queue.join_thread()
 
@@ -166,10 +163,9 @@ class SleepyThreadTests(TcpTests, unittest.TestCase):
         time.sleep(3)
 
         for proc in procs:
-            proc.poll()
             if proc.returncode is not None:  # pragma: no cover
                 proc.terminate()
-            proc.wait(timeout=5)
+            proc.wait()
         # the notsleepy response should always be first returned (it sleeps
         # for 2 seconds, then returns; the notsleepy response should be
         # processed in the meantime)
