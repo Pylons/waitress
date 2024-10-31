@@ -4,6 +4,9 @@
 Security
 ~~~~~~~~
 
+- Python 3.8 is no longer supported. Added support for Python 3.13.
+  See https://github.com/Pylons/waitress/pull/445.
+
 - Fix a bug that would lead to Waitress busy looping on select() on a half-open
   socket due to a race condition that existed when creating a new HTTPChannel.
   See https://github.com/Pylons/waitress/pull/435,
