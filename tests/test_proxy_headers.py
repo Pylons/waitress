@@ -225,6 +225,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
 
         environ = inner.environ
         self.assertEqual(environ["REMOTE_ADDR"], "198.51.100.2")
+        self.assertEqual(environ["HTTP_X_FORWARDED_FOR"], "198.51.100.2, 203.0.113.1")
 
     def test_parse_forwarded_multiple_proxies_trust_only_two(self):
         inner = DummyApp()
@@ -251,6 +252,10 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["SERVER_NAME"], "example.com")
         self.assertEqual(environ["HTTP_HOST"], "example.com:8080")
         self.assertEqual(environ["SERVER_PORT"], "8080")
+        self.assertEqual(
+            environ["HTTP_FORWARDED"],
+            "For=198.51.100.2;host=example.com:8080, For=203.0.113.1",
+        )
 
     def test_parse_forwarded_multiple_proxies(self):
         inner = DummyApp()
@@ -278,6 +283,11 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["HTTP_HOST"], "example.com:8443")
         self.assertEqual(environ["SERVER_PORT"], "8443")
         self.assertEqual(environ["wsgi.url_scheme"], "https")
+        self.assertEqual(
+            environ["HTTP_FORWARDED"],
+            'for="[2001:db8::1]:3821";host="example.com:8443";proto="https", '
+            'for=192.0.2.1;host="example.internal:8080"',
+        )
 
     def test_parse_forwarded_multiple_proxies_minimal(self):
         inner = DummyApp()
@@ -304,6 +314,10 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["HTTP_HOST"], "example.org")
         self.assertEqual(environ["SERVER_PORT"], "443")
         self.assertEqual(environ["wsgi.url_scheme"], "https")
+        self.assertEqual(
+            environ["HTTP_FORWARDED"],
+            'for="[2001:db8::1]";proto="https", for=192.0.2.1;host="example.org"',
+        )
 
     def test_parse_proxy_headers_forwarded_host_with_port(self):
         inner = DummyApp()
@@ -332,6 +346,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["SERVER_NAME"], "example.com")
         self.assertEqual(environ["HTTP_HOST"], "example.com:8080")
         self.assertEqual(environ["SERVER_PORT"], "8080")
+        self.assertEqual(environ["HTTP_X_FORWARDED_FOR"], "198.51.100.2, 203.0.113.1")
 
     def test_parse_proxy_headers_forwarded_host_without_port(self):
         inner = DummyApp()
@@ -360,6 +375,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["SERVER_NAME"], "example.com")
         self.assertEqual(environ["HTTP_HOST"], "example.com")
         self.assertEqual(environ["SERVER_PORT"], "80")
+        self.assertEqual(environ["HTTP_X_FORWARDED_FOR"], "198.51.100.2, 203.0.113.1")
 
     def test_parse_proxy_headers_forwarded_host_with_forwarded_port(self):
         inner = DummyApp()
@@ -390,6 +406,7 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["SERVER_NAME"], "example.com")
         self.assertEqual(environ["HTTP_HOST"], "example.com:8080")
         self.assertEqual(environ["SERVER_PORT"], "8080")
+        self.assertEqual(environ["HTTP_X_FORWARDED_FOR"], "198.51.100.2, 203.0.113.1")
 
     def test_parse_proxy_headers_forwarded_host_multiple_with_forwarded_port(self):
         inner = DummyApp()
@@ -420,6 +437,8 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["SERVER_NAME"], "example.com")
         self.assertEqual(environ["HTTP_HOST"], "example.com:8080")
         self.assertEqual(environ["SERVER_PORT"], "8080")
+        self.assertEqual(environ["HTTP_X_FORWARDED_FOR"], "198.51.100.2, 203.0.113.1")
+        self.assertEqual(environ["HTTP_X_FORWARDED_HOST"], "example.com, example.org")
 
     def test_parse_proxy_headers_forwarded_host_multiple_with_forwarded_port_limit_one_trusted(
         self,
@@ -452,6 +471,8 @@ class TestProxyHeadersMiddleware(unittest.TestCase):
         self.assertEqual(environ["SERVER_NAME"], "example.org")
         self.assertEqual(environ["HTTP_HOST"], "example.org:8080")
         self.assertEqual(environ["SERVER_PORT"], "8080")
+        self.assertEqual(environ["HTTP_X_FORWARDED_FOR"], "203.0.113.1")
+        self.assertEqual(environ["HTTP_X_FORWARDED_HOST"], "example.org")
 
     def test_parse_forwarded(self):
         inner = DummyApp()
