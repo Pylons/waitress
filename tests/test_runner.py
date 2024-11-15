@@ -1,65 +1,9 @@
 import contextlib
 import os
 import sys
-
-if sys.version_info[:2] == (2, 6):  # pragma: no cover
-    import unittest2 as unittest
-else:  # pragma: no cover
-    import unittest
+import unittest
 
 from waitress import runner
-
-
-class Test_match(unittest.TestCase):
-    def test_empty(self):
-        self.assertRaisesRegex(
-            ValueError, "^Malformed application ''$", runner.match, ""
-        )
-
-    def test_module_only(self):
-        self.assertRaisesRegex(
-            ValueError, r"^Malformed application 'foo\.bar'$", runner.match, "foo.bar"
-        )
-
-    def test_bad_module(self):
-        self.assertRaisesRegex(
-            ValueError,
-            r"^Malformed application 'foo#bar:barney'$",
-            runner.match,
-            "foo#bar:barney",
-        )
-
-    def test_module_obj(self):
-        self.assertTupleEqual(
-            runner.match("foo.bar:fred.barney"), ("foo.bar", "fred.barney")
-        )
-
-
-class Test_resolve(unittest.TestCase):
-    def test_bad_module(self):
-        self.assertRaises(
-            ImportError, runner.resolve, "nonexistent", "nonexistent_function"
-        )
-
-    def test_nonexistent_function(self):
-        self.assertRaisesRegex(
-            AttributeError,
-            r"has no attribute 'nonexistent_function'",
-            runner.resolve,
-            "os.path",
-            "nonexistent_function",
-        )
-
-    def test_simple_happy_path(self):
-        from os.path import exists
-
-        self.assertIs(runner.resolve("os.path", "exists"), exists)
-
-    def test_complex_happy_path(self):
-        # Ensure we can recursively resolve object attributes if necessary.
-        from os.path import exists
-
-        self.assertEqual(runner.resolve("os.path", "exists.__name__"), exists.__name__)
 
 
 class Test_run(unittest.TestCase):
@@ -83,10 +27,10 @@ class Test_run(unittest.TestCase):
         self.match_output(["a:a", "b:b"], 1, "^Error: Specify one application only")
 
     def test_bad_apps_app(self):
-        self.match_output(["a"], 1, "^Error: Malformed application 'a'")
+        self.match_output(["a"], 1, "^Error: No module named 'a'")
 
     def test_bad_app_module(self):
-        self.match_output(["nonexistent:a"], 1, "^Error: Bad module 'nonexistent'")
+        self.match_output(["nonexistent:a"], 1, "^Error: No module named 'nonexistent'")
 
         self.match_output(
             ["nonexistent:a"],
@@ -117,7 +61,9 @@ class Test_run(unittest.TestCase):
 
     def test_bad_app_object(self):
         self.match_output(
-            ["tests.fixtureapps.runner:a"], 1, "^Error: Bad object name 'a'"
+            ["tests.fixtureapps.runner:a"],
+            1,
+            "^Error: module 'tests.fixtureapps.runner' has no attribute 'a'",
         )
 
     def test_simple_call(self):
