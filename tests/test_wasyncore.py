@@ -453,15 +453,15 @@ class HelperFunctionTests(unittest.TestCase):
         # method causes the handle_error method to get called
         tr2 = crashingdummy()
         asyncore.read(tr2)
-        self.assertEqual(tr2.error_handled, True)
+        self.assertTrue(tr2.error_handled)
 
         tr2 = crashingdummy()
         asyncore.write(tr2)
-        self.assertEqual(tr2.error_handled, True)
+        self.assertTrue(tr2.error_handled)
 
         tr2 = crashingdummy()
         asyncore._exception(tr2)
-        self.assertEqual(tr2.error_handled, True)
+        self.assertTrue(tr2.error_handled)
 
     # asyncore.readwrite uses constants in the select module that
     # are not present in Windows systems (see this thread:
@@ -508,7 +508,7 @@ class HelperFunctionTests(unittest.TestCase):
 
         for flag, expectedattr in expected:
             tobj = testobj()
-            self.assertEqual(getattr(tobj, expectedattr), False)
+            self.assertFalse(getattr(tobj, expectedattr))
             asyncore.readwrite(tobj, flag)
 
             # Only the attribute modified by the routine we expect to be
@@ -525,9 +525,9 @@ class HelperFunctionTests(unittest.TestCase):
             # check that an exception other than ExitNow in the object handler
             # method causes the handle_error method to get called
             tr2 = crashingdummy()
-            self.assertEqual(tr2.error_handled, False)
+            self.assertFalse(tr2.error_handled)
             asyncore.readwrite(tr2, flag)
-            self.assertEqual(tr2.error_handled, True)
+            self.assertTrue(tr2.error_handled)
 
     def test_closeall(self):
         self.closeall_check(False)
@@ -544,7 +544,7 @@ class HelperFunctionTests(unittest.TestCase):
         for i in range(10):
             c = dummychannel()
             l.append(c)
-            self.assertEqual(c.socket.closed, False)
+            self.assertFalse(c.socket.closed)
             testmap[i] = c
 
         if usedefault:
@@ -560,7 +560,7 @@ class HelperFunctionTests(unittest.TestCase):
         self.assertEqual(len(testmap), 0)
 
         for c in l:
-            self.assertEqual(c.socket.closed, True)
+            self.assertTrue(c.socket.closed)
 
     def test_compact_traceback(self):
         try:
@@ -586,8 +586,8 @@ class DispatcherTests(unittest.TestCase):
 
     def test_basic(self):
         d = asyncore.dispatcher()
-        self.assertEqual(d.readable(), True)
-        self.assertEqual(d.writable(), True)
+        self.assertTrue(d.readable())
+        self.assertTrue(d.writable())
 
     def test_repr(self):
         d = asyncore.dispatcher()
@@ -600,7 +600,7 @@ class DispatcherTests(unittest.TestCase):
         logger = DummyLogger()
         inst.logger = logger
         inst.log_info("message", "warning")
-        self.assertEqual(logger.messages, [(logging.WARN, "message")])
+        self.assertListEqual(logger.messages, [(logging.WARN, "message")])
 
     def test_log(self):
         import logging
@@ -609,7 +609,7 @@ class DispatcherTests(unittest.TestCase):
         logger = DummyLogger()
         inst.logger = logger
         inst.log("message")
-        self.assertEqual(logger.messages, [(logging.DEBUG, "message")])
+        self.assertListEqual(logger.messages, [(logging.DEBUG, "message")])
 
     def test_unhandled(self):
         import logging
@@ -629,7 +629,7 @@ class DispatcherTests(unittest.TestCase):
             (logging.WARN, "unhandled write event"),
             (logging.WARN, "unhandled connect event"),
         ]
-        self.assertEqual(logger.messages, expected)
+        self.assertListEqual(logger.messages, expected)
 
     def test_strerror(self):
         # refers to bug #8573
@@ -638,7 +638,7 @@ class DispatcherTests(unittest.TestCase):
         if hasattr(os, "strerror"):
             self.assertEqual(err, os.strerror(errno.EPERM))
         err = asyncore._strerror(-1)
-        self.assertTrue(err != "")
+        self.assertNotEqual(err, "")
 
 
 @unittest.skipUnless(
@@ -1333,8 +1333,8 @@ class Test_poll(unittest.TestCase):
             result = self._callFUT(map=map)
         finally:
             wasyncore.time = old_time
-        self.assertEqual(result, None)
-        self.assertEqual(dummy_time.sleepvals, [0.0])
+        self.assertIsNone(result)
+        self.assertListEqual(dummy_time.sleepvals, [0.0])
 
     def test_select_raises_EINTR(self):
         # i read the mock.patch docs.  nerp.
@@ -1350,8 +1350,8 @@ class Test_poll(unittest.TestCase):
             result = self._callFUT(map=map)
         finally:
             wasyncore.select = old_select
-        self.assertEqual(result, None)
-        self.assertEqual(dummy_select.selected, [([0], [], [0], 0.0)])
+        self.assertIsNone(result)
+        self.assertListEqual(dummy_select.selected, [([0], [], [0], 0.0)])
 
     def test_select_raises_non_EINTR(self):
         # i read the mock.patch docs.  nerp.
@@ -1367,7 +1367,7 @@ class Test_poll(unittest.TestCase):
             self.assertRaises(select.error, self._callFUT, map=map)
         finally:
             wasyncore.select = old_select
-        self.assertEqual(dummy_select.selected, [([0], [], [0], 0.0)])
+        self.assertListEqual(dummy_select.selected, [([0], [], [0], 0.0)])
 
 
 class Test_poll2(unittest.TestCase):
@@ -1390,7 +1390,7 @@ class Test_poll2(unittest.TestCase):
             self._callFUT(map=map)
         finally:
             wasyncore.select = old_select
-        self.assertEqual(pollster.polled, [0.0])
+        self.assertListEqual(pollster.polled, [0.0])
 
     def test_select_raises_non_EINTR(self):
         # i read the mock.patch docs.  nerp.
@@ -1406,7 +1406,7 @@ class Test_poll2(unittest.TestCase):
             self.assertRaises(select.error, self._callFUT, map=map)
         finally:
             wasyncore.select = old_select
-        self.assertEqual(pollster.polled, [0.0])
+        self.assertListEqual(pollster.polled, [0.0])
 
 
 class Test_dispatcher(unittest.TestCase):
@@ -1460,7 +1460,7 @@ class Test_dispatcher(unittest.TestCase):
         sock.accept = accept
         inst = self._makeOne(sock=sock, map=map)
         result = inst.accept()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
 
     def test_accept_raise_unexpected_socketerror(self):
         sock = dummysocket()
@@ -1571,7 +1571,7 @@ class Test_dispatcher(unittest.TestCase):
         inst = self._makeOne(sock=sock, map=map)
         inst.accepting = True
         result = inst.handle_write_event()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
 
     def test_handle_error_gardenpath(self):
         sock = dummysocket()
@@ -1592,7 +1592,7 @@ class Test_dispatcher(unittest.TestCase):
         inst.log_info = log_info
         inst.handle_error()
         self.assertTrue(inst.close_handled)
-        self.assertEqual(inst.logged_info, ("error",))
+        self.assertTupleEqual(inst.logged_info, ("error",))
 
     def test_handle_close(self):
         sock = dummysocket()
@@ -1628,7 +1628,7 @@ class Test_close_all(unittest.TestCase):
         disp = DummyDispatcher(exc=socket.error(errno.EBADF))
         map = {0: disp}
         self._callFUT(map)
-        self.assertEqual(map, {})
+        self.assertDictEqual(map, {})
 
     def test_socketerror_on_close_non_ebadf(self):
         disp = DummyDispatcher(exc=socket.error(errno.EAGAIN))

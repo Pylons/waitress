@@ -70,7 +70,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.requests = True
         inst.last_activity = 0
         result = inst.handle_write()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
         self.assertEqual(inst.last_activity, 0)
 
     def test_handle_write_no_request_with_outbuf(self):
@@ -80,7 +80,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.total_outbufs_len = len(inst.outbufs[0])
         inst.last_activity = 0
         result = inst.handle_write()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
         self.assertNotEqual(inst.last_activity, 0)
         self.assertEqual(sock.sent, b"abc")
 
@@ -95,7 +95,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.last_activity = 0
         inst.logger = DummyLogger()
         result = inst.handle_write()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
         self.assertEqual(inst.last_activity, 0)
         self.assertEqual(sock.sent, b"")
         self.assertEqual(len(inst.logger.exceptions), 1)
@@ -110,7 +110,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.last_activity = 0
         inst.logger = DummyLogger()
         result = inst.handle_write()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
         self.assertEqual(inst.last_activity, 0)
         self.assertEqual(sock.sent, b"")
         self.assertEqual(len(inst.logger.exceptions), 1)
@@ -124,9 +124,9 @@ class TestHTTPChannel(unittest.TestCase):
         inst.will_close = True
         inst.last_activity = 0
         result = inst.handle_write()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.connected, False)
-        self.assertEqual(sock.closed, True)
+        self.assertIsNone(result)
+        self.assertFalse(inst.connected)
+        self.assertTrue(sock.closed)
         self.assertEqual(inst.last_activity, 0)
         self.assertTrue(outbuf.closed)
 
@@ -139,8 +139,8 @@ class TestHTTPChannel(unittest.TestCase):
         inst.will_close = False
         inst.last_activity = 0
         result = inst.handle_write()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.will_close, False)
+        self.assertIsNone(result)
+        self.assertFalse(inst.will_close)
         self.assertTrue(inst.outbuf_lock.acquired)
         self.assertEqual(sock.sent, b"abc")
 
@@ -153,9 +153,9 @@ class TestHTTPChannel(unittest.TestCase):
         inst.close_when_flushed = True
         inst.last_activity = 0
         result = inst.handle_write()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.will_close, True)
-        self.assertEqual(inst.close_when_flushed, False)
+        self.assertIsNone(result)
+        self.assertTrue(inst.will_close)
+        self.assertFalse(inst.close_when_flushed)
         self.assertEqual(sock.sent, b"abc")
         self.assertTrue(outbuf.closed)
 
@@ -163,18 +163,18 @@ class TestHTTPChannel(unittest.TestCase):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = []
         inst.will_close = False
-        self.assertEqual(inst.readable(), True)
+        self.assertTrue(inst.readable())
 
     def test_readable_no_requests_will_close(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = []
         inst.will_close = True
-        self.assertEqual(inst.readable(), False)
+        self.assertFalse(inst.readable())
 
     def test_readable_with_requests(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = [True]
-        self.assertEqual(inst.readable(), False)
+        self.assertFalse(inst.readable())
 
     def test_handle_read_no_error(self):
         inst, sock, map = self._makeOneWithMap()
@@ -184,9 +184,9 @@ class TestHTTPChannel(unittest.TestCase):
         L = []
         inst.received = lambda x: L.append(x)
         result = inst.handle_read()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
         self.assertNotEqual(inst.last_activity, 0)
-        self.assertEqual(L, [b"abc"])
+        self.assertListEqual(L, [b"abc"])
 
     def test_handle_read_error(self):
         inst, sock, map = self._makeOneWithMap()
@@ -199,7 +199,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.last_activity = 0
         inst.logger = DummyLogger()
         result = inst.handle_read()
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
         self.assertEqual(inst.last_activity, 0)
         self.assertEqual(len(inst.logger.exceptions), 1)
 
@@ -361,8 +361,8 @@ class TestHTTPChannel(unittest.TestCase):
         inst.will_close = False
         inst.last_activity = 0
         result = inst.handle_write()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.will_close, False)
+        self.assertIsNone(result)
+        self.assertFalse(inst.will_close)
         self.assertTrue(inst.outbuf_lock.acquired)
         self.assertTrue(inst.outbuf_lock.notified)
         self.assertEqual(sock.sent, b"abc")
@@ -378,8 +378,8 @@ class TestHTTPChannel(unittest.TestCase):
         inst.will_close = False
         inst.last_activity = 0
         result = inst.handle_write()
-        self.assertEqual(result, None)
-        self.assertEqual(inst.will_close, False)
+        self.assertIsNone(result)
+        self.assertFalse(inst.will_close)
         self.assertTrue(inst.outbuf_lock.acquired)
         self.assertFalse(inst.outbuf_lock.notified)
         self.assertEqual(sock.sent, b"")
@@ -387,14 +387,14 @@ class TestHTTPChannel(unittest.TestCase):
     def test__flush_some_empty_outbuf(self):
         inst, sock, map = self._makeOneWithMap()
         result = inst._flush_some()
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test__flush_some_full_outbuf_socket_returns_nonzero(self):
         inst, sock, map = self._makeOneWithMap()
         inst.outbufs[0].append(b"abc")
         inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         result = inst._flush_some()
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     def test__flush_some_full_outbuf_socket_returns_zero(self):
         inst, sock, map = self._makeOneWithMap()
@@ -402,7 +402,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.outbufs[0].append(b"abc")
         inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         result = inst._flush_some()
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_flush_some_multiple_buffers_first_empty(self):
         inst, sock, map = self._makeOneWithMap()
@@ -411,9 +411,9 @@ class TestHTTPChannel(unittest.TestCase):
         inst.outbufs.append(buffer)
         inst.total_outbufs_len = sum(len(x) for x in inst.outbufs)
         result = inst._flush_some()
-        self.assertEqual(result, True)
+        self.assertTrue(result)
         self.assertEqual(buffer.skipped, 3)
-        self.assertEqual(inst.outbufs, [buffer])
+        self.assertListEqual(inst.outbufs, [buffer])
 
     def test_flush_some_multiple_buffers_close_raises(self):
         inst, sock, map = self._makeOneWithMap()
@@ -428,9 +428,9 @@ class TestHTTPChannel(unittest.TestCase):
 
         inst.outbufs[0].close = doraise
         result = inst._flush_some()
-        self.assertEqual(result, True)
+        self.assertTrue(result)
         self.assertEqual(buffer.skipped, 3)
-        self.assertEqual(inst.outbufs, [buffer])
+        self.assertListEqual(inst.outbufs, [buffer])
         self.assertEqual(len(inst.logger.exceptions), 1)
 
     def test__flush_some_outbuf_len_gt_sys_maxint(self):
@@ -455,13 +455,13 @@ class TestHTTPChannel(unittest.TestCase):
         result = inst._flush_some()
         # we are testing that _flush_some doesn't raise an OverflowError
         # when one of its outbufs has a __len__ that returns gt sys.maxint
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_handle_close(self):
         inst, sock, map = self._makeOneWithMap()
         inst.handle_close()
-        self.assertEqual(inst.connected, False)
-        self.assertEqual(sock.closed, True)
+        self.assertFalse(inst.connected)
+        self.assertTrue(sock.closed)
 
     def test_handle_close_outbuf_raises_on_close(self):
         inst, sock, map = self._makeOneWithMap()
@@ -472,8 +472,8 @@ class TestHTTPChannel(unittest.TestCase):
         inst.outbufs[0].close = doraise
         inst.logger = DummyLogger()
         inst.handle_close()
-        self.assertEqual(inst.connected, False)
-        self.assertEqual(sock.closed, True)
+        self.assertFalse(inst.connected)
+        self.assertTrue(sock.closed)
         self.assertEqual(len(inst.logger.exceptions), 1)
 
     def test_add_channel(self):
@@ -488,19 +488,19 @@ class TestHTTPChannel(unittest.TestCase):
         fileno = inst._fileno
         inst.server.active_channels[fileno] = True
         inst.del_channel(map)
-        self.assertEqual(map.get(fileno), None)
-        self.assertEqual(inst.server.active_channels.get(fileno), None)
+        self.assertIsNone(map.get(fileno))
+        self.assertIsNone(inst.server.active_channels.get(fileno))
 
     def test_received(self):
         inst, sock, map = self._makeOneWithMap()
         inst.server = DummyServer()
         inst.received(b"GET / HTTP/1.1\r\n\r\n")
-        self.assertEqual(inst.server.tasks, [inst])
+        self.assertListEqual(inst.server.tasks, [inst])
         self.assertTrue(inst.requests)
 
     def test_received_no_chunk(self):
         inst, sock, map = self._makeOneWithMap()
-        self.assertEqual(inst.received(b""), False)
+        self.assertFalse(inst.received(b""))
 
     def test_received_preq_not_completed(self):
         inst, sock, map = self._makeOneWithMap()
@@ -510,8 +510,8 @@ class TestHTTPChannel(unittest.TestCase):
         preq.completed = False
         preq.empty = True
         inst.received(b"GET / HTTP/1.1\r\n\r\n")
-        self.assertEqual(inst.requests, [])
-        self.assertEqual(inst.server.tasks, [])
+        self.assertListEqual(inst.requests, [])
+        self.assertListEqual(inst.server.tasks, [])
 
     def test_received_preq_completed_empty(self):
         inst, sock, map = self._makeOneWithMap()
@@ -521,8 +521,8 @@ class TestHTTPChannel(unittest.TestCase):
         preq.completed = True
         preq.empty = True
         inst.received(b"GET / HTTP/1.1\r\n\r\n")
-        self.assertEqual(inst.request, None)
-        self.assertEqual(inst.server.tasks, [])
+        self.assertIsNone(inst.request)
+        self.assertListEqual(inst.server.tasks, [])
 
     def test_received_preq_error(self):
         inst, sock, map = self._makeOneWithMap()
@@ -532,7 +532,7 @@ class TestHTTPChannel(unittest.TestCase):
         preq.completed = True
         preq.error = True
         inst.received(b"GET / HTTP/1.1\r\n\r\n")
-        self.assertEqual(inst.request, None)
+        self.assertIsNone(inst.request)
         self.assertEqual(len(inst.server.tasks), 1)
         self.assertTrue(inst.requests)
 
@@ -545,8 +545,8 @@ class TestHTTPChannel(unittest.TestCase):
         preq.empty = True
         preq.connection_close = True
         inst.received(b"GET / HTTP/1.1\r\n\r\n" + b"a" * 50000)
-        self.assertEqual(inst.request, None)
-        self.assertEqual(inst.server.tasks, [])
+        self.assertIsNone(inst.request)
+        self.assertListEqual(inst.server.tasks, [])
 
     def test_received_headers_finished_expect_continue_false(self):
         inst, sock, map = self._makeOneWithMap()
@@ -560,7 +560,7 @@ class TestHTTPChannel(unittest.TestCase):
         preq.retval = 1
         inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, preq)
-        self.assertEqual(inst.server.tasks, [])
+        self.assertListEqual(inst.server.tasks, [])
         self.assertEqual(inst.outbufs[0].get(100), b"")
 
     def test_received_headers_finished_expect_continue_true(self):
@@ -574,10 +574,10 @@ class TestHTTPChannel(unittest.TestCase):
         preq.empty = False
         inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, preq)
-        self.assertEqual(inst.server.tasks, [])
+        self.assertListEqual(inst.server.tasks, [])
         self.assertEqual(sock.sent, b"HTTP/1.1 100 Continue\r\n\r\n")
-        self.assertEqual(inst.sent_continue, True)
-        self.assertEqual(preq.completed, False)
+        self.assertTrue(inst.sent_continue)
+        self.assertFalse(preq.completed)
 
     def test_received_headers_finished_expect_continue_true_sent_true(self):
         inst, sock, map = self._makeOneWithMap()
@@ -591,10 +591,10 @@ class TestHTTPChannel(unittest.TestCase):
         inst.sent_continue = True
         inst.received(b"GET / HTTP/1.1\r\n\r\n")
         self.assertEqual(inst.request, preq)
-        self.assertEqual(inst.server.tasks, [])
+        self.assertListEqual(inst.server.tasks, [])
         self.assertEqual(sock.sent, b"")
-        self.assertEqual(inst.sent_continue, True)
-        self.assertEqual(preq.completed, False)
+        self.assertTrue(inst.sent_continue)
+        self.assertFalse(preq.completed)
 
     def test_service_with_one_request(self):
         inst, sock, map = self._makeOneWithMap()
@@ -602,7 +602,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.task_class = DummyTaskClass()
         inst.requests = [request]
         inst.service()
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertTrue(request.serviced)
         self.assertTrue(request.closed)
 
@@ -613,7 +613,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.error_task_class = DummyTaskClass()
         inst.requests = [request]
         inst.service()
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertTrue(request.serviced)
         self.assertTrue(request.closed)
 
@@ -625,7 +625,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.requests = [request1, request2]
         inst.service()
         inst.service()
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertTrue(request1.serviced)
         self.assertTrue(request2.serviced)
         self.assertTrue(request1.closed)
@@ -643,12 +643,12 @@ class TestHTTPChannel(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.service()
         self.assertTrue(request.serviced)
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
-        self.assertEqual(inst.error_task_class.serviced, True)
+        self.assertTrue(inst.error_task_class.serviced)
         self.assertTrue(request.closed)
 
     def test_service_with_requests_raises_already_wrote_header(self):
@@ -662,12 +662,12 @@ class TestHTTPChannel(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.service()
         self.assertTrue(request.serviced)
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertTrue(inst.close_when_flushed)
-        self.assertEqual(inst.error_task_class.serviced, False)
+        self.assertFalse(inst.error_task_class.serviced)
         self.assertTrue(request.closed)
 
     def test_service_with_requests_raises_didnt_write_header_expose_tbs(self):
@@ -683,11 +683,11 @@ class TestHTTPChannel(unittest.TestCase):
         inst.service()
         self.assertTrue(request.serviced)
         self.assertFalse(inst.will_close)
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
-        self.assertEqual(inst.error_task_class.serviced, True)
+        self.assertTrue(inst.error_task_class.serviced)
         self.assertTrue(request.closed)
 
     def test_service_with_requests_raises_didnt_write_header(self):
@@ -701,7 +701,7 @@ class TestHTTPChannel(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.service()
         self.assertTrue(request.serviced)
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
@@ -721,12 +721,12 @@ class TestHTTPChannel(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.service()
         self.assertTrue(request.serviced)
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.infos), 1)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
-        self.assertEqual(inst.error_task_class.serviced, False)
+        self.assertFalse(inst.error_task_class.serviced)
         self.assertTrue(request.closed)
 
     def test_service_with_request_error_raises_disconnect(self):
@@ -746,27 +746,27 @@ class TestHTTPChannel(unittest.TestCase):
         inst.service()
         self.assertTrue(request.serviced)
         self.assertTrue(err_request.serviced)
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
         self.assertEqual(len(inst.logger.exceptions), 1)
         self.assertEqual(len(inst.logger.infos), 0)
         self.assertTrue(inst.server.trigger_pulled)
         self.assertTrue(inst.last_activity)
         self.assertFalse(inst.will_close)
-        self.assertEqual(inst.task_class.serviced, True)
-        self.assertEqual(inst.error_task_class.serviced, True)
+        self.assertTrue(inst.task_class.serviced)
+        self.assertTrue(inst.error_task_class.serviced)
         self.assertTrue(request.closed)
 
     def test_cancel_no_requests(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = ()
         inst.cancel()
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
 
     def test_cancel_with_requests(self):
         inst, sock, map = self._makeOneWithMap()
         inst.requests = [None]
         inst.cancel()
-        self.assertEqual(inst.requests, [])
+        self.assertListEqual(inst.requests, [])
 
 
 class TestHTTPChannelLookahead(TestHTTPChannel):
