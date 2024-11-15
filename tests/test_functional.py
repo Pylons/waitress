@@ -29,20 +29,7 @@ class NullHandler(logging.Handler):  # pragma: no cover
 def start_server(app, svr, queue, **kwargs):  # pragma: no cover
     """Run a fixture application."""
     logging.getLogger("waitress").addHandler(NullHandler())
-    try_register_coverage()
     svr(app, queue, **kwargs).run()
-
-
-def try_register_coverage():  # pragma: no cover
-    # Hack around multiprocessing exiting early and not triggering coverage's
-    # atexit handler by always registering a signal handler
-
-    if "COVERAGE_PROCESS_START" in os.environ:
-
-        def sigterm(*args):
-            sys.exit(0)
-
-        signal.signal(signal.SIGTERM, sigterm)
 
 
 class FixtureTcpWSGIServer(server.TcpWSGIServer):
