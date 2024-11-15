@@ -358,7 +358,7 @@ class HTTPChannel(wasyncore.dispatcher):
                     raise ClientDisconnected
                 num_bytes = len(data)
 
-                if data.__class__ is ReadOnlyFileBasedBuffer:
+                if isinstance(data, ReadOnlyFileBasedBuffer):
                     # they used wsgi.file_wrapper
                     self.outbufs.append(data)
                     nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)

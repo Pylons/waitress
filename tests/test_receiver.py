@@ -178,8 +178,6 @@ class TestChunkedReceiver(unittest.TestCase):
         self.assertEqual(inst.error.__class__, BadRequest)
 
     def test_received_multiple_chunks(self):
-        from waitress.utilities import BadRequest
-
         buf = DummyBuffer()
         inst = self._makeOne(buf)
         data = (
@@ -196,13 +194,11 @@ class TestChunkedReceiver(unittest.TestCase):
         )
         result = inst.received(data)
         self.assertEqual(result, len(data))
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
         self.assertEqual(b"".join(buf.data), b"Wikipedia in\r\n\r\nchunks.")
-        self.assertEqual(inst.error, None)
+        self.assertIsNone(inst.error)
 
     def test_received_multiple_chunks_split(self):
-        from waitress.utilities import BadRequest
-
         buf = DummyBuffer()
         inst = self._makeOne(buf)
         data1 = b"4\r\nWiki\r"
@@ -245,7 +241,7 @@ class TestChunkedReceiverParametrized:
         data = b"4;" + invalid_extension + b"\r\ntest\r\n"
         result = inst.received(data)
         assert result == len(data)
-        assert inst.error.__class__ == BadRequest
+        assert isinstance(inst.error, BadRequest)
         assert inst.error.body == "Invalid chunk extension"
 
     @pytest.mark.parametrize(
@@ -260,7 +256,7 @@ class TestChunkedReceiverParametrized:
         data = b"4;" + valid_extension + b"\r\ntest\r\n"
         result = inst.received(data)
         assert result == len(data)
-        assert inst.error == None
+        assert inst.error is None
 
     @pytest.mark.parametrize(
         "invalid_size", [b"0x04", b"+0x04", b"x04", b"+04", b" 04", b" 0x04"]
@@ -273,7 +269,7 @@ class TestChunkedReceiverParametrized:
         data = invalid_size + b"\r\ntest\r\n"
         result = inst.received(data)
         assert result == len(data)
-        assert inst.error.__class__ == BadRequest
+        assert isinstance(inst.error, BadRequest)
         assert inst.error.body == "Invalid chunk size"
 
 

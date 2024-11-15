@@ -398,7 +398,6 @@ if hasattr(socket, "AF_UNIX"):
             from waitress.server import (
                 BaseWSGIServer,
                 MultiSocketServer,
-                TcpWSGIServer,
                 UnixWSGIServer,
             )
 

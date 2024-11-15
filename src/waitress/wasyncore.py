@@ -53,19 +53,14 @@ nor the 3.X asyncore; it is a version compatible with either 2.7 or 3.X.
 
 from errno import (
     EAGAIN,
-    EALREADY,
     EBADF,
     ECONNABORTED,
     ECONNRESET,
-    EINPROGRESS,
     EINTR,
-    EINVAL,
-    EISCONN,
     ENOTCONN,
     EPIPE,
     ESHUTDOWN,
     EWOULDBLOCK,
-    errorcode,
 )
 import logging
 import os
@@ -75,7 +70,7 @@ import sys
 import time
 import warnings
 
-from . import compat, utilities
+from . import utilities
 
 _DISCONNECTED = frozenset({ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED, EPIPE, EBADF})
 
