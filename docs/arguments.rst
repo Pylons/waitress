@@ -314,3 +314,17 @@ url_prefix
     be stripped of the prefix.
 
     Default: ``''``
+
+channel_request_lookahead
+    Sets the amount of requests we can continue to read from the socket, while
+    we are processing current requests. The default value won't allow any
+    lookahead, increase it above ``0`` to enable.
+
+    When enabled this inserts a callable ``waitress.client_disconnected`` into
+    the environment that allows the task to check if the client disconnected
+    while waiting for the response at strategic points in the execution and to
+    cancel the operation.
+
+    Default: ``0``
+
+    .. versionadded:: 2.0.0

@@ -26,7 +26,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.handler_thread(0)
         self.assertEqual(inst.stop_count, 0)
         self.assertEqual(inst.active_count, 0)
-        self.assertEqual(inst.threads, set())
+        self.assertSetEqual(inst.threads, set())
         self.assertEqual(len(inst.logger.logged), 1)
 
     def test_set_thread_count_increase(self):
@@ -34,7 +34,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         L = []
         inst.start_new_thread = lambda *x: L.append(x)
         inst.set_thread_count(1)
-        self.assertEqual(L, [(inst.handler_thread, 0)])
+        self.assertListEqual(L, [(inst.handler_thread, 0)])
 
     def test_set_thread_count_increase_with_existing(self):
         inst = self._makeOne()
@@ -42,7 +42,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.threads = {0}
         inst.start_new_thread = lambda *x: L.append(x)
         inst.set_thread_count(2)
-        self.assertEqual(L, [(inst.handler_thread, 1)])
+        self.assertListEqual(L, [(inst.handler_thread, 1)])
 
     def test_set_thread_count_decrease(self):
         inst = self._makeOne()
@@ -56,7 +56,7 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.start_new_thread = lambda *x: L.append(x)
         inst.threads = {0}
         inst.set_thread_count(1)
-        self.assertEqual(L, [])
+        self.assertListEqual(L, [])
 
     def test_add_task_with_idle_threads(self):
         task = DummyTask()
@@ -82,23 +82,23 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.logger = DummyLogger()
         task = DummyTask()
         inst.queue.append(task)
-        self.assertEqual(inst.shutdown(timeout=0.01), True)
-        self.assertEqual(
+        self.assertTrue(inst.shutdown(timeout=0.01))
+        self.assertListEqual(
             inst.logger.logged,
             [
                 "1 thread(s) still running",
                 "Canceling 1 pending task(s)",
             ],
         )
-        self.assertEqual(task.cancelled, True)
+        self.assertTrue(task.cancelled)
 
     def test_shutdown_no_threads(self):
         inst = self._makeOne()
-        self.assertEqual(inst.shutdown(timeout=0.01), True)
+        self.assertTrue(inst.shutdown(timeout=0.01))
 
     def test_shutdown_no_cancel_pending(self):
         inst = self._makeOne()
-        self.assertEqual(inst.shutdown(cancel_pending=False, timeout=0.01), False)
+        self.assertFalse(inst.shutdown(cancel_pending=False, timeout=0.01))
 
 
 class TestTask(unittest.TestCase):
@@ -135,8 +135,8 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[1], b"Connection: close")
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: waitress")
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(("Connection", "close") in inst.response_headers)
+        self.assertTrue(inst.close_on_finish)
+        self.assertIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_v10_keepalive_with_content_length(self):
         inst = self._makeOne()
@@ -153,7 +153,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[2], b"Content-Length: 10")
         self.assertTrue(lines[3].startswith(b"Date:"))
         self.assertEqual(lines[4], b"Server: waitress")
-        self.assertEqual(inst.close_on_finish, False)
+        self.assertFalse(inst.close_on_finish)
 
     def test_build_response_header_v11_connection_closed_by_client(self):
         inst = self._makeOne()
@@ -168,8 +168,8 @@ class TestTask(unittest.TestCase):
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: waitress")
         self.assertEqual(lines[4], b"Transfer-Encoding: chunked")
-        self.assertTrue(("Connection", "close") in inst.response_headers)
-        self.assertEqual(inst.close_on_finish, True)
+        self.assertIn(("Connection", "close"), inst.response_headers)
+        self.assertTrue(inst.close_on_finish)
 
     def test_build_response_header_v11_connection_keepalive_by_client(self):
         inst = self._makeOne()
@@ -184,8 +184,8 @@ class TestTask(unittest.TestCase):
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: waitress")
         self.assertEqual(lines[4], b"Transfer-Encoding: chunked")
-        self.assertTrue(("Connection", "close") in inst.response_headers)
-        self.assertEqual(inst.close_on_finish, True)
+        self.assertIn(("Connection", "close"), inst.response_headers)
+        self.assertTrue(inst.close_on_finish)
 
     def test_build_response_header_v11_200_no_content_length(self):
         inst = self._makeOne()
@@ -199,8 +199,8 @@ class TestTask(unittest.TestCase):
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: waitress")
         self.assertEqual(lines[4], b"Transfer-Encoding: chunked")
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(("Connection", "close") in inst.response_headers)
+        self.assertTrue(inst.close_on_finish)
+        self.assertIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_v11_204_no_content_length_or_transfer_encoding(self):
         # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
@@ -216,8 +216,8 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[1], b"Connection: close")
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: waitress")
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(("Connection", "close") in inst.response_headers)
+        self.assertTrue(inst.close_on_finish)
+        self.assertIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_v11_1xx_no_content_length_or_transfer_encoding(self):
         # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
@@ -233,8 +233,8 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[1], b"Connection: close")
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: waitress")
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(("Connection", "close") in inst.response_headers)
+        self.assertTrue(inst.close_on_finish)
+        self.assertIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_v11_304_no_content_length_or_transfer_encoding(self):
         # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
@@ -250,8 +250,8 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[1], b"Connection: close")
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: waitress")
-        self.assertEqual(inst.close_on_finish, True)
-        self.assertTrue(("Connection", "close") in inst.response_headers)
+        self.assertTrue(inst.close_on_finish)
+        self.assertIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_via_added(self):
         inst = self._makeOne()
@@ -297,7 +297,7 @@ class TestTask(unittest.TestCase):
         inst = self._makeOne()
         inst.response_headers = [("Content-Length", "70")]
         inst.remove_content_length_header()
-        self.assertEqual(inst.response_headers, [])
+        self.assertListEqual(inst.response_headers, [])
 
     def test_remove_content_length_header_with_other(self):
         inst = self._makeOne()
@@ -306,7 +306,7 @@ class TestTask(unittest.TestCase):
             ("Content-Type", "text/html"),
         ]
         inst.remove_content_length_header()
-        self.assertEqual(inst.response_headers, [("Content-Type", "text/html")])
+        self.assertListEqual(inst.response_headers, [("Content-Type", "text/html")])
 
     def test_start(self):
         inst = self._makeOne()
@@ -347,7 +347,7 @@ class TestTask(unittest.TestCase):
         inst.complete = True
         inst.write(b"abc")
         self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.wrote_header, True)
+        self.assertTrue(inst.wrote_header)
 
     def test_write_start_response_uncalled(self):
         inst = self._makeOne()
@@ -369,7 +369,7 @@ class TestTask(unittest.TestCase):
         inst.logger = DummyLogger()
         inst.write(b"abc")
         self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.logged_write_excess, True)
+        self.assertTrue(inst.logged_write_excess)
         self.assertEqual(len(inst.logger.logged), 1)
 
 
@@ -395,7 +395,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertTrue(inst.start_time)
         self.assertTrue(inst.close_on_finish)
         self.assertTrue(inst.channel.written)
-        self.assertEqual(inst.executed, True)
+        self.assertTrue(inst.executed)
 
     def test_service_server_raises_socket_error(self):
         import socket
@@ -446,7 +446,7 @@ class TestWSGITask(unittest.TestCase):
         self.assertTrue(inst.complete)
         self.assertEqual(inst.status, "200 OK")
         self.assertTrue(inst.channel.written)
-        self.assertFalse(("a", "b") in inst.response_headers)
+        self.assertNotIn(("a", "b"), inst.response_headers)
 
     def test_execute_app_calls_start_response_w_excinf_headers_written(self):
         def app(environ, start_response):
@@ -515,7 +515,7 @@ class TestWSGITask(unittest.TestCase):
         inst = self._makeOne()
         inst.channel.server.application = app
         inst.execute()
-        self.assertTrue(b"A: b\r\nA: a\r\nC: b\r\n" in inst.channel.written)
+        self.assertIn(b"A: b\r\nA: a\r\nC: b\r\n", inst.channel.written)
 
     def test_execute_bad_status_value(self):
         def app(environ, start_response):
@@ -564,7 +564,7 @@ class TestWSGITask(unittest.TestCase):
         inst = self._makeOne()
         inst.channel.server.application = app
         inst.execute()
-        self.assertEqual(inst.content_length, None)
+        self.assertIsNone(inst.content_length)
 
     def test_execute_app_returns_too_many_bytes(self):
         def app(environ, start_response):
@@ -575,7 +575,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.logger = DummyLogger()
         inst.execute()
-        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(inst.close_on_finish)
         self.assertEqual(len(inst.logger.logged), 1)
 
     def test_execute_app_returns_too_few_bytes(self):
@@ -587,7 +587,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.logger = DummyLogger()
         inst.execute()
-        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(inst.close_on_finish)
         self.assertEqual(len(inst.logger.logged), 1)
 
     def test_execute_app_head_with_content_length(self):
@@ -600,7 +600,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.logger = DummyLogger()
         inst.execute()
-        self.assertEqual(inst.close_on_finish, False)
+        self.assertFalse(inst.close_on_finish)
         self.assertEqual(len(inst.logger.logged), 0)
 
     def test_execute_app_without_body_204_logged(self):
@@ -612,7 +612,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.logger = DummyLogger()
         inst.execute()
-        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(inst.close_on_finish)
         self.assertNotIn(b"abc", inst.channel.written)
         self.assertNotIn(b"Content-Length", inst.channel.written)
         self.assertNotIn(b"Transfer-Encoding", inst.channel.written)
@@ -627,7 +627,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.logger = DummyLogger()
         inst.execute()
-        self.assertEqual(inst.close_on_finish, True)
+        self.assertTrue(inst.close_on_finish)
         self.assertNotIn(b"abc", inst.channel.written)
         self.assertNotIn(b"Content-Length", inst.channel.written)
         self.assertNotIn(b"Transfer-Encoding", inst.channel.written)
@@ -647,7 +647,7 @@ class TestWSGITask(unittest.TestCase):
         inst = self._makeOne()
         inst.channel.server.application = app
         inst.execute()
-        self.assertEqual(foo.closed, True)
+        self.assertTrue(foo.closed)
 
     def test_execute_app_returns_filewrapper_prepare_returns_True(self):
         from waitress.buffers import ReadOnlyFileBasedBuffer
@@ -663,7 +663,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.execute()
         self.assertTrue(inst.channel.written)  # header
-        self.assertEqual(inst.channel.otherdata, [app_iter])
+        self.assertListEqual(inst.channel.otherdata, [app_iter])
 
     def test_execute_app_returns_filewrapper_prepare_returns_True_nocl(self):
         from waitress.buffers import ReadOnlyFileBasedBuffer
@@ -679,7 +679,7 @@ class TestWSGITask(unittest.TestCase):
         inst.channel.server.application = app
         inst.execute()
         self.assertTrue(inst.channel.written)  # header
-        self.assertEqual(inst.channel.otherdata, [app_iter])
+        self.assertListEqual(inst.channel.otherdata, [app_iter])
         self.assertEqual(inst.content_length, 3)
 
     def test_execute_app_returns_filewrapper_prepare_returns_True_badcl(self):
@@ -698,14 +698,14 @@ class TestWSGITask(unittest.TestCase):
         inst.response_headers = [("Content-Length", "10")]
         inst.execute()
         self.assertTrue(inst.channel.written)  # header
-        self.assertEqual(inst.channel.otherdata, [app_iter])
+        self.assertListEqual(inst.channel.otherdata, [app_iter])
         self.assertEqual(inst.content_length, 3)
-        self.assertEqual(dict(inst.response_headers)["Content-Length"], "3")
+        self.assertIn(("Content-Length", "3"), inst.response_headers)
 
     def test_get_environment_already_cached(self):
         inst = self._makeOne()
-        inst.environ = object()
-        self.assertEqual(inst.get_environment(), inst.environ)
+        inst.environ = {}
+        self.assertDictEqual(inst.get_environment(), inst.environ)
 
     def test_get_environment_path_startswith_more_than_one_slash(self):
         inst = self._makeOne()
@@ -784,7 +784,7 @@ class TestWSGITask(unittest.TestCase):
         environ = inst.get_environment()
 
         # nail the keys of environ
-        self.assertEqual(
+        self.assertListEqual(
             sorted(environ.keys()),
             [
                 "CONTENT_LENGTH",
@@ -835,11 +835,11 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ["wsgi.version"], (1, 0))
         self.assertEqual(environ["wsgi.url_scheme"], "http")
         self.assertEqual(environ["wsgi.errors"], sys.stderr)
-        self.assertEqual(environ["wsgi.multithread"], True)
-        self.assertEqual(environ["wsgi.multiprocess"], False)
-        self.assertEqual(environ["wsgi.run_once"], False)
+        self.assertTrue(environ["wsgi.multithread"])
+        self.assertFalse(environ["wsgi.multiprocess"])
+        self.assertFalse(environ["wsgi.run_once"])
         self.assertEqual(environ["wsgi.input"], "stream")
-        self.assertEqual(environ["wsgi.input_terminated"], True)
+        self.assertTrue(environ["wsgi.input_terminated"])
         self.assertEqual(inst.environ, environ)
 
 

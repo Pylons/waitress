@@ -3,7 +3,7 @@ requires = ["setuptools >= 41"]
 build-backend = "setuptools.build_meta"
 
 [tool.black]
-target-version = ['py35', 'py36', 'py37', 'py38']
+target-version = ['py39', 'py310', 'py311', 'py312', 'py313']
 exclude = '''
 /(
   \.git

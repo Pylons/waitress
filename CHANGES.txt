@@ -1,10 +1,14 @@
-3.0.1 (unreleased)
+3.0.1 (2024-11-28)
 ------------------
+
+Security
+~~~~~~~~
 
 - Fix a bug that would lead to Waitress busy looping on select() on a half-open
   socket due to a race condition that existed when creating a new HTTPChannel.
-  See https://github.com/Pylons/waitress/pull/435 and
-  https://github.com/Pylons/waitress/issues/418
+  See https://github.com/Pylons/waitress/pull/435,
+  https://github.com/Pylons/waitress/issues/418 and
+  https://github.com/Pylons/waitress/security/advisories/GHSA-3f84-rpwh-47g6
 
   With thanks to Dylan Jay and Dieter Maurer for their extensive debugging and
   helping track this down.
@@ -12,6 +16,11 @@
 - No longer strip the header values before passing them to the WSGI environ.
   See https://github.com/Pylons/waitress/pull/434 and
   https://github.com/Pylons/waitress/issues/432
+
+- Fix a race condition in Waitress when `channel_request_lookahead` is enabled
+  that could lead to HTTP request smuggling.
+
+  See https://github.com/Pylons/waitress/security/advisories/GHSA-9298-4cf8-g4wj
 
 3.0.0 (2024-02-04)
 ------------------

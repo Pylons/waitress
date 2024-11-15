@@ -140,7 +140,7 @@ class HTTPChannel(wasyncore.dispatcher):
         # 1. We're not already about to close the connection.
         # 2. We're not waiting to flush remaining data before closing the
         #    connection
-        # 3. There are not too many tasks already queued
+        # 3. There are not too many tasks already queued (if lookahead is enabled)
         # 4. There's no data in the output buffer that needs to be sent
         #    before we potentially create a new task.
 
@@ -196,6 +196,15 @@ class HTTPChannel(wasyncore.dispatcher):
             return False
 
         with self.requests_lock:
+            # Don't bother processing anymore data if this connection is about
+            # to close. This may happen if readable() returned True, on the
+            # main thread before the service thread set the close_when_flushed
+            # flag, and we read data but our service thread is attempting to
+            # shut down the connection due to an error. We want to make sure we
+            # do this while holding the request_lock so that we can't race
+            if self.will_close or self.close_when_flushed:
+                return False
+
             while data:
                 if self.request is None:
                     self.request = self.parser_class(self.adj)
@@ -349,7 +358,7 @@ class HTTPChannel(wasyncore.dispatcher):
                     raise ClientDisconnected
                 num_bytes = len(data)
 
-                if data.__class__ is ReadOnlyFileBasedBuffer:
+                if isinstance(data, ReadOnlyFileBasedBuffer):
                     # they used wsgi.file_wrapper
                     self.outbufs.append(data)
                     nextbuf = OverflowableBuffer(self.adj.outbuf_overflow)

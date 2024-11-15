@@ -14,26 +14,26 @@ class TestFixedStreamReceiver(unittest.TestCase):
         inst = self._makeOne(0, buf)
         result = inst.received("a")
         self.assertEqual(result, 0)
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
 
     def test_received_remain_lte_datalen(self):
         buf = DummyBuffer()
         inst = self._makeOne(1, buf)
         result = inst.received("aa")
         self.assertEqual(result, 1)
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
         self.assertEqual(inst.completed, 1)
         self.assertEqual(inst.remain, 0)
-        self.assertEqual(buf.data, ["a"])
+        self.assertListEqual(buf.data, ["a"])
 
     def test_received_remain_gt_datalen(self):
         buf = DummyBuffer()
         inst = self._makeOne(10, buf)
         result = inst.received("aa")
         self.assertEqual(result, 2)
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
         self.assertEqual(inst.remain, 8)
-        self.assertEqual(buf.data, ["aa"])
+        self.assertListEqual(buf.data, ["aa"])
 
     def test_getfile(self):
         buf = DummyBuffer()
@@ -63,7 +63,7 @@ class TestChunkedReceiver(unittest.TestCase):
         inst.completed = True
         result = inst.received(b"a")
         self.assertEqual(result, 0)
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
 
     def test_received_remain_gt_zero(self):
         buf = DummyBuffer()
@@ -72,7 +72,7 @@ class TestChunkedReceiver(unittest.TestCase):
         result = inst.received(b"a")
         self.assertEqual(inst.chunk_remainder, 99)
         self.assertEqual(result, 1)
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
 
     def test_received_control_line_notfinished(self):
         buf = DummyBuffer()
@@ -80,7 +80,7 @@ class TestChunkedReceiver(unittest.TestCase):
         result = inst.received(b"a")
         self.assertEqual(inst.control_line, b"a")
         self.assertEqual(result, 1)
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
 
     def test_received_control_line_finished_garbage_in_input(self):
         buf = DummyBuffer()
@@ -95,18 +95,18 @@ class TestChunkedReceiver(unittest.TestCase):
         result = inst.received(b"a;discard\r\n")
         self.assertEqual(inst.control_line, b"")
         self.assertEqual(inst.chunk_remainder, 10)
-        self.assertEqual(inst.all_chunks_received, False)
+        self.assertFalse(inst.all_chunks_received)
         self.assertEqual(result, 11)
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
 
     def test_received_control_line_finished_all_chunks_received(self):
         buf = DummyBuffer()
         inst = self._makeOne(buf)
         result = inst.received(b"0;discard\r\n")
         self.assertEqual(inst.control_line, b"")
-        self.assertEqual(inst.all_chunks_received, True)
+        self.assertTrue(inst.all_chunks_received)
         self.assertEqual(result, 11)
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
 
     def test_received_trailer_startswith_crlf(self):
         buf = DummyBuffer()
@@ -114,7 +114,7 @@ class TestChunkedReceiver(unittest.TestCase):
         inst.all_chunks_received = True
         result = inst.received(b"\r\n")
         self.assertEqual(result, 2)
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
 
     def test_received_trailer_startswith_lf(self):
         buf = DummyBuffer()
@@ -122,7 +122,7 @@ class TestChunkedReceiver(unittest.TestCase):
         inst.all_chunks_received = True
         result = inst.received(b"\n")
         self.assertEqual(result, 1)
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
 
     def test_received_trailer_not_finished(self):
         buf = DummyBuffer()
@@ -130,7 +130,7 @@ class TestChunkedReceiver(unittest.TestCase):
         inst.all_chunks_received = True
         result = inst.received(b"a")
         self.assertEqual(result, 1)
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
 
     def test_received_trailer_finished(self):
         buf = DummyBuffer()
@@ -139,7 +139,7 @@ class TestChunkedReceiver(unittest.TestCase):
         result = inst.received(b"abc\r\n\r\n")
         self.assertEqual(inst.trailer, b"abc\r\n\r\n")
         self.assertEqual(result, 7)
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
 
     def test_getfile(self):
         buf = DummyBuffer()
@@ -154,7 +154,7 @@ class TestChunkedReceiver(unittest.TestCase):
     def test___len__(self):
         buf = DummyBuffer(["1", "2"])
         inst = self._makeOne(buf)
-        self.assertEqual(inst.__len__(), 2)
+        self.assertEqual(len(inst), 2)
 
     def test_received_chunk_is_properly_terminated(self):
         buf = DummyBuffer()
@@ -162,7 +162,7 @@ class TestChunkedReceiver(unittest.TestCase):
         data = b"4\r\nWiki\r\n"
         result = inst.received(data)
         self.assertEqual(result, len(data))
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
         self.assertEqual(buf.data[0], b"Wiki")
 
     def test_received_chunk_not_properly_terminated(self):
@@ -173,13 +173,11 @@ class TestChunkedReceiver(unittest.TestCase):
         data = b"4\r\nWikibadchunk\r\n"
         result = inst.received(data)
         self.assertEqual(result, len(data))
-        self.assertEqual(inst.completed, False)
+        self.assertFalse(inst.completed)
         self.assertEqual(buf.data[0], b"Wiki")
-        self.assertEqual(inst.error.__class__, BadRequest)
+        self.assertIsInstance(inst.error, BadRequest)
 
     def test_received_multiple_chunks(self):
-        from waitress.utilities import BadRequest
-
         buf = DummyBuffer()
         inst = self._makeOne(buf)
         data = (
@@ -196,13 +194,11 @@ class TestChunkedReceiver(unittest.TestCase):
         )
         result = inst.received(data)
         self.assertEqual(result, len(data))
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
         self.assertEqual(b"".join(buf.data), b"Wikipedia in\r\n\r\nchunks.")
-        self.assertEqual(inst.error, None)
+        self.assertIsNone(inst.error)
 
     def test_received_multiple_chunks_split(self):
-        from waitress.utilities import BadRequest
-
         buf = DummyBuffer()
         inst = self._makeOne(buf)
         data1 = b"4\r\nWiki\r"
@@ -223,9 +219,9 @@ class TestChunkedReceiver(unittest.TestCase):
         result = inst.received(data2)
         self.assertEqual(result, len(data2))
 
-        self.assertEqual(inst.completed, True)
+        self.assertTrue(inst.completed)
         self.assertEqual(b"".join(buf.data), b"Wikipedia in\r\n\r\nchunks.")
-        self.assertEqual(inst.error, None)
+        self.assertIsNone(inst.error)
 
 
 class TestChunkedReceiverParametrized:
@@ -245,7 +241,7 @@ class TestChunkedReceiverParametrized:
         data = b"4;" + invalid_extension + b"\r\ntest\r\n"
         result = inst.received(data)
         assert result == len(data)
-        assert inst.error.__class__ == BadRequest
+        assert isinstance(inst.error, BadRequest)
         assert inst.error.body == "Invalid chunk extension"
 
     @pytest.mark.parametrize(
@@ -260,7 +256,7 @@ class TestChunkedReceiverParametrized:
         data = b"4;" + valid_extension + b"\r\ntest\r\n"
         result = inst.received(data)
         assert result == len(data)
-        assert inst.error == None
+        assert inst.error is None
 
     @pytest.mark.parametrize(
         "invalid_size", [b"0x04", b"+0x04", b"x04", b"+04", b" 04", b" 0x04"]
@@ -273,7 +269,7 @@ class TestChunkedReceiverParametrized:
         data = invalid_size + b"\r\ntest\r\n"
         result = inst.received(data)
         assert result == len(data)
-        assert inst.error.__class__ == BadRequest
+        assert isinstance(inst.error, BadRequest)
         assert inst.error.body == "Invalid chunk size"
 
 
