@@ -1,6 +1,18 @@
 3.0.1 (2024-11-28)
 ------------------
 
+Backward Incompatibilities
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Python 3.8 is no longer supported.
+  See https://github.com/Pylons/waitress/pull/445.
+
+Features
+~~~~~~~~
+
+- Added support for Python 3.13.
+  See https://github.com/Pylons/waitress/pull/445.
+
 Security
 ~~~~~~~~
 
