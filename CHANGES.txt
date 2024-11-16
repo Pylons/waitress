@@ -1,4 +1,17 @@
-3.0.1 (2024-11-28)
+3.0.2 (2024-11-16)
+------------------
+
+Security
+~~~~~~~~
+
+- When using Waitress to process trusted proxy headers, Waitress will now
+  update the headers to drop any untrusted values, thereby making sure that
+  WSGI apps only get trusted and validated values that Waitress itself used to
+  update the environ. See https://github.com/Pylons/waitress/pull/452 and
+  https://github.com/Pylons/waitress/issues/451
+
+
+3.0.1 (2024-10-28)
 ------------------
 
 Backward Incompatibilities
