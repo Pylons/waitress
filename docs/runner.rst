@@ -14,11 +14,11 @@ underscores, ``waitress-serve`` uses hyphens. Thus::
 
     import myapp
 
-    waitress.serve(myapp.wsgifunc, port=8041, url_scheme='https')
+    waitress.serve(app=myapp.wsgifunc, port=8041, url_scheme='https')
 
 Is equivalent to::
 
-    waitress-serve --port=8041 --url-scheme=https myapp:wsgifunc
+    waitress-serve --app=myapp:wsgifunc --port=8041 --url-scheme=https
 
 The full argument list is :ref:`given below <invocation>`.
 
@@ -47,7 +47,7 @@ A number of frameworks, *web.py* being an example, have factory methods on
 their application objects that return usable WSGI functions when called. For
 cases like these, ``waitress-serve`` has the ``--call`` flag. Thus::
 
-    waitress-serve --call myapp.mymodule.app.wsgi_factory
+    waitress-serve --app=myapp.mymodule.app.wsgi_factory --call
 
 Would load the ``myapp.mymodule`` module, and call ``app.wsgi_factory`` to get
 a WSGI application function to be passed to ``waitress.server``.
@@ -64,7 +64,12 @@ Invocation
 
 Usage::
 
-    waitress-serve [OPTS] MODULE:OBJECT
+    waitress-serve [OPTS] --app=MODULE:OBJECT
+
+Required options:
+
+``--app``
+    Specify WSGI application to run.
 
 Common options:
 
