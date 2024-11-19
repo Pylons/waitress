@@ -95,6 +95,15 @@ trusted_proxy
 
     For unix sockets, set this value to ``localhost`` instead of an IP address.
 
+    The value ``*`` (wildcard) may be used to signify that all remote peers are
+    to be trusted.
+
+    .. warning::
+       Using the wildcard is a security issue if Waitress is receiving
+       connections from untrusted locations as well as trusted locations. Make
+       sure that waitress is adequately deployed behind an additional layer of
+       security, such as a firewall only allowing traffic from known proxies.
+
     Default: ``None``
 
 trusted_proxy_count
@@ -305,3 +314,17 @@ url_prefix
     be stripped of the prefix.
 
     Default: ``''``
+
+channel_request_lookahead
+    Sets the amount of requests we can continue to read from the socket, while
+    we are processing current requests. The default value won't allow any
+    lookahead, increase it above ``0`` to enable.
+
+    When enabled this inserts a callable ``waitress.client_disconnected`` into
+    the environment that allows the task to check if the client disconnected
+    while waiting for the response at strategic points in the execution and to
+    cancel the operation.
+
+    Default: ``0``
+
+    .. versionadded:: 2.0.0

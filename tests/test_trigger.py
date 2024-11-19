@@ -32,41 +32,41 @@ if not sys.platform.startswith("win"):
         def test_readable(self):
             map = {}
             inst = self._makeOne(map)
-            self.assertEqual(inst.readable(), True)
+            self.assertTrue(inst.readable())
 
         def test_writable(self):
             map = {}
             inst = self._makeOne(map)
-            self.assertEqual(inst.writable(), False)
+            self.assertFalse(inst.writable())
 
         def test_handle_connect(self):
             map = {}
             inst = self._makeOne(map)
-            self.assertEqual(inst.handle_connect(), None)
+            self.assertIsNone(inst.handle_connect())
 
         def test_close(self):
             map = {}
             inst = self._makeOne(map)
-            self.assertEqual(inst.close(), None)
-            self.assertEqual(inst._closed, True)
+            self.assertIsNone(inst.close())
+            self.assertTrue(inst._closed)
 
         def test_handle_close(self):
             map = {}
             inst = self._makeOne(map)
-            self.assertEqual(inst.handle_close(), None)
-            self.assertEqual(inst._closed, True)
+            self.assertIsNone(inst.handle_close())
+            self.assertTrue(inst._closed)
 
         def test_pull_trigger_nothunk(self):
             map = {}
             inst = self._makeOne(map)
-            self.assertEqual(inst.pull_trigger(), None)
+            self.assertIsNone(inst.pull_trigger())
             r = os.read(inst._fds[0], 1)
             self.assertEqual(r, b"x")
 
         def test_pull_trigger_thunk(self):
             map = {}
             inst = self._makeOne(map)
-            self.assertEqual(inst.pull_trigger(True), None)
+            self.assertIsNone(inst.pull_trigger(True))
             self.assertEqual(len(inst.thunks), 1)
             r = os.read(inst._fds[0], 1)
             self.assertEqual(r, b"x")
@@ -75,14 +75,14 @@ if not sys.platform.startswith("win"):
             map = {}
             inst = self._makeOne(map)
             result = inst.handle_read()
-            self.assertEqual(result, None)
+            self.assertIsNone(result)
 
         def test_handle_read_no_socket_error(self):
             map = {}
             inst = self._makeOne(map)
             inst.pull_trigger()
             result = inst.handle_read()
-            self.assertEqual(result, None)
+            self.assertIsNone(result)
 
         def test_handle_read_thunk(self):
             map = {}
@@ -91,9 +91,9 @@ if not sys.platform.startswith("win"):
             L = []
             inst.thunks = [lambda: L.append(True)]
             result = inst.handle_read()
-            self.assertEqual(result, None)
-            self.assertEqual(L, [True])
-            self.assertEqual(inst.thunks, [])
+            self.assertIsNone(result)
+            self.assertListEqual(L, [True])
+            self.assertListEqual(inst.thunks, [])
 
         def test_handle_read_thunk_error(self):
             map = {}
@@ -106,6 +106,6 @@ if not sys.platform.startswith("win"):
             L = []
             inst.log_info = lambda *arg: L.append(arg)
             result = inst.handle_read()
-            self.assertEqual(result, None)
+            self.assertIsNone(result)
             self.assertEqual(len(L), 1)
-            self.assertEqual(inst.thunks, [])
+            self.assertListEqual(inst.thunks, [])

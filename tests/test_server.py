@@ -102,7 +102,7 @@ class TestWSGIServer(unittest.TestCase):
 
     def test_ctor_start_true(self):
         inst = self._makeOneWithMap(_start=True)
-        self.assertEqual(inst.accepting, True)
+        self.assertTrue(inst.accepting)
         self.assertEqual(inst.socket.listened, 1024)
 
     def test_ctor_makes_dispatcher(self):
@@ -113,7 +113,7 @@ class TestWSGIServer(unittest.TestCase):
 
     def test_ctor_start_false(self):
         inst = self._makeOneWithMap(_start=False)
-        self.assertEqual(inst.accepting, False)
+        self.assertFalse(inst.accepting)
 
     def test_get_server_multi(self):
         inst = self._makeOneWithMulti()
@@ -138,13 +138,13 @@ class TestWSGIServer(unittest.TestCase):
         inst.trigger.close()
         inst.trigger = DummyTrigger()
         inst.pull_trigger()
-        self.assertEqual(inst.trigger.pulled, True)
+        self.assertTrue(inst.trigger.pulled)
 
     def test_add_task(self):
         task = DummyTask()
         inst = self._makeOneWithMap()
         inst.add_task(task)
-        self.assertEqual(inst.task_dispatcher.tasks, [task])
+        self.assertListEqual(inst.task_dispatcher.tasks, [task])
         self.assertFalse(task.serviced)
 
     def test_readable_not_accepting(self):
@@ -189,7 +189,7 @@ class TestWSGIServer(unittest.TestCase):
         L = []
         inst.maintenance = lambda t: L.append(t)
         inst.readable()
-        self.assertEqual(L, [])
+        self.assertListEqual(L, [])
         self.assertEqual(inst.next_channel_cleanup, then)
 
     def test_readable_maintenance_true(self):
@@ -207,18 +207,18 @@ class TestWSGIServer(unittest.TestCase):
 
     def test_handle_read(self):
         inst = self._makeOneWithMap()
-        self.assertEqual(inst.handle_read(), None)
+        self.assertIsNone(inst.handle_read())
 
     def test_handle_connect(self):
         inst = self._makeOneWithMap()
-        self.assertEqual(inst.handle_connect(), None)
+        self.assertIsNone(inst.handle_connect())
 
     def test_handle_accept_wouldblock_socket_error(self):
         inst = self._makeOneWithMap()
         ewouldblock = socket.error(errno.EWOULDBLOCK)
         inst.socket = DummySock(toraise=ewouldblock)
         inst.handle_accept()
-        self.assertEqual(inst.socket.accepted, False)
+        self.assertFalse(inst.socket.accepted)
 
     def test_handle_accept_other_socket_error(self):
         inst = self._makeOneWithMap()
@@ -232,7 +232,7 @@ class TestWSGIServer(unittest.TestCase):
         inst.accept = foo
         inst.logger = DummyLogger()
         inst.handle_accept()
-        self.assertEqual(inst.socket.accepted, False)
+        self.assertFalse(inst.socket.accepted)
         self.assertEqual(len(inst.logger.logged), 1)
 
     def test_handle_accept_noerror(self):
@@ -243,9 +243,9 @@ class TestWSGIServer(unittest.TestCase):
         L = []
         inst.channel_class = lambda *arg, **kw: L.append(arg)
         inst.handle_accept()
-        self.assertEqual(inst.socket.accepted, True)
-        self.assertEqual(innersock.opts, [("level", "optname", "value")])
-        self.assertEqual(L, [(inst, innersock, None, inst.adj)])
+        self.assertTrue(inst.socket.accepted)
+        self.assertListEqual(innersock.opts, [("level", "optname", "value")])
+        self.assertListEqual(L, [(inst, innersock, None, inst.adj)])
 
     def test_maintenance(self):
         inst = self._makeOneWithMap()
@@ -258,13 +258,13 @@ class TestWSGIServer(unittest.TestCase):
         zombie.running_tasks = False
         inst.active_channels[100] = zombie
         inst.maintenance(10000)
-        self.assertEqual(zombie.will_close, True)
+        self.assertTrue(zombie.will_close)
 
     def test_backward_compatibility(self):
         from waitress.adjustments import Adjustments
         from waitress.server import TcpWSGIServer, WSGIServer
 
-        self.assertTrue(WSGIServer is TcpWSGIServer)
+        self.assertIs(WSGIServer, TcpWSGIServer)
         self.inst = WSGIServer(None, _start=False, port=1234)
         # Ensure the adjustment was actually applied.
         self.assertNotEqual(Adjustments.port, 1234)
@@ -276,7 +276,7 @@ class TestWSGIServer(unittest.TestCase):
         sockets = [socket.socket(socket.AF_INET, socket.SOCK_STREAM)]
         sockets[0].bind(("127.0.0.1", 0))
         inst = self._makeWithSockets(_start=False, sockets=sockets)
-        self.assertTrue(isinstance(inst, TcpWSGIServer))
+        self.assertIsInstance(inst, TcpWSGIServer)
 
     def test_create_with_multiple_tcp_sockets(self):
         from waitress.server import MultiSocketServer
@@ -288,7 +288,7 @@ class TestWSGIServer(unittest.TestCase):
         sockets[0].bind(("127.0.0.1", 0))
         sockets[1].bind(("127.0.0.1", 0))
         inst = self._makeWithSockets(_start=False, sockets=sockets)
-        self.assertTrue(isinstance(inst, MultiSocketServer))
+        self.assertIsInstance(inst, MultiSocketServer)
         self.assertEqual(len(inst.effective_listen), 2)
 
     def test_create_with_one_socket_should_not_bind_socket(self):
@@ -297,7 +297,7 @@ class TestWSGIServer(unittest.TestCase):
         sockets[0].bind(("127.0.0.1", 80))
         sockets[0].bind_called = False
         inst = self._makeWithSockets(_start=False, sockets=sockets)
-        self.assertEqual(inst.socket.bound, ("127.0.0.1", 80))
+        self.assertTupleEqual(inst.socket.bound, ("127.0.0.1", 80))
         self.assertFalse(inst.socket.bind_called)
 
     def test_create_with_one_socket_handle_accept_noerror(self):
@@ -309,9 +309,9 @@ class TestWSGIServer(unittest.TestCase):
         inst.channel_class = lambda *arg, **kw: L.append(arg)
         inst.adj = DummyAdj
         inst.handle_accept()
-        self.assertEqual(sockets[0].accepted, True)
-        self.assertEqual(innersock.opts, [("level", "optname", "value")])
-        self.assertEqual(L, [(inst, innersock, None, inst.adj)])
+        self.assertTrue(sockets[0].accepted)
+        self.assertListEqual(innersock.opts, [("level", "optname", "value")])
+        self.assertListEqual(L, [(inst, innersock, None, inst.adj)])
 
 
 if hasattr(socket, "AF_UNIX"):
@@ -378,14 +378,14 @@ if hasattr(socket, "AF_UNIX"):
             client = self._makeDummy()
             listen = self._makeDummy(acceptresult=(client, None))
             inst = self._makeOne(_sock=listen)
-            self.assertEqual(inst.accepting, True)
+            self.assertTrue(inst.accepting)
             self.assertEqual(inst.socket.listened, 1024)
             L = []
             inst.channel_class = lambda *arg, **kw: L.append(arg)
             inst.handle_accept()
-            self.assertEqual(inst.socket.accepted, True)
-            self.assertEqual(client.opts, [])
-            self.assertEqual(L, [(inst, client, ("localhost", None), inst.adj)])
+            self.assertTrue(inst.socket.accepted)
+            self.assertListEqual(client.opts, [])
+            self.assertListEqual(L, [(inst, client, ("localhost", None), inst.adj)])
 
         def test_creates_new_sockinfo(self):
             from waitress.server import UnixWSGIServer
@@ -400,7 +400,6 @@ if hasattr(socket, "AF_UNIX"):
             from waitress.server import (
                 BaseWSGIServer,
                 MultiSocketServer,
-                TcpWSGIServer,
                 UnixWSGIServer,
             )
 
@@ -409,12 +408,12 @@ if hasattr(socket, "AF_UNIX"):
                 socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
             ]
             inst = self._makeWithSockets(sockets=sockets, _start=False)
-            self.assertTrue(isinstance(inst, MultiSocketServer))
+            self.assertIsInstance(inst, MultiSocketServer)
             server = list(
                 filter(lambda s: isinstance(s, BaseWSGIServer), inst.map.values())
             )
-            self.assertTrue(isinstance(server[0], UnixWSGIServer))
-            self.assertTrue(isinstance(server[1], UnixWSGIServer))
+            self.assertIsInstance(server[0], UnixWSGIServer)
+            self.assertIsInstance(server[1], UnixWSGIServer)
 
 
 if VSOCK:

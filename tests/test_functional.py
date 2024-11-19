@@ -29,20 +29,7 @@ class NullHandler(logging.Handler):  # pragma: no cover
 def start_server(app, svr, queue, **kwargs):  # pragma: no cover
     """Run a fixture application."""
     logging.getLogger("waitress").addHandler(NullHandler())
-    try_register_coverage()
     svr(app, queue, **kwargs).run()
-
-
-def try_register_coverage():  # pragma: no cover
-    # Hack around multiprocessing exiting early and not triggering coverage's
-    # atexit handler by always registering a signal handler
-
-    if "COVERAGE_PROCESS_START" in os.environ:
-
-        def sigterm(*args):
-            sys.exit(0)
-
-        signal.signal(signal.SIGTERM, sigterm)
 
 
 class FixtureTcpWSGIServer(server.TcpWSGIServer):
@@ -317,7 +304,7 @@ class EchoTests:
             self.assertline(line, "200", "OK", "HTTP/1.1")
             self.assertEqual(echo.body, b"")
             self.assertEqual(echo.content_length, "0")
-            self.assertFalse("transfer-encoding" in headers)
+            self.assertNotIn("transfer-encoding", headers)
 
     def test_chunking_request_with_content(self):
         control_line = b"20\r\n"  # 20 hex = 32 dec
@@ -336,7 +323,7 @@ class EchoTests:
             self.assertline(line, "200", "OK", "HTTP/1.1")
             self.assertEqual(echo.body, expected)
             self.assertEqual(echo.content_length, str(len(expected)))
-            self.assertFalse("transfer-encoding" in headers)
+            self.assertNotIn("transfer-encoding", headers)
 
     def test_broken_chunked_encoding(self):
         control_line = b"20\r\n"  # 20 hex = 32 dec
@@ -421,7 +408,7 @@ class EchoTests:
             self.assertline(line, "400", "Bad Request", "HTTP/1.1")
             cl = int(headers["content-length"])
             self.assertEqual(cl, len(response_body))
-            self.assertTrue(b"Chunk not properly terminated" in response_body)
+            self.assertIn(b"Chunk not properly terminated", response_body)
             self.assertEqual(
                 sorted(headers.keys()),
                 ["connection", "content-length", "content-type", "date", "server"],
@@ -443,7 +430,7 @@ class EchoTests:
         connection = response.getheader("Connection", "")
         # We sent no Connection: Keep-Alive header
         # Connection: close (or no header) is default.
-        self.assertTrue(connection != "Keep-Alive")
+        self.assertNotEqual(connection, "Keep-Alive")
 
     def test_keepalive_http10_explicit(self):
         # If header Connection: Keep-Alive is explicitly sent,
@@ -476,7 +463,7 @@ class EchoTests:
         response = httplib.HTTPResponse(self.sock)
         response.begin()
         self.assertEqual(int(response.status), 200)
-        self.assertTrue(response.getheader("connection") != "close")
+        self.assertNotEqual(response.getheader("connection"), "close")
 
     def test_keepalive_http11_explicit(self):
         # Explicitly set keep-alive
@@ -493,7 +480,7 @@ class EchoTests:
         response = httplib.HTTPResponse(self.sock)
         response.begin()
         self.assertEqual(int(response.status), 200)
-        self.assertTrue(response.getheader("connection") != "close")
+        self.assertNotEqual(response.getheader("connection"), "close")
 
     def test_keepalive_http11_connclose(self):
         # specifying Connection: close explicitly
@@ -706,7 +693,7 @@ class NoContentLengthTests:
         with self.sock.makefile("rb", 0) as fp:
             line, headers, response_body = read_http(fp)
             self.assertline(line, "200", "OK", "HTTP/1.0")
-            self.assertEqual(headers.get("content-length"), None)
+            self.assertIsNone(headers.get("content-length"))
             self.assertEqual(headers.get("connection"), "close")
             self.assertEqual(response_body, body)
             # remote closed connection (despite keepalive header), because
@@ -749,7 +736,7 @@ class NoContentLengthTests:
         with self.sock.makefile("rb", 0) as fp:
             line, headers, response_body = read_http(fp)
             self.assertline(line, "200", "OK", "HTTP/1.0")
-            self.assertEqual(headers.get("content-length"), None)
+            self.assertIsNone(headers.get("content-length"))
             self.assertEqual(headers.get("connection"), "close")
             self.assertEqual(response_body, body)
             # remote closed connection (despite keepalive header), because
@@ -914,7 +901,7 @@ class WriteCallbackTests:
             line = fp.readline()  # status line
             line, headers, response_body = read_http(fp)
             content_length = headers.get("content-length")
-            self.assertEqual(content_length, None)
+            self.assertIsNone(content_length)
             self.assertEqual(response_body, b"abcdefghi")
             # remote closed connection (despite keepalive header)
             self.send_check_error(to_send)
@@ -1332,7 +1319,7 @@ class FileWrapperTests:
                 self.assertEqual(cl, len(response_body))
                 ct = headers["content-type"]
                 self.assertEqual(ct, "image/jpeg")
-                self.assertTrue(b"\377\330\377" in response_body)
+                self.assertIn(b"\377\330\377", response_body)
                 # connection has not been closed
 
     def test_filelike_nocl_http11(self):
@@ -1349,7 +1336,7 @@ class FileWrapperTests:
                 self.assertEqual(cl, len(response_body))
                 ct = headers["content-type"]
                 self.assertEqual(ct, "image/jpeg")
-                self.assertTrue(b"\377\330\377" in response_body)
+                self.assertIn(b"\377\330\377", response_body)
                 # connection has not been closed
 
     def test_filelike_shortcl_http11(self):
@@ -1367,7 +1354,7 @@ class FileWrapperTests:
                 self.assertEqual(cl, len(response_body))
                 ct = headers["content-type"]
                 self.assertEqual(ct, "image/jpeg")
-                self.assertTrue(b"\377" in response_body)
+                self.assertIn(b"\377", response_body)
                 # connection has not been closed
 
     def test_filelike_longcl_http11(self):
@@ -1384,7 +1371,7 @@ class FileWrapperTests:
                 self.assertEqual(cl, len(response_body))
                 ct = headers["content-type"]
                 self.assertEqual(ct, "image/jpeg")
-                self.assertTrue(b"\377\330\377" in response_body)
+                self.assertIn(b"\377\330\377", response_body)
                 # connection has not been closed
 
     def test_notfilelike_http11(self):
@@ -1401,7 +1388,7 @@ class FileWrapperTests:
                 self.assertEqual(cl, len(response_body))
                 ct = headers["content-type"]
                 self.assertEqual(ct, "image/jpeg")
-                self.assertTrue(b"\377\330\377" in response_body)
+                self.assertIn(b"\377\330\377", response_body)
                 # connection has not been closed
 
     def test_notfilelike_iobase_http11(self):
@@ -1418,7 +1405,7 @@ class FileWrapperTests:
                 self.assertEqual(cl, len(response_body))
                 ct = headers["content-type"]
                 self.assertEqual(ct, "image/jpeg")
-                self.assertTrue(b"\377\330\377" in response_body)
+                self.assertIn(b"\377\330\377", response_body)
                 # connection has not been closed
 
     def test_notfilelike_nocl_http11(self):
@@ -1432,7 +1419,7 @@ class FileWrapperTests:
             self.assertline(line, "200", "OK", "HTTP/1.1")
             ct = headers["content-type"]
             self.assertEqual(ct, "image/jpeg")
-            self.assertTrue(b"\377\330\377" in response_body)
+            self.assertIn(b"\377\330\377", response_body)
             # connection has been closed (no content-length)
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1452,7 +1439,7 @@ class FileWrapperTests:
                 self.assertEqual(cl, len(response_body))
                 ct = headers["content-type"]
                 self.assertEqual(ct, "image/jpeg")
-                self.assertTrue(b"\377" in response_body)
+                self.assertIn(b"\377", response_body)
                 # connection has not been closed
 
     def test_notfilelike_longcl_http11(self):
@@ -1468,7 +1455,7 @@ class FileWrapperTests:
             self.assertEqual(cl, len(response_body) + 10)
             ct = headers["content-type"]
             self.assertEqual(ct, "image/jpeg")
-            self.assertTrue(b"\377\330\377" in response_body)
+            self.assertIn(b"\377\330\377", response_body)
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1486,7 +1473,7 @@ class FileWrapperTests:
             self.assertEqual(cl, len(response_body))
             ct = headers["content-type"]
             self.assertEqual(ct, "image/jpeg")
-            self.assertTrue(b"\377\330\377" in response_body)
+            self.assertIn(b"\377\330\377", response_body)
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1504,7 +1491,7 @@ class FileWrapperTests:
             self.assertEqual(cl, len(response_body))
             ct = headers["content-type"]
             self.assertEqual(ct, "image/jpeg")
-            self.assertTrue(b"\377\330\377" in response_body)
+            self.assertIn(b"\377\330\377", response_body)
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1522,7 +1509,7 @@ class FileWrapperTests:
             self.assertEqual(cl, len(response_body))
             ct = headers["content-type"]
             self.assertEqual(ct, "image/jpeg")
-            self.assertTrue(b"\377\330\377" in response_body)
+            self.assertIn(b"\377\330\377", response_body)
             # connection has been closed
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)
@@ -1538,7 +1525,7 @@ class FileWrapperTests:
             self.assertline(line, "200", "OK", "HTTP/1.0")
             ct = headers["content-type"]
             self.assertEqual(ct, "image/jpeg")
-            self.assertTrue(b"\377\330\377" in response_body)
+            self.assertIn(b"\377\330\377", response_body)
             # connection has been closed (no content-length)
             self.send_check_error(to_send)
             self.assertRaises(ConnectionClosed, read_http, fp)

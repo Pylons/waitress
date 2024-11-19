@@ -14,35 +14,35 @@ class Test_asbool(unittest.TestCase):
 
     def test_s_is_None(self):
         result = self._callFUT(None)
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_s_is_True(self):
         result = self._callFUT(True)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     def test_s_is_False(self):
         result = self._callFUT(False)
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_s_is_true(self):
         result = self._callFUT("True")
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     def test_s_is_false(self):
         result = self._callFUT("False")
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_s_is_yes(self):
         result = self._callFUT("yes")
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     def test_s_is_on(self):
         result = self._callFUT("on")
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     def test_s_is_1(self):
         result = self._callFUT(1)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
 
 class Test_as_socket_list(unittest.TestCase):
@@ -57,7 +57,7 @@ class Test_as_socket_list(unittest.TestCase):
         if hasattr(socket, "AF_UNIX"):
             sockets.append(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM))
         new_sockets = as_socket_list(sockets)
-        self.assertEqual(sockets, new_sockets)
+        self.assertListEqual(sockets, new_sockets)
 
         for sock in sockets:
             sock.close()
@@ -71,7 +71,7 @@ class Test_as_socket_list(unittest.TestCase):
             {"something": "else"},
         ]
         new_sockets = as_socket_list(sockets)
-        self.assertEqual(new_sockets, [sockets[0], sockets[1]])
+        self.assertListEqual(new_sockets, [sockets[0], sockets[1]])
 
         for sock in [sock for sock in sockets if isinstance(sock, socket.socket)]:
             sock.close()
@@ -146,9 +146,9 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.port, 8080)
         self.assertEqual(inst.threads, 5)
         self.assertEqual(inst.trusted_proxy, "192.168.1.1")
-        self.assertEqual(inst.trusted_proxy_headers, {"forwarded"})
+        self.assertSetEqual(inst.trusted_proxy_headers, {"forwarded"})
         self.assertEqual(inst.trusted_proxy_count, 2)
-        self.assertEqual(inst.log_untrusted_proxy_headers, True)
+        self.assertTrue(inst.log_untrusted_proxy_headers)
         self.assertEqual(inst.url_scheme, "https")
         self.assertEqual(inst.backlog, 20)
         self.assertEqual(inst.recv_bytes, 200)
@@ -158,17 +158,17 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.connection_limit, 1000)
         self.assertEqual(inst.cleanup_interval, 1100)
         self.assertEqual(inst.channel_timeout, 1200)
-        self.assertEqual(inst.log_socket_errors, True)
+        self.assertTrue(inst.log_socket_errors)
         self.assertEqual(inst.max_request_header_size, 1300)
         self.assertEqual(inst.max_request_body_size, 1400)
-        self.assertEqual(inst.expose_tracebacks, True)
+        self.assertTrue(inst.expose_tracebacks)
         self.assertEqual(inst.asyncore_loop_timeout, 5)
-        self.assertEqual(inst.asyncore_use_poll, True)
+        self.assertTrue(inst.asyncore_use_poll)
         self.assertEqual(inst.ident, "abc")
         self.assertEqual(inst.unix_socket_perms, 0o777)
         self.assertEqual(inst.url_prefix, "/foo")
-        self.assertEqual(inst.ipv4, True)
-        self.assertEqual(inst.ipv6, False)
+        self.assertTrue(inst.ipv4)
+        self.assertFalse(inst.ipv6)
 
         if VSOCK:
             self.assertEqual(inst.vsock_socket_cid, -1)
@@ -182,35 +182,35 @@ class TestAdjustments(unittest.TestCase):
 
         # On Travis, somehow we start listening to two sockets when resolving
         # localhost...
-        self.assertEqual(("127.0.0.1", 8080), bind_pairs[0])
+        self.assertTupleEqual(("127.0.0.1", 8080), bind_pairs[0])
 
     def test_goodvar_listen(self):
         inst = self._makeOne(listen="127.0.0.1")
 
         bind_pairs = [(host, port) for (_, _, _, (host, port)) in inst.listen]
 
-        self.assertEqual(bind_pairs, [("127.0.0.1", 8080)])
+        self.assertListEqual(bind_pairs, [("127.0.0.1", 8080)])
 
     def test_default_listen(self):
         inst = self._makeOne()
 
         bind_pairs = [(host, port) for (_, _, _, (host, port)) in inst.listen]
 
-        self.assertEqual(bind_pairs, [("0.0.0.0", 8080)])
+        self.assertListEqual(bind_pairs, [("0.0.0.0", 8080)])
 
     def test_multiple_listen(self):
         inst = self._makeOne(listen="127.0.0.1:9090 127.0.0.1:8080")
 
         bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
 
-        self.assertEqual(bind_pairs, [("127.0.0.1", 9090), ("127.0.0.1", 8080)])
+        self.assertListEqual(bind_pairs, [("127.0.0.1", 9090), ("127.0.0.1", 8080)])
 
     def test_wildcard_listen(self):
         inst = self._makeOne(listen="*:8080")
 
         bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
 
-        self.assertTrue(len(bind_pairs) >= 1)
+        self.assertGreaterEqual(len(bind_pairs), 1)
 
     def test_ipv6_no_port(self):  # pragma: nocover
         if not self._hasIPv6():
@@ -220,7 +220,7 @@ class TestAdjustments(unittest.TestCase):
 
         bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
 
-        self.assertEqual(bind_pairs, [("::1", 8080)])
+        self.assertListEqual(bind_pairs, [("::1", 8080)])
 
     def test_bad_port(self):
         self.assertRaises(ValueError, self._makeOne, listen="127.0.0.1:test")
@@ -240,7 +240,7 @@ class TestAdjustments(unittest.TestCase):
 
         bind_pairs = [sockaddr[:2] for (_, _, _, sockaddr) in inst.listen]
 
-        self.assertEqual(bind_pairs, [("127.0.0.1", 80), ("0.0.0.0", 443)])
+        self.assertListEqual(bind_pairs, [("127.0.0.1", 80), ("0.0.0.0", 443)])
 
     def test_dont_mix_host_port_listen(self):
         self.assertRaises(
@@ -257,7 +257,7 @@ class TestAdjustments(unittest.TestCase):
             socket.socket(socket.AF_INET, socket.SOCK_STREAM),
         ]
         inst = self._makeOne(sockets=sockets)
-        self.assertEqual(inst.sockets, sockets)
+        self.assertListEqual(inst.sockets, sockets)
         sockets[0].close()
         sockets[1].close()
 
@@ -366,7 +366,7 @@ class TestAdjustments(unittest.TestCase):
             trusted_proxy="localhost",
             trusted_proxy_headers="x-forwarded-for x-forwarded-by",
         )
-        self.assertEqual(
+        self.assertSetEqual(
             inst.trusted_proxy_headers, {"x-forwarded-for", "x-forwarded-by"}
         )
 
@@ -375,7 +375,7 @@ class TestAdjustments(unittest.TestCase):
             trusted_proxy="localhost",
             trusted_proxy_headers="x-forwarded-for\nx-forwarded-by\nx-forwarded-host",
         )
-        self.assertEqual(
+        self.assertSetEqual(
             inst.trusted_proxy_headers,
             {"x-forwarded-for", "x-forwarded-by", "x-forwarded-host"},
         )
@@ -413,10 +413,10 @@ class TestAdjustments(unittest.TestCase):
 
     def test_server_header_removable(self):
         inst = self._makeOne(ident=None)
-        self.assertEqual(inst.ident, None)
+        self.assertIsNone(inst.ident)
 
         inst = self._makeOne(ident="")
-        self.assertEqual(inst.ident, None)
+        self.assertIsNone(inst.ident)
 
         inst = self._makeOne(ident="specific_header")
         self.assertEqual(inst.ident, "specific_header")

@@ -150,3 +150,5 @@ Contributors
 - Jonathan Vanasco, 2022-11-15
 
 - Ananth Bhaskararaman, 2023-04-05
+
+- Simon King, 2024-11-12
