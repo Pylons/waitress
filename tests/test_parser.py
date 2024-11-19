@@ -54,14 +54,14 @@ class TestHTTPRequestParser(unittest.TestCase):
         result = self.parser.received(data)
         self.assertEqual(result, 24)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(self.parser.headers, {})
+        self.assertDictEqual(self.parser.headers, {})
 
     def test_received_bad_host_header(self):
         data = b"HTTP/1.0 GET /foobar\r\n Host: foo\r\n\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, 36)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(self.parser.error.__class__, BadRequest)
+        self.assertIsInstance(self.parser.error, BadRequest)
 
     def test_received_bad_transfer_encoding(self):
         data = (
@@ -75,21 +75,21 @@ class TestHTTPRequestParser(unittest.TestCase):
         result = self.parser.received(data)
         self.assertEqual(result, 48)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(self.parser.error.__class__, ServerNotImplemented)
+        self.assertIsInstance(self.parser.error, ServerNotImplemented)
 
     def test_received_nonsense_nothing(self):
         data = b"\r\n\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, 4)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(self.parser.headers, {})
+        self.assertDictEqual(self.parser.headers, {})
 
     def test_received_no_doublecr(self):
         data = b"GET /foobar HTTP/8.4\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, 22)
         self.assertFalse(self.parser.completed)
-        self.assertEqual(self.parser.headers, {})
+        self.assertDictEqual(self.parser.headers, {})
 
     def test_received_already_completed(self):
         self.parser.completed = True
@@ -102,7 +102,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         result = self.parser.received(data)
         self.assertEqual(result, 44)
         self.assertTrue(self.parser.completed)
-        self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
+        self.assertIsInstance(self.parser.error, RequestEntityTooLarge)
 
     def test_received_headers_not_too_large_multiple_chunks(self):
         data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n"
@@ -121,7 +121,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         result = self.parser.received(data)
         self.assertEqual(result, 34)
         self.assertTrue(self.parser.completed)
-        self.assertTrue(isinstance(self.parser.error, RequestHeaderFieldsTooLarge))
+        self.assertIsInstance(self.parser.error, RequestHeaderFieldsTooLarge)
 
     def test_received_body_too_large(self):
         self.parser.adj.max_request_body_size = 2
@@ -139,7 +139,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(result, 62)
         self.parser.received(data[result:])
         self.assertTrue(self.parser.completed)
-        self.assertTrue(isinstance(self.parser.error, RequestEntityTooLarge))
+        self.assertIsInstance(self.parser.error, RequestEntityTooLarge)
 
     def test_received_error_from_parser(self):
         data = (
@@ -155,7 +155,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         result = self.parser.received(data[result:])
         self.assertEqual(result, 9)
         self.assertTrue(self.parser.completed)
-        self.assertTrue(isinstance(self.parser.error, BadRequest))
+        self.assertIsInstance(self.parser.error, BadRequest)
 
     def test_received_chunked_completed_sets_content_length(self):
         data = (
@@ -172,7 +172,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         data = data[result:]
         result = self.parser.received(data)
         self.assertTrue(self.parser.completed)
-        self.assertTrue(self.parser.error is None)
+        self.assertIsNone(self.parser.error)
         self.assertEqual(self.parser.headers["CONTENT_LENGTH"], "29")
 
     def test_parse_header_gardenpath(self):
@@ -285,12 +285,12 @@ class TestHTTPRequestParser(unittest.TestCase):
     def test_parse_header_11_expect_continue(self):
         data = b"GET /foobar HTTP/1.1\r\nexpect: 100-continue\r\n"
         self.parser.parse_header(data)
-        self.assertEqual(self.parser.expect_continue, True)
+        self.assertTrue(self.parser.expect_continue)
 
     def test_parse_header_connection_close(self):
         data = b"GET /foobar HTTP/1.1\r\nConnection: close\r\n"
         self.parser.parse_header(data)
-        self.assertEqual(self.parser.connection_close, True)
+        self.assertTrue(self.parser.connection_close)
 
     def test_close_with_body_rcv(self):
         body_rcv = DummyBodyStream()
@@ -526,7 +526,7 @@ class Test_get_header_lines(unittest.TestCase):
 
     def test_get_header_lines(self):
         result = self._callFUT(b"slam\r\nslim")
-        self.assertEqual(result, [b"slam", b"slim"])
+        self.assertListEqual(result, [b"slam", b"slim"])
 
     def test_get_header_lines_folded(self):
         # From RFC2616:
@@ -538,11 +538,11 @@ class Test_get_header_lines(unittest.TestCase):
 
         # We are just preserving the whitespace that indicates folding.
         result = self._callFUT(b"slim\r\n slam")
-        self.assertEqual(result, [b"slim slam"])
+        self.assertListEqual(result, [b"slim slam"])
 
     def test_get_header_lines_tabbed(self):
         result = self._callFUT(b"slam\r\n\tslim")
-        self.assertEqual(result, [b"slam\tslim"])
+        self.assertListEqual(result, [b"slam\tslim"])
 
     def test_get_header_lines_malformed(self):
         # https://corte.si/posts/code/pathod/pythonservers/index.html
@@ -555,29 +555,29 @@ class Test_crack_first_line(unittest.TestCase):
 
     def test_crack_first_line_matchok(self):
         result = self._callFUT(b"GET / HTTP/1.0")
-        self.assertEqual(result, (b"GET", b"/", b"1.0"))
+        self.assertTupleEqual(result, (b"GET", b"/", b"1.0"))
 
     def test_crack_first_line_lowercase_method(self):
         self.assertRaises(ParsingError, self._callFUT, b"get / HTTP/1.0")
 
     def test_crack_first_line_nomatch(self):
         result = self._callFUT(b"GET / bleh")
-        self.assertEqual(result, (b"", b"", b""))
+        self.assertTupleEqual(result, (b"", b"", b""))
 
         result = self._callFUT(b"GET /info?txtAirPlay&txtRAOP RTSP/1.0")
-        self.assertEqual(result, (b"", b"", b""))
+        self.assertTupleEqual(result, (b"", b"", b""))
 
     def test_crack_first_line_missing_version(self):
         result = self._callFUT(b"GET /")
-        self.assertEqual(result, (b"GET", b"/", b""))
+        self.assertTupleEqual(result, (b"GET", b"/", b""))
 
     def test_crack_first_line_bad_method(self):
         result = self._callFUT(b"GE\x00 /foobar HTTP/8.4")
-        self.assertEqual(result, (b"", b"", b""))
+        self.assertTupleEqual(result, (b"", b"", b""))
 
     def test_crack_first_line_bad_version(self):
         result = self._callFUT(b"GET /foobar HTTP/.1.")
-        self.assertEqual(result, (b"", b"", b""))
+        self.assertTupleEqual(result, (b"", b"", b""))
 
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
@@ -610,7 +610,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertTrue(parser.completed)
         self.assertEqual(parser.version, "8.4")
         self.assertFalse(parser.empty)
-        self.assertEqual(
+        self.assertDictEqual(
             parser.headers,
             {
                 "FIRSTNAME": "mickey",
@@ -639,7 +639,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.version, "8.4")
         self.assertFalse(parser.empty)
-        self.assertEqual(
+        self.assertDictEqual(
             parser.headers,
             {"FIRSTNAME": "mickey", "LASTNAME": "Mouse", "CONTENT_LENGTH": "10"},
         )
@@ -693,7 +693,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         )
         self.feed(data)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(
+        self.assertDictEqual(
             self.parser.headers,
             {
                 "CONTENT_LENGTH": "6",
@@ -711,7 +711,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         )
         self.feed(data)
         self.assertTrue(self.parser.completed)
-        self.assertEqual(
+        self.assertDictEqual(
             self.parser.headers,
             {
                 "CONTENT_LENGTH": "6",

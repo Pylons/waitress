@@ -20,6 +20,7 @@ import operator as op
 import os
 import os.path
 import pathlib
+import pkgutil
 import sys
 from argparse import ArgumentParser, BooleanOptionalAction
 from dataclasses import dataclass
@@ -29,34 +30,6 @@ import importlib
 from waitress import serve
 from waitress.adjustments import Adjustments
 from waitress.utilities import logger
-
-RUNNER_PATTERN = re.compile(
-    r"""
-    ^
-    (?P<module>
-        [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
-    )
-    :
-    (?P<object>
-        [a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*
-    )
-    $
-    """,
-    re.I | re.X,
-)
-
-
-def match(obj_name):
-    matches = RUNNER_PATTERN.match(obj_name)
-
-    if not matches:
-        raise ValueError(f"Malformed application '{obj_name}'")
-
-    return matches.group("module"), matches.group("object")
-
-
-def resolve(module_name, object_name):
-    return getattr(importlib.import_module(module_name), object_name)
 
 
 def show_exception(stream):
@@ -127,6 +100,7 @@ class DEFAULTS:
 
 
 def run(argv=sys.argv, _serve=serve):
+    """Command line runner."""
     parser = ArgumentParser()
     # Standard options
     parser.add_argument(
@@ -347,35 +321,24 @@ Default is 'no'.""",
 
     args = parser.parse_args(argv[1:])
 
-    """Command line runner."""
-
     # set a default level for the logger only if it hasn't been set explicitly
     # note that this level does not override any parent logger levels,
     # handlers, etc but without it no log messages are emitted by default
     if logger.level == logging.NOTSET:
         logger.setLevel(logging.INFO)
 
-    try:
-        module, obj_name = match(args.app)
-        del args.app
-    except ValueError as exc:
-        print(exc, file=sys.stderr)
-        parser.print_help(file=sys.stderr)
-        show_exception(sys.stderr)
-        return 1
-
     # Add the current directory onto sys.path
     sys.path.append(os.getcwd())
 
     # Get the WSGI function.
     try:
-        app = resolve(module, obj_name)
+        app = pkgutil.resolve_name(args[0])
     except ImportError:
         print(f"Bad module {module!r}", file=sys.stderr)
         parser.print_help(file=sys.stderr)
         show_exception(sys.stderr)
         return 1
-    except AttributeError:
+    except (AttributeError, ValueError):
         print(f"Bad object name {obj_name!r}", file=sys.stderr)
         parser.print_help(file=sys.stderr)
         show_exception(sys.stderr)

@@ -148,3 +148,5 @@ Contributors
 - Frank Krick, 2018-10-29
 
 - Jonathan Vanasco, 2022-11-15
+
+- Simon King, 2024-11-12
