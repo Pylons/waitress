@@ -332,7 +332,7 @@ Default is 'no'.""",
 
     # Get the WSGI function.
     try:
-        app = pkgutil.resolve_name(args[0])
+        app = pkgutil.resolve_name(args.app)
     except ImportError:
         print(f"Bad module {module!r}", file=sys.stderr)
         parser.print_help(file=sys.stderr)
