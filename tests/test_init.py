@@ -5,7 +5,7 @@ class Test_serve(unittest.TestCase):
     def _callFUT(self, app, **kw):
         from waitress import serve
 
-        return serve(app, {}, **kw)
+        return serve(app, **kw)
 
     def test_it(self):
         server = DummyServerFactory()
@@ -34,7 +34,7 @@ class Test_serve_paste(unittest.TestCase):
 class DummyServerFactory:
     ran = False
 
-    def __call__(self, app, opts, **kw):
+    def __call__(self, app, **kw):
         self.adj = DummyAdj(kw)
         self.app = app
         self.kw = kw

@@ -22,7 +22,6 @@ class TestWSGIServer(unittest.TestCase):
 
         self.inst = create_server(
             application,
-            {},
             host=host,
             port=port,
             map=map,
@@ -58,7 +57,6 @@ class TestWSGIServer(unittest.TestCase):
 
         self.inst = create_server(
             app,
-            {},
             listen=listen,
             map=map,
             _dispatcher=task_dispatcher,
@@ -84,7 +82,6 @@ class TestWSGIServer(unittest.TestCase):
             _sockets = sockets
         self.inst = create_server(
             application,
-            {},
             map=map,
             _dispatcher=_dispatcher,
             _start=_start,
@@ -325,7 +322,6 @@ if hasattr(socket, "AF_UNIX"):
 
             self.inst = create_server(
                 dummy_app,
-                {},
                 map={},
                 _start=_start,
                 _sock=_sock,
@@ -352,7 +348,6 @@ if hasattr(socket, "AF_UNIX"):
                 _sockets = sockets
             self.inst = create_server(
                 application,
-                {},
                 map=map,
                 _dispatcher=_dispatcher,
                 _start=_start,

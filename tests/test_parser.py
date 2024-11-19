@@ -35,7 +35,7 @@ from waitress.utilities import (
 
 class TestHTTPRequestParser(unittest.TestCase):
     def setUp(self):
-        my_adj = Adjustments({})
+        my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)
 
     def test_get_body_stream_None(self):
@@ -582,7 +582,7 @@ class Test_crack_first_line(unittest.TestCase):
 
 class TestHTTPRequestParserIntegration(unittest.TestCase):
     def setUp(self):
-        my_adj = Adjustments({})
+        my_adj = Adjustments()
         self.parser = HTTPRequestParser(my_adj)
 
     def feed(self, data):

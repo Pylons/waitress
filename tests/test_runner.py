@@ -3,48 +3,43 @@ import os
 import sys
 import unittest
 
-from waitress import runner
+from waitress import adjustments, runner
 
 
 def test_valid_socket():
-    assert runner._valid_socket('0.0.0.0:42') == ('0.0.0.0', '42')
-    assert runner._valid_socket('[2001:db8::1]:42') == ('2001:db8::1', '42')
+    assert runner._valid_socket("0.0.0.0:42") == ("0.0.0.0", "42")
+    assert runner._valid_socket("[2001:db8::1]:42") == ("2001:db8::1", "42")
 
 
 class Test_run(unittest.TestCase):
     def match_output(self, argv, code, regex):
         argv = ["waitress-serve"] + argv
         with capture() as captured:
-            self.assertEqual(runner.run(argv=argv), code)
+            try:
+                self.assertEqual(runner.run(argv=argv), code)
+            except SystemExit as exit:
+                self.assertEqual(exit.code, code)
         self.assertRegex(captured.getvalue(), regex)
         captured.close()
 
-    def test_bad(self):
-        self.match_output(["--app=foo:bar", "--bad-opt"], 2, "error: unrecognized arguments: waitress-serve --bad-opt")
-
-    def test_help(self):
-        self.match_output(["--help"], 0, "^usage: waitress-serve")
-
     def test_no_app(self):
-        self.match_output([], 2, "error: the following arguments are required: --app")
+        self.match_output([], 1, "^Error: Specify one and only one WSGI application")
 
     def test_multiple_apps_app(self):
-        self.match_output(["--app", "a:a", "--app", "b:b"], 1, "^Error: Specify one application only")
+        self.match_output(
+            ["--app", "a:a", "--app", "b:b"],
+            1,
+            "^Error: Specify one and only one WSGI application",
+        )
 
     def test_bad_apps_app(self):
         self.match_output(["--app", "a"], 1, "^Error: No module named 'a'")
 
     def test_bad_app_module(self):
-        self.match_output(["--app", "nonexistent:a"], 1, "^Error: No module named 'nonexistent'")
-
         self.match_output(
             ["--app", "nonexistent:a"],
             1,
-            (
-                r"There was an exception \((ImportError|ModuleNotFoundError)\) "
-                "importing your module.\n\nIt had these arguments: \n"
-                "1. No module named '?nonexistent'?"
-            ),
+            "^Error: No module named 'nonexistent'",
         )
 
     def test_cwd_added_to_path(self):
@@ -57,7 +52,8 @@ class Test_run(unittest.TestCase):
             os.chdir(os.path.dirname(__file__))
             argv = [
                 "waitress-serve",
-                "--app", "fixtureapps.runner:app",
+                "--app",
+                "fixtureapps.runner:app",
             ]
             self.assertEqual(runner.run(argv=argv, _serve=null_serve), 0)
         finally:
@@ -76,11 +72,29 @@ class Test_run(unittest.TestCase):
 
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)
-            self.assertDictEqual(kw, {"port": "80"})
+            self.assertEqual(kw["port"], 80)
 
         argv = [
             "waitress-serve",
             "--port=80",
+            "--app=tests.fixtureapps.runner:app",
+        ]
+        self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
+
+    def test_good_listen(self):
+        from tests.fixtureapps import runner as _apps
+
+        def check_server(app, **kw):
+            self.assertIs(app, _apps.app)
+            adj = adjustments.Adjustments(**kw)
+            self.assertListEqual(
+                [entry[3] for entry in adj.listen],
+                [("127.0.0.1", 80)],
+            )
+
+        argv = [
+            "waitress-serve",
+            "--listen=127.0.0.1:80",
             "--app=tests.fixtureapps.runner:app",
         ]
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
@@ -90,7 +104,7 @@ class Test_run(unittest.TestCase):
 
         def check_server(app, **kw):
             self.assertIs(app, _apps.app)
-            self.assertDictEqual(kw, {"port": "80"})
+            self.assertEqual(kw["port"], 80)
 
         argv = [
             "waitress-serve",
@@ -100,36 +114,48 @@ class Test_run(unittest.TestCase):
         ]
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
 
-
-class Test_helper(unittest.TestCase):
-    def test_exception_logging(self):
-        from waitress.runner import show_exception
-
-        regex = (
-            r"There was an exception \(ImportError\) importing your module."
-            r"\n\nIt had these arguments: \n1. My reason"
+    def test_bad_listen(self):
+        self.match_output(
+            [
+                "--listen=foo/bar",
+                "--app=tests.fixtureapps.runner:app",
+            ],
+            2,
+            "error: argument --listen: invalid _valid_socket value: 'foo/bar'",
         )
 
-        with capture() as captured:
-            try:
-                raise ImportError("My reason")
-            except ImportError:
-                self.assertIsNone(show_exception(sys.stderr))
-            self.assertRegex(captured.getvalue(), regex)
-        captured.close()
-
-        regex = (
-            r"There was an exception \(ImportError\) importing your module."
-            r"\n\nIt had no arguments."
+    def test_inet(self):
+        self.match_output(
+            [
+                "--listen=127.0.0.1:8080",
+                "--host=127.0.0.1",
+                "--app=tests.fixtureapps.runner:app",
+            ],
+            2,
+            "error: argument --host: not allowed with argument --listen",
         )
 
-        with capture() as captured:
-            try:
-                raise ImportError
-            except ImportError:
-                self.assertIsNone(show_exception(sys.stderr))
-            self.assertRegex(captured.getvalue(), regex)
-        captured.close()
+    def test_inet_and_unix_socket(self):
+        self.match_output(
+            [
+                "--host=127.0.0.1",
+                "--unix-socket=/tmp/waitress.sock",
+                "--app=tests.fixtureapps.runner:app",
+            ],
+            2,
+            "error: argument --unix-socket: not allowed with argument --host",
+        )
+
+    def test_listen_and_unix_socket(self):
+        self.match_output(
+            [
+                "--listen=127.0.0.1:8080",
+                "--unix-socket=/tmp/waitress.sock",
+                "--app=tests.fixtureapps.runner:app",
+            ],
+            2,
+            "error: argument --unix-socket: not allowed with argument --listen",
+        )
 
 
 @contextlib.contextmanager

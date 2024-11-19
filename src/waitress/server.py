@@ -30,7 +30,6 @@ from .proxy_headers import proxy_headers_middleware
 
 def create_server(
     application,
-    opts, # dict
     map=None,
     _start=True,  # test shim
     _sock=None,  # test shim
@@ -42,7 +41,7 @@ def create_server(
             'The "app" passed to ``create_server`` was ``None``.  You forgot '
             "to return a WSGI app within your application."
         )
-    adj = Adjustments(opts, **kw)
+    adj = Adjustments(**kw)
 
     if map is None:  # pragma: nocover
         map = {}
@@ -192,7 +191,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
         **kw,
     ):
         if adj is None:
-            adj = Adjustments({}, **kw)
+            adj = Adjustments(**kw)
 
         if adj.trusted_proxy or adj.clear_untrusted_proxy_headers:
             # wrap the application to deal with proxy headers

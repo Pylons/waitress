@@ -3,7 +3,6 @@ from http import client as httplib
 import logging
 import multiprocessing
 import os
-import signal
 import socket
 import string
 import subprocess

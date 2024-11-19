@@ -11,9 +11,8 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Adjustments are tunable parameters.
-"""
-import getopt
+"""Adjustments are tunable parameters."""
+
 import socket
 import warnings
 
@@ -43,7 +42,7 @@ def asbool(s):
 
 def asoctal(s):
     """Convert the given octal string to an actual number."""
-    return int(s, 8)
+    return s if isinstance(s, int) else int(s, 8)
 
 
 def aslist_cronly(value):
@@ -56,6 +55,8 @@ def aslist(value):
     """Return a list of strings, separating the input based on newlines
     and, if flatten=True (the default), also split on spaces within
     each line."""
+    if isinstance(value, list):
+        return value
     values = aslist_cronly(value)
     result = []
     for value in values:
@@ -289,7 +290,7 @@ class Adjustments:
     # (or when using the Proxy settings, without forwarding a Host header)
     server_name = "waitress.invalid"
 
-    def __init__(self, opts, **kw):
+    def __init__(self, **kw):
         if "listen" in kw and ("host" in kw or "port" in kw):
             raise ValueError("host or port may not be set if listen is set.")
 
@@ -312,12 +313,6 @@ class Adjustments:
             warnings.warn(
                 "send_bytes will be removed in a future release", DeprecationWarning
             )
-
-        # opts are already validated, so that we set them as is
-        for k, v in opts.items():
-            if k not in self._param_map:
-                raise ValueError("Unknown adjustment %r" % k)
-            setattr(self, k, v)
 
         for k, v in kw.items():
             if k not in self._param_map:
@@ -451,47 +446,6 @@ class Adjustments:
         self.listen = wanted_sockets
 
         self.check_sockets(self.sockets)
-
-    @classmethod
-    def parse_args(cls, argv):
-        """Pre-parse command line arguments for input into __init__.  Note that
-        this does not cast values into adjustment types, it just creates a
-        dictionary suitable for passing into __init__, where __init__ does the
-        casting.
-        """
-        long_opts = ["help", "call"]
-        for opt, cast in cls._params:
-            opt = opt.replace("_", "-")
-            if cast is asbool:
-                long_opts.append(opt)
-                long_opts.append("no-" + opt)
-            else:
-                long_opts.append(opt + "=")
-
-        kw = {
-            "help": False,
-            "call": False,
-        }
-
-        opts, args = getopt.getopt(argv, "", long_opts)
-        for opt, value in opts:
-            param = opt.lstrip("-").replace("-", "_")
-
-            if param == "listen":
-                kw["listen"] = "{} {}".format(kw.get("listen", ""), value)
-                continue
-
-            if param.startswith("no_"):
-                param = param[3:]
-                kw[param] = "false"
-            elif param in ("help", "call"):
-                kw[param] = True
-            elif cls._param_map[param] is asbool:
-                kw[param] = "true"
-            else:
-                kw[param] = value
-
-        return kw, args
 
     @classmethod
     def check_sockets(cls, sockets):

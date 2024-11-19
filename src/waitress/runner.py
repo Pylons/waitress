@@ -12,9 +12,8 @@
 #
 ##############################################################################
 """Command line runner."""
-import warnings
-import re
-import getopt
+
+from argparse import ArgumentParser, BooleanOptionalAction
 import logging
 import operator as op
 import os
@@ -22,32 +21,10 @@ import os.path
 import pathlib
 import pkgutil
 import sys
-from argparse import ArgumentParser, BooleanOptionalAction
-from dataclasses import dataclass
-from ipaddress import ip_address
 from urllib.parse import urlparse
-import importlib
-from waitress import serve
-from waitress.adjustments import Adjustments
+
+from waitress import adjustments, serve
 from waitress.utilities import logger
-
-
-def show_exception(stream):
-    exc_type, exc_value = sys.exc_info()[:2]
-    args = getattr(exc_value, "args", None)
-    print(
-        ("There was an exception ({}) importing your module.\n").format(
-            exc_type.__name__,
-        ),
-        file=stream,
-    )
-    if args:
-        print("It had these arguments: ", file=stream)
-        for idx, arg in enumerate(args, start=1):
-            print(f"{idx}. {arg}\n", file=stream)
-    else:
-        print("It had no arguments.", file=stream)
-
 
 host_and_port = op.attrgetter("hostname", "port")
 
@@ -57,66 +34,39 @@ def _valid_socket(value):
     res = urlparse(f"scheme://{value}")
 
     if not all(host_and_port(res)):
-        raise ValueError("Not a socket! Should HOST:PORT", value)
+        raise ValueError("Not a valid host and port! Should HOST:PORT", value)
 
-    return str(ip_address(res.hostname)), str(res.port)
-
-
-def _validate_opts(opts):
-    if hasattr(opts, 'listen') and (hasattr(opts, 'host') or hasattr(opts, 'port')):
-        raise ValueError("host or port may not be set if listen is set.")
-
-    if hasattr(opts, 'unix_socket') and (hasattr(opts, 'host') or hasattr(opts, 'port')):
-        raise ValueError("unix_socket may not be set if host or port is set")
-
-    if hasattr(opts, 'unix_socket') and hasattr(opts, 'listen'):
-        raise ValueError("unix_socket may not be set if listen is set")
+    return res.hostname, str(res.port)
 
 
-@dataclass(frozen=True)
-class DEFAULTS:
-    BACKLOG = 1024
-    HOST = "0.0.0.0"
-    IDENT = "waitress"
-    PORT = 8080
-    THREADS = 4
-    UNIX_SOCKET_PERMS = "600"
-    URL_SCHEME = "http"
-    # fmt: off
-    ASYNCORE_LOOP_TIMEOUT   = 1     # second
-    CHANNEL_TIMEOUT         = 120   # seconds
-    CHANNEL_REQUEST_LOOKAHEAD = 0
-    CLEANUP_INTERVAL        = 30    # seconds
-    CONNECTION_LIMIT        = 100
-    INBUF_HIGH_WATERMARK    = 16777216    # 16  MB
-    INBUF_OVERFLOW          = 524288      # 512 KB
-    MAX_REQUEST_BODY_SIZE   = 1073741824  # 1   GB
-    MAX_REQUEST_HEADER_SIZE = 262144      # 256 KB
-    OUTBUF_HIGH_WATERMARK   = 16777216    # 16  MB
-    OUTBUF_OVERFLOW         = 1048576     # 1   MB
-    RECV_BYTES              = 8192        # 8   KB
-    SEND_BYTES              = 18000
-    # fmt: on
-
-
-def run(argv=sys.argv, _serve=serve):
-    """Command line runner."""
+def make_parser():
     parser = ArgumentParser()
     # Standard options
-    parser.add_argument(
-        "--app",
-        required=True,
-        help="Specify WSGI application to run. Required. Can be passed at any position.",
-    )
     parser.add_argument(
         "--call",
         action="store_true",
         help="Call the given object to get the WSGI application.",
     )
-    parser.add_argument(
+    listener = parser.add_mutually_exclusive_group(required=False)
+    listener.add_argument(
+        "--listen",
+        action="append",
+        type=_valid_socket,
+        metavar="HOST:PORT",
+        help="Tell waitress to listen on an ip port combination.",
+    )
+    listener.add_argument(
+        "--unix-socket",
+        type=pathlib.Path,
+        help="""Path of Unix socket. If a socket path is specified, a
+Unix domain socket is made instead of the usual inet domain socket.
+
+Not available on Windows.""",
+    )
+    listener.add_argument(
         "--host",
-        type=ip_address,
-        default=DEFAULTS.HOST,
+        type=str,
+        default=adjustments.Adjustments.host,
         help="""Hostname or IP address on which to listen.
 Note: may not be used together with `--listen`.
 
@@ -125,42 +75,32 @@ Default is %(default)s, which means "all IP addresses on this host".""",
     parser.add_argument(
         "--port",
         type=int,
-        default=DEFAULTS.PORT,
-        help="""TCP port on which to listen.
-Note: may not be used together with `--listen`.
+        default=adjustments.Adjustments.port,
+        help="""TCP port on which to listen. Ignored if --listen or --unix-socket are used.
 
 Default is %(default)s.""",
     )
-    parser.add_argument(
-        "--listen",
-        type=_valid_socket,
-        action='append',
-        help="Tell waitress to listen on an ip port combination.",
-    )
-    parser.add_argument(
-        "--ipv4", action=BooleanOptionalAction, help="Toggle on/off IPv4 support."
-    )
-    parser.add_argument(
-        "--ipv6", action=BooleanOptionalAction, help="Toggle on/off IPv6 support."
-    )
-    parser.add_argument(
-        "--unix-socket",
-        type=pathlib.Path,
-        help="""Path of Unix socket. If a socket path is specified, a
-Unix domain socket is made instead of the usual inet domain socket.
 
-Not available on Windows.""",
+    parser.add_argument(
+        "--ipv4",
+        action=BooleanOptionalAction,
+        help="Toggle on/off IPv4 support.",
+    )
+    parser.add_argument(
+        "--ipv6",
+        action=BooleanOptionalAction,
+        help="Toggle on/off IPv6 support.",
     )
     parser.add_argument(
         "--unix-socket-perms",
-        type=lambda v: int(v, base=8),
-        default=DEFAULTS.UNIX_SOCKET_PERMS,
+        type=adjustments.asoctal,
+        default=oct(adjustments.Adjustments.unix_socket_perms),
         help="""Octal permissions to use for the Unix domain socket.
 Default is %(default)s.""",
     )
     parser.add_argument(
         "--url-scheme",
-        default=DEFAULTS.URL_SCHEME,
+        default=adjustments.Adjustments.url_scheme,
         help="Default `wsgi.url_scheme` value. Default is %(default)r.",
     )
     parser.add_argument(
@@ -173,7 +113,7 @@ stripped of the prefix.""",
     )
     parser.add_argument(
         "--ident",
-        default=DEFAULTS.IDENT,
+        default=adjustments.Adjustments.ident,
         help="""Server identity used in the 'Server' header in responses.
 Default is %(default)r.""",
     )
@@ -181,37 +121,36 @@ Default is %(default)r.""",
     parser.add_argument(
         "--threads",
         type=int,
-        default=DEFAULTS.THREADS,
+        default=adjustments.Adjustments.threads,
         help="""Number of threads used to process application logic.
 Default is %(default)s.""",
     )
     parser.add_argument(
         "--backlog",
         type=int,
-        default=DEFAULTS.BACKLOG,
+        default=adjustments.Adjustments.backlog,
         help="""Connection backlog for the server. Default is %(default)s.""",
     )
     parser.add_argument(
         "--recv-bytes",
         type=int,
-        default=DEFAULTS.RECV_BYTES,
+        default=adjustments.Adjustments.recv_bytes,
         help="""Number of bytes to request when calling `socket.recv()`.
 Default is %(default)s bytes.""",
     )
     parser.add_argument(
         "--send-bytes",
         type=int,
-        default=DEFAULTS.SEND_BYTES,
+        default=adjustments.Adjustments.send_bytes,
         help="""Number of bytes to send to `socket.send()`.
 Note: multiples of 9000 should avoid partly-filled TCP packets.
 
 Default is %(default)s bytes.""",
-
     )
     parser.add_argument(
         "--outbuf-overflow",
         type=int,
-        default=DEFAULTS.OUTBUF_OVERFLOW,
+        default=adjustments.Adjustments.outbuf_overflow,
         help="""A temporary file should be created if the pending output is larger
 than this.
 
@@ -220,7 +159,7 @@ Default is %(default)s bytes.""",
     parser.add_argument(
         "--outbuf-high-watermark",
         type=int,
-        default=DEFAULTS.OUTBUF_HIGH_WATERMARK,
+        default=adjustments.Adjustments.outbuf_high_watermark,
         help="""The `app_iter` will pause when pending output is larger than
 this value and will resume once enough data is written to the socket to fall
 below this threshold.
@@ -230,7 +169,7 @@ Default is %(default)s bytes.""",
     parser.add_argument(
         "--inbuf-overflow",
         type=int,
-        default=DEFAULTS.INBUF_OVERFLOW,
+        default=adjustments.Adjustments.inbuf_overflow,
         help="""A temporary file should be created if the pending input is larger
 than this.
 
@@ -239,7 +178,7 @@ Default is %(default)s bytes.""",
     parser.add_argument(
         "--connection-limit",
         type=int,
-        default=DEFAULTS.CONNECTION_LIMIT,
+        default=adjustments.Adjustments.connection_limit,
         help="""Stop creating new channels if too many are already active.
 
 Default is %(default)s.""",
@@ -247,7 +186,7 @@ Default is %(default)s.""",
     parser.add_argument(
         "--cleanup-interval",
         type=int,
-        default=DEFAULTS.CLEANUP_INTERVAL,
+        default=adjustments.Adjustments.cleanup_interval,
         help="""Minimum seconds between cleaning up inactive channels.
 See `--channel-timeout` option.
 
@@ -256,7 +195,7 @@ Default is %(default)s.""",
     parser.add_argument(
         "--channel-timeout",
         type=int,
-        default=DEFAULTS.CHANNEL_TIMEOUT,
+        default=adjustments.Adjustments.channel_timeout,
         help="""Maximum number of seconds to leave inactive connections open.
 'Inactive' is defined as 'has received no data from the client and has sent
 no data to the client'.
@@ -266,21 +205,21 @@ Default is %(default)s.""",
     parser.add_argument(
         "--max-request-header-size",
         type=int,
-        default=DEFAULTS.MAX_REQUEST_HEADER_SIZE,
+        default=adjustments.Adjustments.max_request_header_size,
         help="""Maximum size of all request headers combined.
 Default is %(default)s bytes.""",
     )
     parser.add_argument(
         "--max-request-body-size",
         type=int,
-        default=DEFAULTS.MAX_REQUEST_BODY_SIZE,
+        default=adjustments.Adjustments.max_request_body_size,
         help="""Maximum size of request body.
 Default is %(default)s bytes.""",
     )
     parser.add_argument(
         "--asyncore-loop-timeout",
         type=int,
-        default=DEFAULTS.ASYNCORE_LOOP_TIMEOUT,
+        default=adjustments.Adjustments.asyncore_loop_timeout,
         help="""The timeout value in seconds passed to `asyncore.loop()`.
 Default is %(default)s.""",
     )
@@ -295,7 +234,7 @@ Default is %(default)s.""",
     parser.add_argument(
         "--channel-request-lookahead",
         type=int,
-        default=DEFAULTS.CHANNEL_REQUEST_LOOKAHEAD,
+        default=adjustments.Adjustments.channel_request_lookahead,
         help="""Allows channels to stay readable and buffer more requests up to
 the given maximum even if a request is already being processed. This allows
 detecting if a client closed the connection while its request is being processed.
@@ -319,6 +258,27 @@ client.
 Default is 'no'.""",
     )
 
+    # This hack is needed to support the use of a flag and the legacy
+    # positional syntax.
+    parser.add_argument(
+        "--app",
+        required=False,
+        action="append",
+        help="Specify WSGI application to run. Required, but can be given without the flag for backward compatibility.",
+    )
+    parser.add_argument(
+        "app",
+        nargs="?",
+        action="append",
+        metavar="APP",
+        help="Legacy method for specifying the WSGI application to run.",
+    )
+    return parser
+
+
+def run(argv=sys.argv, _serve=serve):
+    """Command line runner."""
+    parser = make_parser()
     args = parser.parse_args(argv[1:])
 
     # set a default level for the logger only if it hasn't been set explicitly
@@ -330,26 +290,29 @@ Default is 'no'.""",
     # Add the current directory onto sys.path
     sys.path.append(os.getcwd())
 
+    apps = list(filter(None, args.app))
+    if len(apps) != 1:
+        print("Error: Specify one and only one WSGI application", file=sys.stderr)
+        parser.print_help(file=sys.stderr)
+        return 1
+    app_name = apps[0]
+    del args.app
+
     # Get the WSGI function.
     try:
-        app = pkgutil.resolve_name(args.app)
-    except ImportError:
-        print(f"Bad module {module!r}", file=sys.stderr)
+        app = pkgutil.resolve_name(app_name)
+    except (ImportError, AttributeError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         parser.print_help(file=sys.stderr)
-        show_exception(sys.stderr)
-        return 1
-    except (AttributeError, ValueError):
-        print(f"Bad object name {obj_name!r}", file=sys.stderr)
-        parser.print_help(file=sys.stderr)
-        show_exception(sys.stderr)
         return 1
     if args.call:
         app = app()
     del args.call
+    if args.listen:
+        del args.port
+        del args.host
 
-    from pprint import pprint as pp; pp(vars(args))
     opts = {k: v for k, v in vars(args).items() if v is not None}
-    _validate_opts(opts)
-    _serve(app, opts)
+    _serve(app, **opts)
 
     return 0
