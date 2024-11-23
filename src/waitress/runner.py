@@ -63,6 +63,19 @@ Standard options:
         A wildcard for the hostname is also supported and will bind to both
         IPv4/IPv6 depending on whether they are enabled or disabled.
 
+    --server-name=NAME
+        This is the value that will be placed in the WSGI environment as
+        ``SERVER_NAME``, the only time that this value is used in the WSGI
+        environment for a request is if the client sent a HTTP/1.0 request
+        without a ``Host`` header set, and no other proxy headers.
+
+        The default is value is ``waitress.invalid``, if your WSGI application
+        is creating URL's that include this as the hostname and you are using a
+        reverse proxy setup, you may want to validate that your reverse proxy
+        is sending the appropriate headers.
+
+        In most situations you will not need to set this value.
+
     --[no-]ipv4
         Toggle on/off IPv4 support.
 
@@ -97,15 +110,81 @@ Standard options:
         Default wsgi.url_scheme value, default is 'http'.
 
     --url-prefix=STR
-        The ``SCRIPT_NAME`` WSGI environment value.  Setting this to anything
-        except the empty string will cause the WSGI ``SCRIPT_NAME`` value to be
+        The 'SCRIPT_NAME' WSGI environment value.  Setting this to anything
+        except the empty string will cause the WSGI 'SCRIPT_NAME' value to be
         the value passed minus any trailing slashes you add, and it will cause
-        the ``PATH_INFO`` of any request which is prefixed with this value to
-        be stripped of the prefix.  Default is the empty string.
+        the 'PATH_INFO' of any request which is prefixed with this value to be
+        stripped of the prefix.  Default is the empty string.
 
     --ident=STR
         Server identity used in the 'Server' header in responses. Default
         is 'waitress'.
+
+    --trusted-proxy=IP
+        IP address of a remote peer allowed to override various WSGI environment
+        variables using proxy headers.
+
+        For unix sockets, set this value to 'localhost' instead of an IP
+        address.
+
+        The value '*' (wildcard) may be used to signify that all remote peers
+        are to be trusted.
+
+    --trusted-proxy-count=INT
+        How many proxies we trust when chained. For example,
+
+            X-Forwarded-For: 192.0.2.1, "[2001:db8::1]"
+
+        or
+
+            Forwarded: for=192.0.2.1, For="[2001:db8::1]"
+
+        means there were (potentially), two proxies involved. If we know there
+        is only 1 valid proxy, then that initial IP address "192.0.2.1" is not
+        trusted and we completely ignore it.
+
+        If there are two trusted proxies in the path, this value should be set
+        to 2. If there are more proxies, this value should be set higher.
+
+        Default: 1
+
+    --trusted_proxy_headers=LIST
+        Which of the proxy headers should we trust, this is a set where you
+        either specify "forwarded" or one or more of "x-forwarded-host",
+        "x-forwarded-for", "x-forwarded-proto", "x-forwarded-port",
+        "x-forwarded-by".
+
+        This list of trusted headers is used when 'trusted_proxy' is set and
+        will allow waitress to modify the WSGI environment using the values
+        provided by the proxy.
+
+        It is an error to set this value without setting --trusted-proxy.
+
+        WARNING: If --trusted-proxy is set, the default is 'x-forwarded-proto'
+        to match older versions of Waitress. Users should explicitly opt-in by
+        selecting the headers to be trusted as future versions of waitress will
+        use an empty default.
+
+    --[no-]log-untrusted-proxy-headers
+        Should waitress log warning messages about proxy headers that are being
+        sent from upstream that are not trusted by --trusted-proxy-headers but
+        are being cleared due to --clear-untrusted-proxy-headers?
+
+        This may be useful for debugging if you expect your upstream proxy
+        server to only send specific headers.
+
+        It is a no-op to set this value without also setting
+        --clear-untrusted-proxy-headers and --trusted-proxy.
+
+    --[no-]clear-untrusted-proxy-headers
+       This tells Waitress to remove any untrusted proxy headers ("Forwarded",
+       "X-Forwared-For", "X-Forwarded-By", "X-Forwarded-Host",
+       "X-Forwarded-Port", "X-Forwarded-Proto") not explicitly allowed by
+       --trusted-proxy-headers.
+
+       This is active by default.
+
+       It is an error to set this value without setting --trusted-proxy.
 
 Tuning options:
 
@@ -149,6 +228,18 @@ Tuning options:
         Default is 120. 'Inactive' is defined as 'has received no data
         from the client and has sent no data to the client'.
 
+    --channel-request-lookahead=INT
+        Sets the amount of requests we can continue to read from the socket,
+        while we are processing current requests. The default value won't allow
+        any lookahead, increase it above '0' to enable.
+
+        When enabled this inserts a callable 'waitress.client_disconnected'
+        into the environment that allows the task to check if the client
+        disconnected while waiting for the response at strategic points in the
+        execution and to cancel the operation.
+
+        Default: '0'
+
     --[no-]log-socket-errors
         Toggle whether premature client disconnect tracebacks ought to be
         logged. On by default.
@@ -168,7 +259,7 @@ Tuning options:
         The timeout value in seconds passed to asyncore.loop(). Default is 1.
 
     --asyncore-use-poll
-        The use_poll argument passed to ``asyncore.loop()``. Helps overcome
+        The use_poll argument passed to asyncore.loop(). Helps overcome
         open file descriptors limit. Default is False.
 
     --channel-request-lookahead=INT
