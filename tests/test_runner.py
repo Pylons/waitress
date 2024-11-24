@@ -21,10 +21,10 @@ class Test_run(unittest.TestCase):
         self.match_output(["--help"], 0, "^Usage:\n\n    waitress-serve")
 
     def test_no_app(self):
-        self.match_output([], 1, "^Error: Specify one application only")
+        self.match_output([], 1, "^Error: Specify an application")
 
     def test_multiple_apps_app(self):
-        self.match_output(["a:a", "b:b"], 1, "^Error: Specify one application only")
+        self.match_output(["a:a", "b:b"], 1, "^Error: No module named 'a'")
 
     def test_bad_apps_app(self):
         self.match_output(["a"], 1, "^Error: No module named 'a'")

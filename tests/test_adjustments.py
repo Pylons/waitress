@@ -396,22 +396,22 @@ class TestCLI(unittest.TestCase):
 
     def test_noargs(self):
         opts, args = self.parse([])
-        self.assertDictEqual(opts, {"call": False, "help": False})
+        self.assertDictEqual(opts, {"call": False, "help": False, "app": None})
         self.assertSequenceEqual(args, [])
 
     def test_help(self):
         opts, args = self.parse(["--help"])
-        self.assertDictEqual(opts, {"call": False, "help": True})
+        self.assertDictEqual(opts, {"call": False, "help": True, "app": None})
         self.assertSequenceEqual(args, [])
 
     def test_call(self):
         opts, args = self.parse(["--call"])
-        self.assertDictEqual(opts, {"call": True, "help": False})
+        self.assertDictEqual(opts, {"call": True, "help": False, "app": None})
         self.assertSequenceEqual(args, [])
 
     def test_both(self):
         opts, args = self.parse(["--call", "--help"])
-        self.assertDictEqual(opts, {"call": True, "help": True})
+        self.assertDictEqual(opts, {"call": True, "help": True, "app": None})
         self.assertSequenceEqual(args, [])
 
     def test_positive_boolean(self):

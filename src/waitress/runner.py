@@ -308,8 +308,8 @@ def run(argv=sys.argv, _serve=serve):
         show_help(sys.stdout, name)
         return 0
 
-    if len(args) != 1:
-        show_help(sys.stderr, name, "Specify one application only")
+    if kw["app"] is None:
+        show_help(sys.stderr, name, "Specify an application")
         return 1
 
     # set a default level for the logger only if it hasn't been set explicitly
@@ -323,7 +323,7 @@ def run(argv=sys.argv, _serve=serve):
 
     # Get the WSGI function.
     try:
-        app = pkgutil.resolve_name(args[0])
+        app = pkgutil.resolve_name(kw["app"])
     except (ValueError, ImportError, AttributeError) as exc:
         show_help(sys.stderr, name, str(exc))
         show_exception(sys.stderr)
@@ -332,7 +332,7 @@ def run(argv=sys.argv, _serve=serve):
         app = app()
 
     # These arguments are specific to the runner, not waitress itself.
-    del kw["call"], kw["help"]
+    del kw["call"], kw["help"], kw["app"]
 
     _serve(app, **kw)
     return 0

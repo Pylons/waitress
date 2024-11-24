@@ -459,9 +459,12 @@ class Adjustments:
             else:
                 long_opts.append(opt + "=")
 
+        long_opts.append("app=")
+
         kw = {
             "help": False,
             "call": False,
+            "app": None,
         }
 
         opts, args = getopt.getopt(argv, "", long_opts)
@@ -481,6 +484,9 @@ class Adjustments:
                 kw[param] = "true"
             else:
                 kw[param] = value
+
+        if kw["app"] is None and len(args) > 0:
+            kw["app"] = args.pop(0)
 
         return kw, args
 
