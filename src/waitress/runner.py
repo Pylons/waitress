@@ -29,12 +29,18 @@ from waitress.utilities import logger
 HELP = """\
 Usage:
 
-    {0} [OPTS] MODULE:OBJECT
+    {0} [OPTS] [MODULE:OBJECT]
 
 Standard options:
 
     --help
         Show this information.
+
+    --app=MODULE:OBJECT
+        Run the given callable object the WSGI application.
+
+        You can specify the WSGI application using this flag or as a positional
+        argument.
 
     --call
         Call the given object to get the WSGI application.

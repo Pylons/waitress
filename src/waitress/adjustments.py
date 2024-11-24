@@ -480,6 +480,8 @@ class Adjustments:
                 kw[param] = "false"
             elif param in ("help", "call"):
                 kw[param] = True
+            elif param == "app":
+                kw[param] = value
             elif cls._param_map[param] is asbool:
                 kw[param] = "true"
             else:

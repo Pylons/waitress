@@ -414,6 +414,16 @@ class TestCLI(unittest.TestCase):
         self.assertDictEqual(opts, {"call": True, "help": True, "app": None})
         self.assertSequenceEqual(args, [])
 
+    def test_app_flag(self):
+        opts, args = self.parse(["--app=fred:wilma", "barney:betty"])
+        self.assertEqual(opts["app"], "fred:wilma")
+        self.assertSequenceEqual(args, ["barney:betty"])
+
+    def test_app_arg(self):
+        opts, args = self.parse(["barney:betty"])
+        self.assertEqual(opts["app"], "barney:betty")
+        self.assertSequenceEqual(args, [])
+
     def test_positive_boolean(self):
         opts, args = self.parse(["--expose-tracebacks"])
         self.assertDictContainsSubset({"expose_tracebacks": "true"}, opts)

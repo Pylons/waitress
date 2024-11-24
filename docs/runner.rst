@@ -20,6 +20,10 @@ Is equivalent to::
 
     waitress-serve --port=8041 --url-scheme=https myapp:wsgifunc
 
+Or:
+
+    waitress-serve --port=8041 --url-scheme=https --app=myapp:wsgifunc
+
 The full argument list is :ref:`given below <invocation>`.
 
 Boolean arguments are represented by flags. If you wish to explicitly set a
@@ -64,12 +68,18 @@ Invocation
 
 Usage::
 
-    waitress-serve [OPTS] MODULE:OBJECT
+    waitress-serve [OPTS] [MODULE:OBJECT]
 
 Common options:
 
 ``--help``
     Show this information.
+
+``--app=MODULE:OBJECT``
+    Run the given callable object the WSGI application.
+
+    You can specify the WSGI application using this flag or as a positional
+    argument.
 
 ``--call``
     Call the given object to get the WSGI application.
