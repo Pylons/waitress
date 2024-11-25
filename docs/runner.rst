@@ -170,7 +170,7 @@ Common options:
 
     Default: ``1``
 
-``--trusted_proxy_headers=LIST``
+``--trusted-proxy-headers=LIST``
     Which of the proxy headers should we trust, this is a set where you
     either specify "forwarded" or one or more of "x-forwarded-host", "x-forwarded-for",
     "x-forwarded-proto", "x-forwarded-port", "x-forwarded-by".
