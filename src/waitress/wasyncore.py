@@ -328,7 +328,7 @@ class dispatcher:
     def create_socket(self, family=socket.AF_INET, type=socket.SOCK_STREAM):
         self.family_and_type = family, type
         sock = socket.socket(family, type)
-        sock.setblocking(0)
+        sock.setblocking(False)
         self.set_socket(sock)
 
     def set_socket(self, sock, map=None):
@@ -353,10 +353,10 @@ class dispatcher:
     # to pass to select().
     # ==================================================
 
-    def readable(self):
+    def readable(self) -> bool:
         return True
 
-    def writable(self):
+    def writable(self) -> bool:
         return True
 
     # ==================================================

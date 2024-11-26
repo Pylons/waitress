@@ -85,7 +85,7 @@ class HTTPChannel(wasyncore.dispatcher):
         # the channel (possibly by our server maintenance logic), run
         # handle_write
 
-        return self.total_outbufs_len or self.will_close or self.close_when_flushed
+        return self.total_outbufs_len > 0 or self.will_close or self.close_when_flushed
 
     def handle_write(self):
         # Precondition: there's data in the out buffer to be sent, or
@@ -134,6 +134,8 @@ class HTTPChannel(wasyncore.dispatcher):
                 self.will_close = True
 
                 return (False, True)
+
+        return (False, False)
 
     def readable(self):
         # We might want to read more requests. We can only do this if:
