@@ -295,6 +295,9 @@ class Task:
     def start(self):
         self.start_time = time.time()
 
+    def execute(self):
+        raise NotImplementedError  # pragma: no cover
+
     def finish(self):
         if not self.wrote_header:
             self.write(b"")
