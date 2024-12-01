@@ -100,6 +100,15 @@ class AppResolutionError(Exception):
     """The named WSGI application could not be resolved."""
 
 
+def resolve_wsgi_app(app_name, call=False):
+    """Resolve a WSGI app descriptor to a callable."""
+    try:
+        app = pkgutil.resolve_name(app_name)
+    except (ValueError, ImportError, AttributeError) as exc:
+        raise AppResolutionError(f"Cannot import WSGI application '{app_name}': {exc}")
+    return app() if call else app
+
+
 class Adjustments:
     """This class contains tunable parameters."""
 
@@ -500,16 +509,7 @@ class Adjustments:
                 raise AppResolutionError("Specify an application")
             if len(args) > 0:
                 raise AppResolutionError("Provide only one WSGI app")
-
-            # Get the WSGI function.
-            try:
-                kw["app"] = pkgutil.resolve_name(app)
-            except (ValueError, ImportError, AttributeError) as exc:
-                raise AppResolutionError(
-                    f"Cannot import WSGI application '{app}': {exc}",
-                )
-            if kw["call"]:
-                kw["app"] = kw["app"]()
+            kw["app"] = resolve_wsgi_app(app, kw["call"])
 
         del kw["call"]
 
