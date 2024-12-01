@@ -11,19 +11,16 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Command line runner.
-"""
-
+"""Command line runner."""
 
 import getopt
 import logging
 import os
 import os.path
-import pkgutil
 import sys
 
 from waitress import serve
-from waitress.adjustments import Adjustments
+from waitress.adjustments import Adjustments, AppResolutionError
 from waitress.utilities import logger
 
 HELP = """\
@@ -285,11 +282,14 @@ def show_help(stream, name, error=None):  # pragma: no cover
 
 def run(argv=sys.argv, _serve=serve):
     """Command line runner."""
+    # Add the current directory onto sys.path
+    sys.path.append(os.getcwd())
+
     name = os.path.basename(argv[0])
 
     try:
-        kw, args = Adjustments.parse_args(argv[1:])
-    except getopt.GetoptError as exc:
+        kw = Adjustments.parse_args(argv[1:])
+    except (getopt.GetoptError, AppResolutionError) as exc:
         show_help(sys.stderr, name, str(exc))
         return 1
 
@@ -297,30 +297,16 @@ def run(argv=sys.argv, _serve=serve):
         show_help(sys.stdout, name)
         return 0
 
-    if kw["app"] is None:
-        show_help(sys.stderr, name, "Specify an application")
-        return 1
-
     # set a default level for the logger only if it hasn't been set explicitly
     # note that this level does not override any parent logger levels,
     # handlers, etc but without it no log messages are emitted by default
     if logger.level == logging.NOTSET:
         logger.setLevel(logging.INFO)
 
-    # Add the current directory onto sys.path
-    sys.path.append(os.getcwd())
-
-    # Get the WSGI function.
-    try:
-        app = pkgutil.resolve_name(kw["app"])
-    except (ValueError, ImportError, AttributeError) as exc:
-        show_help(sys.stderr, name, str(exc))
-        return 1
-    if kw["call"]:
-        app = app()
+    app = kw["app"]
 
     # These arguments are specific to the runner, not waitress itself.
-    del kw["call"], kw["help"], kw["app"]
+    del kw["help"], kw["app"]
 
     _serve(app, **kw)
     return 0

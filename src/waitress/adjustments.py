@@ -14,6 +14,7 @@
 """Adjustments are tunable parameters.
 """
 import getopt
+import pkgutil
 import socket
 import warnings
 
@@ -93,6 +94,10 @@ class _str_marker(str):
 
 class _int_marker(int):
     pass
+
+
+class AppResolutionError(Exception):
+    """The named WSGI application could not be resolved."""
 
 
 class Adjustments:
@@ -467,6 +472,7 @@ class Adjustments:
             "app": None,
         }
 
+        app = None
         opts, args = getopt.getopt(argv, "", long_opts)
         for opt, value in opts:
             param = opt.lstrip("-").replace("-", "_")
@@ -481,16 +487,31 @@ class Adjustments:
             elif param in ("help", "call"):
                 kw[param] = True
             elif param == "app":
-                kw[param] = value
+                app = value
             elif cls._param_map[param] is asbool:
                 kw[param] = "true"
             else:
                 kw[param] = value
 
-        if kw["app"] is None and len(args) > 0:
-            kw["app"] = args.pop(0)
+        if not kw["help"]:
+            if app is None and len(args) > 0:
+                app = args.pop(0)
+            if app is None:
+                raise AppResolutionError("Specify an application")
+            if len(args) > 0:
+                raise AppResolutionError("Provide only one WSGI app")
 
-        return kw, args
+            # Get the WSGI function.
+            try:
+                kw["app"] = pkgutil.resolve_name(app)
+            except (ValueError, ImportError, AttributeError) as exc:
+                raise AppResolutionError(f"Cannot import WSGI application: {exc}")
+            if kw["call"]:
+                kw["app"] = kw["app"]()
+
+        del kw["call"]
+
+        return kw
 
     @classmethod
     def check_sockets(cls, sockets):

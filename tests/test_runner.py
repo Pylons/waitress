@@ -24,13 +24,14 @@ class Test_run(unittest.TestCase):
         self.match_output([], 1, "^Error: Specify an application")
 
     def test_multiple_apps_app(self):
-        self.match_output(["a:a", "b:b"], 1, "^Error: No module named 'a'")
+        self.match_output(["a:a", "b:b"], 1, "^Error: Provide only one WSGI app")
+        self.match_output(["--app=a:a", "b:b"], 1, "^Error: Provide only one WSGI app")
 
     def test_bad_apps_app(self):
-        self.match_output(["a"], 1, "^Error: No module named 'a'")
+        self.match_output(["a"], 1, "No module named 'a'")
 
     def test_bad_app_module(self):
-        self.match_output(["nonexistent:a"], 1, "^Error: No module named 'nonexistent'")
+        self.match_output(["nonexistent:a"], 1, "No module named 'nonexistent'")
 
     def test_cwd_added_to_path(self):
         def null_serve(app, **kw):
@@ -53,7 +54,7 @@ class Test_run(unittest.TestCase):
         self.match_output(
             ["tests.fixtureapps.runner:a"],
             1,
-            "^Error: module 'tests.fixtureapps.runner' has no attribute 'a'",
+            "module 'tests.fixtureapps.runner' has no attribute 'a'",
         )
 
     def test_simple_call(self):
