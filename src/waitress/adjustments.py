@@ -112,6 +112,9 @@ def resolve_wsgi_app(app_name, call=False):
 class Adjustments:
     """This class contains tunable parameters."""
 
+    # If you add new parameters, be sure to update the following files:
+    #  * src/arguments.rst (waitress.serve)
+    #  * src/waitress/runner.py and src/runner.rst (CLI documentation)
     _params = (
         ("host", str),
         ("port", int),
