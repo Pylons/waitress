@@ -505,7 +505,9 @@ class Adjustments:
             try:
                 kw["app"] = pkgutil.resolve_name(app)
             except (ValueError, ImportError, AttributeError) as exc:
-                raise AppResolutionError(f"Cannot import WSGI application '{app}': {exc}")
+                raise AppResolutionError(
+                    f"Cannot import WSGI application '{app}': {exc}",
+                )
             if kw["call"]:
                 kw["app"] = kw["app"]()
 
