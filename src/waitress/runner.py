@@ -18,6 +18,7 @@ import logging
 import os
 import os.path
 import sys
+import traceback
 
 from waitress import serve
 from waitress.adjustments import Adjustments, AppResolutionError
@@ -289,8 +290,12 @@ def run(argv=sys.argv, _serve=serve):
 
     try:
         kw = Adjustments.parse_args(argv[1:])
-    except (getopt.GetoptError, AppResolutionError) as exc:
+    except getopt.GetoptError as exc:
         show_help(sys.stderr, name, str(exc))
+        return 1
+    except AppResolutionError as exc:
+        show_help(sys.stderr, name, str(exc))
+        traceback.print_exc(file=sys.stderr)
         return 1
 
     if kw["help"]:
