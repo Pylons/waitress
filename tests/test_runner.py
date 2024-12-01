@@ -91,8 +91,10 @@ def capture():
     from io import StringIO
 
     fd = StringIO()
+    old_stdout, old_stderr = sys.stdout, sys.stderr
     sys.stdout = fd
     sys.stderr = fd
-    yield fd
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
+    try:
+        yield fd
+    finally:
+        sys.stdout, sys.stderr = old_stdout, old_stderr
