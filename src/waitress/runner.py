@@ -283,23 +283,6 @@ def show_help(stream, name, error=None):  # pragma: no cover
     print(HELP.format(name), file=stream)
 
 
-def show_exception(stream):
-    exc_type, exc_value = sys.exc_info()[:2]
-    args = getattr(exc_value, "args", None)
-    print(
-        ("There was an exception ({}) importing your module.\n").format(
-            exc_type.__name__,
-        ),
-        file=stream,
-    )
-    if args:
-        print("It had these arguments: ", file=stream)
-        for idx, arg in enumerate(args, start=1):
-            print(f"{idx}. {arg}\n", file=stream)
-    else:
-        print("It had no arguments.", file=stream)
-
-
 def run(argv=sys.argv, _serve=serve):
     """Command line runner."""
     name = os.path.basename(argv[0])
@@ -332,7 +315,6 @@ def run(argv=sys.argv, _serve=serve):
         app = pkgutil.resolve_name(kw["app"])
     except (ValueError, ImportError, AttributeError) as exc:
         show_help(sys.stderr, name, str(exc))
-        show_exception(sys.stderr)
         return 1
     if kw["call"]:
         app = app()
