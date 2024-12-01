@@ -395,38 +395,57 @@ class TestCLI(unittest.TestCase):
         self.assertTrue(set(subset.items()) <= set(dictionary.items()))
 
     def test_noargs(self):
-        opts, args = self.parse([])
-        self.assertDictEqual(opts, {"call": False, "help": False})
-        self.assertSequenceEqual(args, [])
+        from waitress.adjustments import AppResolutionError
+
+        self.assertRaises(AppResolutionError, self.parse, [])
 
     def test_help(self):
-        opts, args = self.parse(["--help"])
-        self.assertDictEqual(opts, {"call": False, "help": True})
-        self.assertSequenceEqual(args, [])
+        opts = self.parse(["--help"])
+        self.assertDictEqual(opts, {"help": True, "app": None})
+
+    def test_app_flag(self):
+        from tests.fixtureapps import runner as _apps
+
+        opts = self.parse(["--app=tests.fixtureapps.runner:app"])
+        self.assertEqual(opts["app"], _apps.app)
 
     def test_call(self):
-        opts, args = self.parse(["--call"])
-        self.assertDictEqual(opts, {"call": True, "help": False})
-        self.assertSequenceEqual(args, [])
+        from tests.fixtureapps import runner as _apps
 
-    def test_both(self):
-        opts, args = self.parse(["--call", "--help"])
-        self.assertDictEqual(opts, {"call": True, "help": True})
-        self.assertSequenceEqual(args, [])
+        opts = self.parse(["--app=tests.fixtureapps.runner:returns_app", "--call"])
+        self.assertEqual(opts["app"], _apps.app)
+
+    def test_app_arg(self):
+        from tests.fixtureapps import runner as _apps
+
+        opts = self.parse(["tests.fixtureapps.runner:app"])
+        self.assertEqual(opts["app"], _apps.app)
+
+    def test_excess(self):
+        from waitress.adjustments import AppResolutionError
+
+        self.assertRaises(
+            AppResolutionError,
+            self.parse,
+            ["tests.fixtureapps.runner:app", "tests.fixtureapps.runner:app"],
+        )
 
     def test_positive_boolean(self):
-        opts, args = self.parse(["--expose-tracebacks"])
+        opts = self.parse(["--expose-tracebacks", "tests.fixtureapps.runner:app"])
         self.assertDictContainsSubset({"expose_tracebacks": "true"}, opts)
-        self.assertSequenceEqual(args, [])
 
     def test_negative_boolean(self):
-        opts, args = self.parse(["--no-expose-tracebacks"])
+        opts = self.parse(["--no-expose-tracebacks", "tests.fixtureapps.runner:app"])
         self.assertDictContainsSubset({"expose_tracebacks": "false"}, opts)
-        self.assertSequenceEqual(args, [])
 
     def test_cast_params(self):
-        opts, args = self.parse(
-            ["--host=localhost", "--port=80", "--unix-socket-perms=777"]
+        opts = self.parse(
+            [
+                "--host=localhost",
+                "--port=80",
+                "--unix-socket-perms=777",
+                "tests.fixtureapps.runner:app",
+            ]
         )
         self.assertDictContainsSubset(
             {
@@ -436,28 +455,25 @@ class TestCLI(unittest.TestCase):
             },
             opts,
         )
-        self.assertSequenceEqual(args, [])
 
     def test_listen_params(self):
-        opts, args = self.parse(
+        opts = self.parse(
             [
                 "--listen=test:80",
+                "tests.fixtureapps.runner:app",
             ]
         )
-
         self.assertDictContainsSubset({"listen": " test:80"}, opts)
-        self.assertSequenceEqual(args, [])
 
     def test_multiple_listen_params(self):
-        opts, args = self.parse(
+        opts = self.parse(
             [
                 "--listen=test:80",
                 "--listen=test:8080",
+                "tests.fixtureapps.runner:app",
             ]
         )
-
         self.assertDictContainsSubset({"listen": " test:80 test:8080"}, opts)
-        self.assertSequenceEqual(args, [])
 
     def test_bad_param(self):
         import getopt

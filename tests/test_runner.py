@@ -21,26 +21,17 @@ class Test_run(unittest.TestCase):
         self.match_output(["--help"], 0, "^Usage:\n\n    waitress-serve")
 
     def test_no_app(self):
-        self.match_output([], 1, "^Error: Specify one application only")
+        self.match_output([], 1, "^Error: Specify an application")
 
     def test_multiple_apps_app(self):
-        self.match_output(["a:a", "b:b"], 1, "^Error: Specify one application only")
+        self.match_output(["a:a", "b:b"], 1, "^Error: Provide only one WSGI app")
+        self.match_output(["--app=a:a", "b:b"], 1, "^Error: Provide only one WSGI app")
 
     def test_bad_apps_app(self):
-        self.match_output(["a"], 1, "^Error: No module named 'a'")
+        self.match_output(["a"], 1, "No module named 'a'")
 
     def test_bad_app_module(self):
-        self.match_output(["nonexistent:a"], 1, "^Error: No module named 'nonexistent'")
-
-        self.match_output(
-            ["nonexistent:a"],
-            1,
-            (
-                r"There was an exception \((ImportError|ModuleNotFoundError)\) "
-                "importing your module.\n\nIt had these arguments: \n"
-                "1. No module named '?nonexistent'?"
-            ),
-        )
+        self.match_output(["nonexistent:a"], 1, "No module named 'nonexistent'")
 
     def test_cwd_added_to_path(self):
         def null_serve(app, **kw):
@@ -63,7 +54,7 @@ class Test_run(unittest.TestCase):
         self.match_output(
             ["tests.fixtureapps.runner:a"],
             1,
-            "^Error: module 'tests.fixtureapps.runner' has no attribute 'a'",
+            "module 'tests.fixtureapps.runner' has no attribute 'a'",
         )
 
     def test_simple_call(self):
@@ -96,44 +87,15 @@ class Test_run(unittest.TestCase):
         self.assertEqual(runner.run(argv=argv, _serve=check_server), 0)
 
 
-class Test_helper(unittest.TestCase):
-    def test_exception_logging(self):
-        from waitress.runner import show_exception
-
-        regex = (
-            r"There was an exception \(ImportError\) importing your module."
-            r"\n\nIt had these arguments: \n1. My reason"
-        )
-
-        with capture() as captured:
-            try:
-                raise ImportError("My reason")
-            except ImportError:
-                self.assertIsNone(show_exception(sys.stderr))
-            self.assertRegex(captured.getvalue(), regex)
-        captured.close()
-
-        regex = (
-            r"There was an exception \(ImportError\) importing your module."
-            r"\n\nIt had no arguments."
-        )
-
-        with capture() as captured:
-            try:
-                raise ImportError
-            except ImportError:
-                self.assertIsNone(show_exception(sys.stderr))
-            self.assertRegex(captured.getvalue(), regex)
-        captured.close()
-
-
 @contextlib.contextmanager
 def capture():
     from io import StringIO
 
     fd = StringIO()
+    old_stdout, old_stderr = sys.stdout, sys.stderr
     sys.stdout = fd
     sys.stderr = fd
-    yield fd
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
+    try:
+        yield fd
+    finally:
+        sys.stdout, sys.stderr = old_stdout, old_stderr
