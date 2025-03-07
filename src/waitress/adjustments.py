@@ -14,6 +14,7 @@
 """Adjustments are tunable parameters.
 """
 import getopt
+import pkgutil
 import socket
 import warnings
 
@@ -95,9 +96,25 @@ class _int_marker(int):
     pass
 
 
+class AppResolutionError(Exception):
+    """The named WSGI application could not be resolved."""
+
+
+def resolve_wsgi_app(app_name, call=False):
+    """Resolve a WSGI app descriptor to a callable."""
+    try:
+        app = pkgutil.resolve_name(app_name)
+    except (ValueError, ImportError, AttributeError) as exc:
+        raise AppResolutionError(f"Cannot import WSGI application '{app_name}': {exc}")
+    return app() if call else app
+
+
 class Adjustments:
     """This class contains tunable parameters."""
 
+    # If you add new parameters, be sure to update the following files:
+    #  * src/arguments.rst (waitress.serve)
+    #  * src/waitress/runner.py and src/runner.rst (CLI documentation)
     _params = (
         ("host", str),
         ("port", int),
@@ -459,11 +476,15 @@ class Adjustments:
             else:
                 long_opts.append(opt + "=")
 
+        long_opts.append("app=")
+
         kw = {
             "help": False,
             "call": False,
+            "app": None,
         }
 
+        app = None
         opts, args = getopt.getopt(argv, "", long_opts)
         for opt, value in opts:
             param = opt.lstrip("-").replace("-", "_")
@@ -477,12 +498,25 @@ class Adjustments:
                 kw[param] = "false"
             elif param in ("help", "call"):
                 kw[param] = True
+            elif param == "app":
+                app = value
             elif cls._param_map[param] is asbool:
                 kw[param] = "true"
             else:
                 kw[param] = value
 
-        return kw, args
+        if not kw["help"]:
+            if app is None and len(args) > 0:
+                app = args.pop(0)
+            if app is None:
+                raise AppResolutionError("Specify an application")
+            if len(args) > 0:
+                raise AppResolutionError("Provide only one WSGI app")
+            kw["app"] = resolve_wsgi_app(app, kw["call"])
+
+        del kw["call"]
+
+        return kw
 
     @classmethod
     def check_sockets(cls, sockets):

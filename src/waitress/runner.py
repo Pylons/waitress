@@ -11,30 +11,34 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Command line runner.
-"""
-
+"""Command line runner."""
 
 import getopt
 import logging
 import os
 import os.path
-import pkgutil
 import sys
+import traceback
 
 from waitress import serve
-from waitress.adjustments import Adjustments
+from waitress.adjustments import Adjustments, AppResolutionError
 from waitress.utilities import logger
 
 HELP = """\
 Usage:
 
-    {0} [OPTS] MODULE:OBJECT
+    {0} [OPTS] [MODULE:OBJECT]
 
 Standard options:
 
     --help
         Show this information.
+
+    --app=MODULE:OBJECT
+        Run the given callable object the WSGI application.
+
+        You can specify the WSGI application using this flag or as a positional
+        argument.
 
     --call
         Call the given object to get the WSGI application.
@@ -277,40 +281,26 @@ def show_help(stream, name, error=None):  # pragma: no cover
     print(HELP.format(name), file=stream)
 
 
-def show_exception(stream):
-    exc_type, exc_value = sys.exc_info()[:2]
-    args = getattr(exc_value, "args", None)
-    print(
-        ("There was an exception ({}) importing your module.\n").format(
-            exc_type.__name__,
-        ),
-        file=stream,
-    )
-    if args:
-        print("It had these arguments: ", file=stream)
-        for idx, arg in enumerate(args, start=1):
-            print(f"{idx}. {arg}\n", file=stream)
-    else:
-        print("It had no arguments.", file=stream)
-
-
 def run(argv=sys.argv, _serve=serve):
     """Command line runner."""
+    # Add the current directory onto sys.path
+    sys.path.append(os.getcwd())
+
     name = os.path.basename(argv[0])
 
     try:
-        kw, args = Adjustments.parse_args(argv[1:])
+        kw = Adjustments.parse_args(argv[1:])
     except getopt.GetoptError as exc:
         show_help(sys.stderr, name, str(exc))
+        return 1
+    except AppResolutionError as exc:
+        show_help(sys.stderr, name, str(exc))
+        traceback.print_exc(file=sys.stderr)
         return 1
 
     if kw["help"]:
         show_help(sys.stdout, name)
         return 0
-
-    if len(args) != 1:
-        show_help(sys.stderr, name, "Specify one application only")
-        return 1
 
     # set a default level for the logger only if it hasn't been set explicitly
     # note that this level does not override any parent logger levels,
@@ -318,21 +308,10 @@ def run(argv=sys.argv, _serve=serve):
     if logger.level == logging.NOTSET:
         logger.setLevel(logging.INFO)
 
-    # Add the current directory onto sys.path
-    sys.path.append(os.getcwd())
-
-    # Get the WSGI function.
-    try:
-        app = pkgutil.resolve_name(args[0])
-    except (ValueError, ImportError, AttributeError) as exc:
-        show_help(sys.stderr, name, str(exc))
-        show_exception(sys.stderr)
-        return 1
-    if kw["call"]:
-        app = app()
+    app = kw["app"]
 
     # These arguments are specific to the runner, not waitress itself.
-    del kw["call"], kw["help"]
+    del kw["help"], kw["app"]
 
     _serve(app, **kw)
     return 0
