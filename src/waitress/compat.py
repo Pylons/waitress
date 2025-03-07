@@ -6,8 +6,9 @@ import socket
 import sys
 import warnings
 
-# True if we are running on Windows
+# Platform detection.
 WIN = platform.system() == "Windows"
+VSOCK = hasattr(socket, "AF_VSOCK")
 
 MAXINT = sys.maxsize
 HAS_IPV6 = socket.has_ipv6

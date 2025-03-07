@@ -4,7 +4,8 @@ Socket Activation
 While waitress does not support the various implementations of socket activation,
 for example using systemd or launchd, it is prepared to receive pre-bound sockets
 from init systems, process and socket managers, or other launchers that can provide
-pre-bound sockets.
+pre-bound sockets. Waitress supports INET and INET6 sockets, and UNIX stream sockets.
+Additionally, on Linux it supports VSOCK stream sockets.
 
 The following shows a code example starting waitress with two pre-bound Internet sockets.
 
