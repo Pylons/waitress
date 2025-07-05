@@ -11,8 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""HTTP Request Parser tests
-"""
+"""HTTP Request Parser tests"""
 import unittest
 
 from waitress.adjustments import Adjustments

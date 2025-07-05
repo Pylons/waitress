@@ -11,8 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Data Chunk Receiver
-"""
+"""Data Chunk Receiver"""
 
 from waitress.rfc7230 import CHUNK_EXT_RE, ONLY_HEXDIG_RE
 from waitress.utilities import BadRequest, find_double_newline

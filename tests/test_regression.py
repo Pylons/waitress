@@ -11,8 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Tests for waitress.channel maintenance logic
-"""
+"""Tests for waitress.channel maintenance logic"""
 import doctest
 
 
