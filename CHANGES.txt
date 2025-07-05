@@ -1,3 +1,15 @@
+Unreleased
+----------
+
+Bugfix
+~~~~~~
+
+- Waitress will now drop a request if the Transer-Encoding is set twice in the
+  request, previously it would decode the chunks and pass it along to the WSGI
+  application with an appropriate content length. See
+  https://github.com/Pylons/waitress/issues/465 and
+  https://github.com/Pylons/waitress/pull/474
+
 3.0.2 (2024-11-16)
 ------------------
 
