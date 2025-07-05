@@ -11,8 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Utility functions
-"""
+"""Utility functions"""
 
 import calendar
 import errno

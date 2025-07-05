@@ -11,8 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Adjustments are tunable parameters.
-"""
+"""Adjustments are tunable parameters."""
 import getopt
 import pkgutil
 import socket
