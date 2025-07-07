@@ -236,6 +236,13 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
 
+    def test_parse_header_11_te_chunked_with_cl_close_connection(self):
+        # NB: test that capitalization of header value is unimportant
+        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: chunked\r\ncontent-length: 10\r\n"
+        self.parser.parse_header(data)
+        self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
+        self.assertEqual(self.parser.connection_close, True)
+
     def test_parse_header_transfer_encoding_invalid(self):
         data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\n"
 
