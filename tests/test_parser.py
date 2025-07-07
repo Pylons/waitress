@@ -263,6 +263,19 @@ class TestHTTPRequestParser(unittest.TestCase):
         else:  # pragma: nocover
             self.assertTrue(False)
 
+    def test_parse_header_transfer_encoding_invalid_multiple_chunked(self):
+        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: chunked\r\ntransfer-encoding: chunked\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except TransferEncodingNotImplemented as e:
+            self.assertIn(
+                "Transfer-Encoding is invalid. Multiple chunked encodings requested.",
+                e.args[0],
+            )
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
     def test_parse_header_transfer_encoding_invalid_whitespace(self):
         data = b"GET /foobar HTTP/1.1\r\nTransfer-Encoding:\x85chunked\r\n"
 

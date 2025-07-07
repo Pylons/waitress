@@ -304,6 +304,14 @@ class HTTPRequestParser:
                     )
 
             if encodings and encodings[-1] == "chunked":
+                if (
+                    len([encoding for encoding in encodings if encoding == "chunked"])
+                    != 1
+                ):
+                    raise TransferEncodingNotImplemented(
+                        "Transfer-Encoding is invalid. Multiple chunked encodings requested."
+                    )
+
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
