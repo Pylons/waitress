@@ -9,6 +9,12 @@ Bugfix
   application with an appropriate content length. See
   https://github.com/Pylons/waitress/issues/465 and
   https://github.com/Pylons/waitress/pull/474
+  
+- When encountering a request that has both Content-Length set and
+  Transfer-Encoding of chunked we now close the connection after it is
+  completed to comply with the requirements of RFC9112. See
+  https://github.com/Pylons/waitress/pull/475 and
+  https://github.com/Pylons/waitress/issues/464
 
 3.0.2 (2024-11-16)
 ------------------

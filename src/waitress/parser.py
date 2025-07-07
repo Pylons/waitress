@@ -315,6 +315,13 @@ class HTTPRequestParser:
                 self.chunked = True
                 buf = OverflowableBuffer(self.adj.inbuf_overflow)
                 self.body_rcv = ChunkedReceiver(buf)
+
+                # RFC9112 states that we need to close the connection if the
+                # Transfer-Encoding is set, AND a Content-Length is provided.
+                cl = headers.pop("CONTENT_LENGTH", None)
+                if cl is not None:
+                    self.connection_close = True
+
             elif encodings:  # pragma: nocover
                 raise TransferEncodingNotImplemented(
                     "Transfer-Encoding requested is not supported."
