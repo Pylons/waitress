@@ -4,12 +4,15 @@ Unreleased
 Bugfix
 ~~~~~~
 
+- Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
+  the correct header name as specified in RFC 7230.
+
 - Waitress will now drop a request if the Transer-Encoding is set twice in the
   request, previously it would decode the chunks and pass it along to the WSGI
   application with an appropriate content length. See
   https://github.com/Pylons/waitress/issues/465 and
   https://github.com/Pylons/waitress/pull/474
-  
+
 - When encountering a request that has both Content-Length set and
   Transfer-Encoding of chunked we now close the connection after it is
   completed to comply with the requirements of RFC9112. See

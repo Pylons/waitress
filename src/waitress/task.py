@@ -32,7 +32,7 @@ hop_by_hop = frozenset(
         "proxy-authenticate",
         "proxy-authorization",
         "te",
-        "trailers",
+        "trailer",
         "transfer-encoding",
         "upgrade",
     )
