@@ -80,7 +80,7 @@ jobs:
     name: "Python: ${{ matrix.py }}-${{ matrix.architecture }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -100,7 +100,7 @@ jobs:
     runs-on: ubuntu-22.04
     name: Validate coverage
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-22.04
     name: Build the documentation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-22.04
     name: Lint the package
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
         uses: actions/setup-python@v5
         with:
