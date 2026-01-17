@@ -31,8 +31,7 @@ jobs:
         os:
           - "ubuntu-22.04"
           - "windows-latest"
-          - "macos-14" # arm64
-          - "macos-13" # x64
+          - "macos-14"
         architecture:
           - x64
           - x86
@@ -54,10 +53,6 @@ jobs:
           #
           # From 3.11 onward, there is support for running x64 and
           # arm64 on Apple Silicon based systems (macos-14)
-          - os: "macos-13"
-            architecture: x86
-          - os: "macos-13"
-            architecture: arm64
           - os: "macos-14"
             architecture: x86
           - os: "macos-14"
@@ -72,8 +67,6 @@ jobs:
           # Don't run all PyPy versions except latest on
           # Windows/macOS. They are expensive to run.
           - os: "windows-latest"
-            py: "pypy-3.9"
-          - os: "macos-13"
             py: "pypy-3.9"
           - os: "macos-14"
             py: "pypy-3.9"
