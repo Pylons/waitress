@@ -12,6 +12,7 @@
 #
 ##############################################################################
 """Adjustments are tunable parameters."""
+
 import getopt
 import pkgutil
 import socket
@@ -356,13 +357,13 @@ class Adjustments:
         hp_pairs = []
         for i in self.listen:
             if ":" in i:
-                (host, port) = i.rsplit(":", 1)
+                host, port = i.rsplit(":", 1)
 
                 # IPv6 we need to make sure that we didn't split on the address
                 if "]" in port:  # pragma: nocover
-                    (host, port) = (i, str(self.port))
+                    host, port = (i, str(self.port))
             else:
-                (host, port) = (i, str(self.port))
+                host, port = (i, str(self.port))
 
             if WIN:  # pragma: no cover
                 try:
@@ -389,7 +390,7 @@ class Adjustments:
                     socket.IPPROTO_TCP,
                     socket.AI_PASSIVE,
                 ):
-                    (family, socktype, proto, _, sockaddr) = s
+                    family, socktype, proto, _, sockaddr = s
 
                     # It seems that getaddrinfo() may sometimes happily return
                     # the same result multiple times, this of course makes

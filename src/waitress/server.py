@@ -360,7 +360,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
 
 class TcpWSGIServer(BaseWSGIServer):
     def bind_server_socket(self):
-        (_, _, _, sockaddr) = self.sockinfo
+        _, _, _, sockaddr = self.sockinfo
         self.bind(sockaddr)
 
     def getsockname(self):
