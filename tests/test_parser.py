@@ -12,6 +12,7 @@
 #
 ##############################################################################
 """HTTP Request Parser tests"""
+
 import unittest
 
 from waitress.adjustments import Adjustments
