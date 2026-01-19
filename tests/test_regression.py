@@ -12,6 +12,7 @@
 #
 ##############################################################################
 """Tests for waitress.channel maintenance logic"""
+
 import doctest
 
 

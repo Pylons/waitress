@@ -376,7 +376,7 @@ class HTTPChannel(wasyncore.dispatcher):
                 self.total_outbufs_len += num_bytes
 
                 if self.total_outbufs_len >= self.adj.send_bytes:
-                    (flushed, exception) = self._flush_exception(
+                    flushed, exception = self._flush_exception(
                         self._flush_some, do_close=False
                     )
 
@@ -396,7 +396,7 @@ class HTTPChannel(wasyncore.dispatcher):
 
         if self.total_outbufs_len > self.adj.outbuf_high_watermark:
             with self.outbuf_lock:
-                (_, exception) = self._flush_exception(self._flush_some, do_close=False)
+                _, exception = self._flush_exception(self._flush_some, do_close=False)
 
                 if exception:
                     # An exception happened while flushing, wake up the main

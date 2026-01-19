@@ -31,8 +31,7 @@ jobs:
         os:
           - "ubuntu-22.04"
           - "windows-latest"
-          - "macos-14" # arm64
-          - "macos-13" # x64
+          - "macos-14"
         architecture:
           - x64
           - x86
@@ -54,10 +53,6 @@ jobs:
           #
           # From 3.11 onward, there is support for running x64 and
           # arm64 on Apple Silicon based systems (macos-14)
-          - os: "macos-13"
-            architecture: x86
-          - os: "macos-13"
-            architecture: arm64
           - os: "macos-14"
             architecture: x86
           - os: "macos-14"
@@ -73,16 +68,14 @@ jobs:
           # Windows/macOS. They are expensive to run.
           - os: "windows-latest"
             py: "pypy-3.9"
-          - os: "macos-13"
-            py: "pypy-3.9"
           - os: "macos-14"
             py: "pypy-3.9"
     name: "Python: ${{ matrix.py }}-${{ matrix.architecture }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.py }}
           architecture: ${{ matrix.architecture }}
@@ -100,9 +93,9 @@ jobs:
     runs-on: ubuntu-22.04
     name: Validate coverage
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           architecture: x64
@@ -113,9 +106,9 @@ jobs:
     runs-on: ubuntu-22.04
     name: Build the documentation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           architecture: x64
@@ -126,9 +119,9 @@ jobs:
     runs-on: ubuntu-22.04
     name: Lint the package
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           architecture: x64

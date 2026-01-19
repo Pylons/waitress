@@ -16,6 +16,7 @@
 This server uses asyncore to accept connections and do initial
 processing but threads to do work.
 """
+
 from io import BytesIO
 import re
 from urllib import parse
