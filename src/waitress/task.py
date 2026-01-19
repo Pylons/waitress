@@ -567,6 +567,10 @@ class WSGITask(Task):
         # channel_request_lookahead larger than 0.
         environ["waitress.client_disconnected"] = self.channel.check_client_disconnected
 
+        # Insert the raw socket object into the environment that allows the
+        # application to upgrade to WebSocket communication.
+        environ["waitress.socket"] = self.channel.socket
+
         # cache the environ for this request
         self.environ = environ
         return environ
