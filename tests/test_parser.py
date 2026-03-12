@@ -64,10 +64,11 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIsInstance(self.parser.error, BadRequest)
 
     def test_received_duplicate_host_header(self):
+        # RFC 9112: MUST reject HTTP/1.1 requests with more than one Host header
         data = (
             b"GET / HTTP/1.1\r\n"
             b"HOST: test1.com\r\n"
-            b"HOST: test2.com\r\n"
+            b"Host: test2.com\r\n"
             b"\r\n"
         )
         result = self.parser.received(data)
