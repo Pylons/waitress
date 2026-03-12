@@ -33,6 +33,9 @@ from waitress.utilities import (
     find_double_newline,
 )
 
+# A list of HEADERS that must not be duplicated per RFC 9112
+HEADERS_NO_DUPLICATES = frozenset({"HOST", "CONTENT_LENGTH"})
+
 
 def unquote_bytes_to_wsgi(bytestring):
     return unquote_to_bytes(bytestring).decode("latin-1")
@@ -220,9 +223,6 @@ class HTTPRequestParser:
 
         headers = self.headers
 
-        # A list of HEADERS that must not be duplicated per RFC 9112
-        HEADERS_NO_DUPLICATES = frozenset({"HOST", "CONTENT_LENGTH"})
-        
         for line in lines:
             header = HEADER_FIELD_RE.match(line)
 
@@ -243,7 +243,7 @@ class HTTPRequestParser:
 
             # Reject duplicate 'Host' headers as per RFC 9112 section 3.2
             if key1 in HEADERS_NO_DUPLICATES and key1 in headers:
-                raise ParsingError(f"Duplicate header: {key.decode('latin-1').title()} ")
+                raise ParsingError(f"Duplicate header: {key.decode('latin-1')} ")
 
             # If a header already exists, we append subsequent values
             # separated by a comma. Applications already need to handle

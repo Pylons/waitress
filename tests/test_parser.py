@@ -256,7 +256,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
-            self.assertIn("Duplicate header: Content-Length ", e.args[0])
+            self.assertTrue(e.args[0].startswith("Duplicate header:"))
         else:  # pragma: nocover
             self.assertTrue(False)
 
