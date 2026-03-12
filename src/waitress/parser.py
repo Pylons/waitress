@@ -241,6 +241,8 @@ class HTTPRequestParser:
             # separated by a comma. Applications already need to handle
             # the comma separated values, as HTTP front ends might do
             # the concatenation for you (behavior specified in RFC2616).
+            if key1 == "HOST" and key1 in headers:
+                raise ParsingError("Duplicate Host Header")
             try:
                 headers[key1] += (b", " + value).decode("latin-1")
             except KeyError:

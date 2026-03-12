@@ -63,6 +63,19 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, BadRequest)
 
+    def test_received_duplicate_host_header(self):
+        data = (
+            b"GET / HTTP/1.1\r\n"
+            b"HOST: test1.com\r\n"
+            b"HOST: test2.com\r\n"
+            b"\r\n"
+        )
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+
+
     def test_received_bad_transfer_encoding(self):
         data = (
             b"GET /foobar HTTP/1.1\r\n"
