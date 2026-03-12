@@ -65,12 +65,7 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_received_duplicate_host_header(self):
         # RFC 9112: MUST reject HTTP/1.1 requests with more than one Host header
-        data = (
-            b"GET / HTTP/1.1\r\n"
-            b"HOST: test1.com\r\n"
-            b"Host: test2.com\r\n"
-            b"\r\n"
-        )
+        data = b"GET / HTTP/1.1\r\nHOST: test1.com\r\nHost: test2.com\r\n\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, len(data))
         self.assertTrue(self.parser.completed)
@@ -79,13 +74,7 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_received_duplicate_content_length_header(self):
         # RFC 7230: MUST reject requests with duplicate Content-Length headers
-        data = (
-            b"GET / HTTP/1.1\r\n"
-            b"Host: example.com\r\n"
-            b"Content-Length: 10\r\n"
-            b"Content-Length: 20\r\n"
-            b"\r\n"
-        )
+        data = b"GET / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 10\r\nContent-Length: 20\r\n\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, len(data))
         self.assertTrue(self.parser.completed)
