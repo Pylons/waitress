@@ -75,6 +75,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(result, len(data))
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertTrue(self.parser.error.body.startswith("Duplicate header:"))
 
     def test_received_duplicate_content_length_header(self):
         # RFC 7230: MUST reject requests with duplicate Content-Length headers
@@ -89,6 +90,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(result, len(data))
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertTrue(self.parser.error.body.startswith("Duplicate header:"))
 
     def test_received_bad_transfer_encoding(self):
         data = (
