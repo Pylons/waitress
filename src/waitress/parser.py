@@ -243,7 +243,7 @@ class HTTPRequestParser:
 
             # Reject duplicate 'Host' headers as per RFC 9112 section 3.2
             if key1 in HEADERS_NO_DUPLICATES and key1 in headers:
-                raise ParsingError(f"Duplicate {key.decode('latin-1').title()} header")
+                raise ParsingError(f"Duplicate header: {key.decode('latin-1').title()} ")
 
             # If a header already exists, we append subsequent values
             # separated by a comma. Applications already need to handle
