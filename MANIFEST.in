@@ -12,7 +12,7 @@ include contributing.md
 include CONTRIBUTORS.txt
 include COPYRIGHT.txt
 
-include pyproject.toml setup.cfg
+include pyproject.toml
 include .coveragerc .flake8
 include tox.ini .readthedocs.yaml
 

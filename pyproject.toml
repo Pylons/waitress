@@ -1,6 +1,57 @@
 [build-system]
-requires = ["setuptools >= 41"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "waitress"
+version = "3.0.2"
+authors = [{ name = "Zope Foundation and Contributors", email = "zope-dev@zope.org" }]
+maintainers = [{ name = "Pylons Project", email = "pylons-discuss@googlegroups.com" }]
+description = "Waitress WSGI server"
+requires-python = ">=3.9"
+keywords = ["waitress", "wsgi", "server", "http"]
+license = "ZPL-2.1"
+classifiers = [
+    "Development Status :: 6 - Mature",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: WSGI",
+]
+dynamic = ["readme"]
+
+[project.urls]
+Repository = "https://github.com/Pylons/waitress"
+Documentation = "https://docs.pylonsproject.org/projects/waitress/en/latest/index.html"
+Changelog = "https://docs.pylonsproject.org/projects/waitress/en/latest/index.html#change-history"
+Issues = "https://github.com/Pylons/waitress/issues"
+
+[project.scripts]
+waitress-serve = "waitress.runner:run"
+
+[project.entry-points."paste.server_runner"]
+main = "waitress:serve_paste"
+
+[project.optional-dependencies]
+testing = ["pytest", "pytest-cov", "coverage>=7.6.0"]
+docs = ["Sphinx>=1.8.1", "docutils", "pylons-sphinx-themes>=1.0.9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.setuptools.dynamic]
+readme = { file = ["README.rst", "CHANGES.txt"] }
 
 [tool.black]
 target-version = ['py39', 'py310', 'py311', 'py312', 'py313']
@@ -11,7 +62,15 @@ exclude = '''
 )/
 '''
 
- # This next section only exists for people that have their editors
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+# For the benefit of test_wasyncore.py
+python_classes = ["Test*"]
+addopts = "--cov -W always"
+
+# This next section only exists for people that have their editors
 # automatically call isort, black already sorts entries on its own when run.
 [tool.isort]
 profile = "black"
