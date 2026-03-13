@@ -25,8 +25,10 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.14"
           - "pypy-3.9"
           - "pypy-3.10"
+          - "pypy-3.11"
           # Pre-release
         os:
           - "ubuntu-22.04"
@@ -41,6 +43,8 @@ jobs:
             toxenv: "pypy39"
           - py: "pypy-3.10"
             toxenv: "pypy310"
+          - py: "pypy-3.11"
+            toxenv: "pypy311"
         exclude:
           # Ubuntu does not have x86/arm64 Python
           - os: "ubuntu-22.04"
@@ -66,10 +70,16 @@ jobs:
             architecture: arm64
           # Don't run all PyPy versions except latest on
           # Windows/macOS. They are expensive to run.
+          # Note: a version of PyPy compatible with 3.11
+          # doesn't appear to be available yet for Windows.
           - os: "windows-latest"
             py: "pypy-3.9"
           - os: "macos-14"
             py: "pypy-3.9"
+          - os: "windows-latest"
+            py: "pypy-3.11"
+          - os: "macos-14"
+            py: "pypy-3.11"
     name: "Python: ${{ matrix.py }}-${{ matrix.architecture }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     steps:
@@ -97,10 +107,10 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           architecture: x64
       - run: pip install tox
-      - run: tox -e py313,coverage
+      - run: tox -e py314,coverage
 
   docs:
     runs-on: ubuntu-22.04
@@ -110,7 +120,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           architecture: x64
       - run: pip install tox
       - run: tox -e docs
@@ -123,7 +133,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           architecture: x64
       - run: pip install tox
       - run: tox -e lint
