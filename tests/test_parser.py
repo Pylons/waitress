@@ -63,6 +63,24 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, BadRequest)
 
+    def test_received_duplicate_host_header(self):
+        # RFC 9112: MUST reject HTTP/1.1 requests with more than one Host header
+        data = b"GET / HTTP/1.1\r\nHOST: test1.com\r\nHost: test2.com\r\n\r\n"
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertTrue(self.parser.error.body.startswith("Duplicate header:"))
+
+    def test_received_duplicate_content_length_header(self):
+        # RFC 7230: MUST reject requests with duplicate Content-Length headers
+        data = b"GET / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 10\r\nContent-Length: 20\r\n\r\n"
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertTrue(self.parser.error.body.startswith("Duplicate header:"))
+
     def test_received_bad_transfer_encoding(self):
         data = (
             b"GET /foobar HTTP/1.1\r\n"
@@ -227,7 +245,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
-            self.assertIn("Content-Length is invalid", e.args[0])
+            self.assertTrue(e.args[0].startswith("Duplicate header:"))
         else:  # pragma: nocover
             self.assertTrue(False)
 
