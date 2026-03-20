@@ -1,5 +1,6 @@
 import errno
 import socket
+import sys
 import unittest
 
 dummy_app = object()
@@ -310,6 +311,42 @@ class TestWSGIServer(unittest.TestCase):
         self.assertTrue(sockets[0].accepted)
         self.assertListEqual(innersock.opts, [("level", "optname", "value")])
         self.assertListEqual(L, [(inst, innersock, None, inst.adj)])
+
+    @unittest.skipIf(
+        sys.platform.startswith("win"), "This test is not supported on Windows"
+    )
+    def test_port_bind_failure_logging(self):
+        # ensure the address is logged on a failed port bind
+
+        # create a first app correctly
+        inst_a = self._makeOne(port=8080)
+
+        # Ensure a second app correctly binds to a different host+port
+        inst_b = self._makeOne(port=8081)
+
+        # a third app should fail the bind to the fist app's host+port
+        with self.assertLogs("waitress", level="ERROR") as cm_log:
+            with self.assertRaises(OSError) as cm:
+                inst_c = self._makeOne(port=8080)
+            self.assertTrue(
+                ("[Errno 48] Address already in use" == str(cm.exception))
+                or ("[Errno 98] Address already in use" == str(cm.exception))
+            )
+
+        self.assertIn(
+            "CRITICAL:waitress:Failed bind to: ('127.0.0.1', 8080)",
+            cm_log.output,
+        )
+        self.assertTrue(
+            (
+                "CRITICAL:waitress:Exception raised: [Errno 48] Address already in use"
+                in cm_log.output
+            )
+            or (
+                "CRITICAL:waitress:Exception raised: [Errno 98] Address already in use"
+                in cm_log.output
+            )
+        )
 
 
 if hasattr(socket, "AF_UNIX"):

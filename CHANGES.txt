@@ -19,6 +19,11 @@ Bugfix
   https://github.com/Pylons/waitress/pull/475 and
   https://github.com/Pylons/waitress/issues/464
 
+- Enabled logging of failed port bind in `waysyncore.py:dispatcher.bind` to aid
+  in debugging application bind failures.  See
+  https://github.com/Pylons/waitress/issues/471
+
+
 3.0.2 (2024-11-16)
 ------------------
 
