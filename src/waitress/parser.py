@@ -34,7 +34,7 @@ from waitress.utilities import (
 )
 
 # A list of HEADERS that must not be duplicated per RFC 9112
-HEADERS_NO_DUPLICATES = frozenset({"HOST", "CONTENT_LENGTH"})
+SINGLETON_FIELDS = frozenset({"HOST", "CONTENT_LENGTH", "CONTENT_TYPE"})
 
 
 def unquote_bytes_to_wsgi(bytestring):
@@ -242,7 +242,7 @@ class HTTPRequestParser:
             key1 = key.upper().replace(b"-", b"_").decode("latin-1")
 
             # Reject duplicate 'Host' headers as per RFC 9112 section 3.2
-            if key1 in HEADERS_NO_DUPLICATES and key1 in headers:
+            if key1 in SINGLETON_FIELDS and key1 in headers:
                 raise ParsingError(f"Duplicate header: {key.decode('latin-1')}")
 
             # If a header already exists, we append subsequent values
