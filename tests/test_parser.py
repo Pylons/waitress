@@ -81,6 +81,14 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIsInstance(self.parser.error, BadRequest)
         self.assertTrue(self.parser.error.body.startswith("Duplicate header:"))
 
+    def test_received_duplicate_content_type_header(self):
+        data = b"GET / HTTP/1.1\r\nHost: example.com\r\nContent-Type: text/plain\r\nContent-Type: text/html\r\n\r\n"
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertTrue(self.parser.error.body.startswith("Duplicate header:"))
+
     def test_received_bad_transfer_encoding(self):
         data = (
             b"GET /foobar HTTP/1.1\r\n"
