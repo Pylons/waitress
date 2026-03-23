@@ -370,13 +370,11 @@ class dispatcher:
         return self.socket.listen(num)
 
     def bind(self, addr):
-        # self.logger.log(logging.DEBUG, "Attempting to bind to: %s" % addr)
         self.addr = addr
         try:
             return self.socket.bind(addr)
         except Exception as exc:
-            self.logger.log(logging.CRITICAL, "Failed bind to: %s" % str(addr))
-            self.logger.log(logging.CRITICAL, "Exception raised: %s" % str(exc))
+            self.logger.critical("Failed bind to: `%s` : `%s`" % (str(addr), str(exc)))
             raise
 
     def accept(self):

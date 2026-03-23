@@ -1,12 +1,28 @@
 import errno
 import socket
 import sys
+from typing import TYPE_CHECKING, List, Union
 import unittest
+
+if TYPE_CHECKING:
+    from waitress.server import BaseWSGIServer, MultiSocketServer
 
 dummy_app = object()
 
 
 class TestWSGIServer(unittest.TestCase):
+
+    # most tests only start a single server (for cleanup)
+    inst: Union["BaseWSGIServer", "MultiSocketServer", None]
+
+    # maintain a list of instantiated servers (for cleanup)
+    insts: List[Union["BaseWSGIServer", "MultiSocketServer"]]
+
+    def __init__(self, *args, **kwargs):
+        # override base `__init__` to track `self.insts` for `self.tearDown`
+        super(TestWSGIServer, self).__init__(*args, **kwargs)
+        self.insts = []
+
     def _makeOne(
         self,
         application=dummy_app,
@@ -30,6 +46,7 @@ class TestWSGIServer(unittest.TestCase):
             _start=_start,
             _sock=_sock,
         )
+        self.insts.append(self.inst)
         return self.inst
 
     def _makeOneWithMap(
@@ -92,8 +109,14 @@ class TestWSGIServer(unittest.TestCase):
         return self.inst
 
     def tearDown(self):
+        # most tests only start a single server
         if self.inst is not None:
             self.inst.close()
+
+        # use the list of instantiated servers
+        if self.insts:
+            for inst in self.insts:
+                inst.close()
 
     def test_ctor_app_is_None(self):
         self.inst = None
@@ -313,10 +336,15 @@ class TestWSGIServer(unittest.TestCase):
         self.assertListEqual(L, [(inst, innersock, None, inst.adj)])
 
     @unittest.skipIf(
-        sys.platform.startswith("win"), "This test is not supported on Windows"
+        sys.platform.startswith("win"),
+        "Windows doesn't raise an exception when reusing a port",
     )
     def test_port_bind_failure_logging(self):
-        # ensure the address is logged on a failed port bind
+        """
+        Ensure the address is logged on a failed port bind.
+
+        This test was developed for #471 - logging a failed bind.
+        """
 
         # create a first app correctly
         inst_a = self._makeOne(port=8080)
@@ -328,24 +356,14 @@ class TestWSGIServer(unittest.TestCase):
         with self.assertLogs("waitress", level="ERROR") as cm_log:
             with self.assertRaises(OSError) as cm:
                 inst_c = self._makeOne(port=8080)
-            self.assertTrue(
-                ("[Errno 48] Address already in use" == str(cm.exception))
-                or ("[Errno 98] Address already in use" == str(cm.exception))
-            )
+            self.assertEqual(cm.exception.errno, errno.EADDRINUSE)
 
+        # check log for inst_c failure
         self.assertIn(
-            "CRITICAL:waitress:Failed bind to: ('127.0.0.1', 8080)",
+            "CRITICAL:waitress:"
+            "Failed bind to: `('127.0.0.1', 8080)` : "
+            "`[Errno %s] Address already in use`" % errno.EADDRINUSE,
             cm_log.output,
-        )
-        self.assertTrue(
-            (
-                "CRITICAL:waitress:Exception raised: [Errno 48] Address already in use"
-                in cm_log.output
-            )
-            or (
-                "CRITICAL:waitress:Exception raised: [Errno 98] Address already in use"
-                in cm_log.output
-            )
         )
 
 
