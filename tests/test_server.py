@@ -341,6 +341,8 @@ class TestWSGIServer(unittest.TestCase):
         Ensure the address is logged on a failed port bind.
 
         This test was developed for #471 - logging a failed bind.
+
+        This test will leave a socket open until #480 is fixed.
         """
 
         # create a first app correctly
@@ -352,6 +354,7 @@ class TestWSGIServer(unittest.TestCase):
         # a third app should fail the bind to the fist app's host+port
         with self.assertLogs("waitress", level="ERROR") as cm_log:
             with self.assertRaises(OSError) as cm:
+                # this line will trigger #480 and leave a socket open
                 inst_c = self._makeOne(port=8080)
             self.assertEqual(cm.exception.errno, errno.EADDRINUSE)
 
