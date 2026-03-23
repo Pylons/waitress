@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 dummy_app = object()
 
+
 class TestWSGIServer(unittest.TestCase):
 
     # maintain a list of instantiated servers (for cleanup)
