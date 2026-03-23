@@ -6,15 +6,11 @@ from typing import TYPE_CHECKING, List, Union
 import unittest
 
 if TYPE_CHECKING:
-    from waitress.server import BaseWSGIServer, MultiSocketServer
+    from waitress.server import BaseWSGIServer, MultiSocketServer, UnixWSGIServer
 
 dummy_app = object()
 
-
 class TestWSGIServer(unittest.TestCase):
-
-    # most tests only start a single server (for cleanup)
-    inst: Union["BaseWSGIServer", "MultiSocketServer", None]
 
     # maintain a list of instantiated servers (for cleanup)
     insts: List[Union["BaseWSGIServer", "MultiSocketServer"]]
@@ -38,7 +34,7 @@ class TestWSGIServer(unittest.TestCase):
     ):
         from waitress.server import create_server
 
-        self.inst = create_server(
+        inst = create_server(
             application,
             host=host,
             port=port,
@@ -47,8 +43,8 @@ class TestWSGIServer(unittest.TestCase):
             _start=_start,
             _sock=_sock,
         )
-        self.insts.append(self.inst)
-        return self.inst
+        self.insts.append(inst)
+        return inst
 
     def _makeOneWithMap(
         self, adj=None, _start=True, host="127.0.0.1", port=0, app=dummy_app
@@ -74,7 +70,7 @@ class TestWSGIServer(unittest.TestCase):
         map = {}
         from waitress.server import create_server
 
-        self.inst = create_server(
+        inst = create_server(
             app,
             listen=listen,
             map=map,
@@ -82,7 +78,8 @@ class TestWSGIServer(unittest.TestCase):
             _start=_start,
             _sock=sock,
         )
-        return self.inst
+        self.insts.append(inst)
+        return inst
 
     def _makeWithSockets(
         self,
@@ -99,7 +96,7 @@ class TestWSGIServer(unittest.TestCase):
         _sockets = []
         if sockets is not None:
             _sockets = sockets
-        self.inst = create_server(
+        inst = create_server(
             application,
             map=map,
             _dispatcher=_dispatcher,
@@ -107,20 +104,15 @@ class TestWSGIServer(unittest.TestCase):
             _sock=_sock,
             sockets=_sockets,
         )
-        return self.inst
+        self.insts.append(inst)
+        return inst
 
     def tearDown(self):
-        # most tests only start a single server
-        if self.inst is not None:
-            self.inst.close()
-
-        # use the list of instantiated servers
-        if self.insts:
-            for inst in self.insts:
-                inst.close()
+        # iterate the list of instantiated servers and `close()` them
+        for inst in self.insts:
+            inst.close()
 
     def test_ctor_app_is_None(self):
-        self.inst = None
         self.assertRaises(ValueError, self._makeOneWithMap, app=None)
 
     def test_ctor_start_true(self):
@@ -288,10 +280,13 @@ class TestWSGIServer(unittest.TestCase):
         from waitress.server import TcpWSGIServer, WSGIServer
 
         self.assertIs(WSGIServer, TcpWSGIServer)
-        self.inst = WSGIServer(None, _start=False, port=1234)
+        inst = WSGIServer(None, _start=False, port=1234)
         # Ensure the adjustment was actually applied.
-        self.assertNotEqual(Adjustments.port, 1234)
-        self.assertEqual(self.inst.adj.port, 1234)
+        try:
+            self.assertNotEqual(Adjustments.port, 1234)
+            self.assertEqual(inst.adj.port, 1234)
+        finally:
+            inst.close()
 
     def test_create_with_one_tcp_socket(self):
         from waitress.server import TcpWSGIServer
@@ -372,6 +367,9 @@ if hasattr(socket, "AF_UNIX"):
 
     class TestUnixWSGIServer(unittest.TestCase):
         unix_socket = "/tmp/waitress.test.sock"
+
+        # maintain a list of instantiated servers (for cleanup)
+        inst: List[Union["BaseWSGIServer", "MultiSocketServer", "UnixWSGIServer"]]
 
         def _makeOne(self, _start=True, _sock=None):
             from waitress.server import create_server
