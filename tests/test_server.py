@@ -1,4 +1,5 @@
 import errno
+import os
 import socket
 import sys
 from typing import TYPE_CHECKING, List, Union
@@ -362,7 +363,7 @@ class TestWSGIServer(unittest.TestCase):
         self.assertIn(
             "CRITICAL:waitress:"
             "Failed bind to: `('127.0.0.1', 8080)` : "
-            "`[Errno %s] Address already in use`" % errno.EADDRINUSE,
+            f"`[Errno {errno.EADDRINUSE}] {os.strerror(errno.EADDRINUSE)}`",
             cm_log.output,
         )
 
