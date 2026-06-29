@@ -384,6 +384,27 @@ class TestAdjustments(unittest.TestCase):
         inst = self._makeOne(ident="specific_header")
         self.assertEqual(inst.ident, "specific_header")
 
+    def test_url_prefix_unicode_normalization(self):
+        from waitress.parser import unquote_bytes_to_wsgi
+
+        # Non-ASCII url_prefix should be normalized to PEP 3333 format
+        # (UTF-8-encoded bytes decoded as ISO-8859-1) so it compares
+        # equal to the parser-produced path for the same logical path.
+        inst = self._makeOne(url_prefix="/\xfc/")  # ü as latin-1 byte
+        # \xfc (ü in latin-1) encoded as UTF-8 is \xc3\xbc.
+        # Decoded as latin-1 that gives two code points: \xc3 \xbc.
+        # Note: slash_fixed_str strips any trailing slash.
+        self.assertEqual(inst.url_prefix, "/Ã¼")
+
+        # ASCII-only url_prefix must still be unchanged.
+        inst2 = self._makeOne(url_prefix="/api")
+        self.assertEqual(inst2.url_prefix, "/api")
+
+        # Now check it matches a parser-produced path for /ü
+        raw_uri = b"/%C3%BC"
+        path = unquote_bytes_to_wsgi(raw_uri)
+        self.assertEqual(inst.url_prefix, path)
+
 
 class TestCLI(unittest.TestCase):
     def parse(self, argv):
