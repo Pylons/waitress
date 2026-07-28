@@ -355,6 +355,15 @@ class BaseWSGIServer(wasyncore.dispatcher):
 
     def close(self):
         self.trigger.close()
+        # Ensure the task dispatcher's worker threads are stopped too,
+        # matching MultiSocketServer.close()'s existing behavior. This
+        # matters most for the common single-listen-address case,
+        # where create_server() returns a bare BaseWSGIServer (not
+        # wrapped in MultiSocketServer), so calling .close() on it is
+        # the only place a caller has to shut things down -- without
+        # this, the dispatcher's worker threads were left running
+        # after close(). See GH #480.
+        self.task_dispatcher.shutdown()
         return wasyncore.dispatcher.close(self)
 
 

@@ -124,6 +124,25 @@ class TestWSGIServer(unittest.TestCase):
         inst.run()
         self.assertTrue(inst.task_dispatcher.was_shutdown)
 
+    def test_close_shuts_down_task_dispatcher(self):
+        """
+        Regression test for
+        https://github.com/Pylons/waitress/issues/480
+
+        close() must shut down the task dispatcher's worker threads
+        directly, not only as a side effect of run()'s
+        SystemExit/KeyboardInterrupt handling. This matters most for
+        the common single-listen-address case, where create_server()
+        returns a bare BaseWSGIServer (not wrapped in
+        MultiSocketServer), so calling .close() directly -- without
+        ever calling .run() -- is the only place a caller has to shut
+        things down.
+        """
+        inst = self._makeOneWithMap(_start=False)
+        inst.task_dispatcher = DummyTaskDispatcher()
+        inst.close()
+        self.assertTrue(inst.task_dispatcher.was_shutdown)
+
     def test_run_base_server(self):
         inst = self._makeOneWithMulti(_start=False)
         inst.asyncore = DummyAsyncore()

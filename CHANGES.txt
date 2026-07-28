@@ -4,6 +4,14 @@ Unreleased
 Bugfix
 ~~~~~~
 
+- ``BaseWSGIServer.close()`` now shuts down the task dispatcher's worker
+  threads, matching ``MultiSocketServer.close()``'s existing behavior. This
+  matters most for the common single-listen-address case, where
+  ``create_server()`` returns a bare ``BaseWSGIServer`` (not wrapped in
+  ``MultiSocketServer``), so calling ``.close()`` directly used to leave the
+  dispatcher's worker threads running. See
+  https://github.com/Pylons/waitress/issues/480
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 
