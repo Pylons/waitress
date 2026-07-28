@@ -4,6 +4,13 @@ Unreleased
 Bugfix
 ~~~~~~
 
+- A non-ASCII ``url_prefix`` configuration value is now converted to the same
+  "UTF-8 bytes decoded as latin-1" representation WSGI's PATH_INFO/SCRIPT_NAME
+  use for the actual request path, so it can now correctly match incoming
+  requests. Previously, a non-ASCII url_prefix could never match any request
+  path at all. See
+  https://github.com/Pylons/waitress/issues/492
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 

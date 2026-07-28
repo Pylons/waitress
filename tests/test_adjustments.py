@@ -174,6 +174,29 @@ class TestAdjustments(unittest.TestCase):
         # localhost...
         self.assertTupleEqual(("127.0.0.1", 8080), bind_pairs[0])
 
+    def test_url_prefix_non_ascii_matches_wsgi_encoded_path(self):
+        """
+        Regression test for
+        https://github.com/Pylons/waitress/issues/492
+
+        A non-ASCII url_prefix must be converted to the same
+        "utf8-as-latin1" representation WSGI's PATH_INFO/SCRIPT_NAME
+        use for the actual request path (see HTTPTask.execute() in
+        task.py), or a non-ASCII url_prefix can never match an
+        incoming request's path.
+        """
+        inst = self._makeOne(url_prefix="/日本語")
+
+        # What the request path would actually look like once the raw
+        # UTF-8 bytes sent by a client are decoded as latin-1, per
+        # PEP 3333's WSGI string convention.
+        expected = "/日本語".encode("utf-8").decode("latin-1")
+        self.assertEqual(inst.url_prefix, expected)
+
+    def test_url_prefix_ascii_is_unaffected(self):
+        inst = self._makeOne(url_prefix="///api/v1///")
+        self.assertEqual(inst.url_prefix, "/api/v1")
+
     def test_goodvar_listen(self):
         inst = self._makeOne(listen="127.0.0.1")
 

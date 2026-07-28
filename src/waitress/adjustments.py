@@ -75,6 +75,17 @@ def slash_fixed_str(s):
         # always have a leading slash, replace any number of leading slashes
         # with a single slash, and strip any trailing slashes
         s = "/" + s.lstrip("/").rstrip("/")
+        # Per PEP 3333, WSGI's PATH_INFO/SCRIPT_NAME are represented as
+        # "native strings" holding raw request bytes decoded as latin-1
+        # (i.e. each byte becomes the code point of the same value),
+        # regardless of the request's actual encoding. The configured
+        # url_prefix, in contrast, is an ordinary Unicode string as the
+        # user wrote it. Encoding it the same way here (UTF-8 bytes,
+        # then decoded as latin-1) ensures comparisons against the
+        # request path (see HTTPTask.execute()) use the same
+        # convention on both sides, so a non-ASCII url_prefix can
+        # actually match. See GH #492.
+        s = s.encode("utf-8").decode("latin-1")
     return s
 
 
