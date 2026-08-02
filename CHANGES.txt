@@ -19,6 +19,19 @@ Bugfix
   https://github.com/Pylons/waitress/pull/475 and
   https://github.com/Pylons/waitress/issues/464
 
+- A request that contains more than one Host header field is now rejected with
+  a 400 (Bad Request), rather than being passed to the WSGI application with
+  the values joined by a comma. See
+  https://github.com/Pylons/waitress/issues/462 and
+  https://github.com/Pylons/waitress/pull/484
+
+- A request that contains more than one Content-Type header field is now
+  rejected with a 400 (Bad Request). Content-Type is a singleton field, and
+  recipients differ in which of the values they pick when it is sent more than
+  once. The same applies to Content-Length. See
+  https://github.com/Pylons/waitress/issues/466 and
+  https://github.com/Pylons/waitress/pull/488
+
 3.0.2 (2024-11-16)
 ------------------
 
