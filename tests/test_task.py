@@ -203,55 +203,75 @@ class TestTask(unittest.TestCase):
         self.assertIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_v11_204_no_content_length_or_transfer_encoding(self):
-        # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
-        # for any response with a status code of 1xx or 204.
+        # RFC 9112 section 6.3: MUST NOT send Transfer-Encoding or
+        # Content-Length for any response with a status code of 1xx, 204 or
+        # 304. Such a response has no message body to delimit, so the
+        # connection may be reused.
         inst = self._makeOne()
         inst.request = DummyParser()
         inst.version = "1.1"
         inst.status = "204 No Content"
         result = inst.build_response_header()
         lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], b"HTTP/1.1 204 No Content")
-        self.assertEqual(lines[1], b"Connection: close")
-        self.assertTrue(lines[2].startswith(b"Date:"))
-        self.assertEqual(lines[3], b"Server: waitress")
-        self.assertTrue(inst.close_on_finish)
-        self.assertIn(("Connection", "close"), inst.response_headers)
+        self.assertTrue(lines[1].startswith(b"Date:"))
+        self.assertEqual(lines[2], b"Server: waitress")
+        self.assertFalse(inst.close_on_finish)
+        self.assertNotIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_v11_1xx_no_content_length_or_transfer_encoding(self):
-        # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
-        # for any response with a status code of 1xx or 204.
+        # RFC 9112 section 6.3: MUST NOT send Transfer-Encoding or
+        # Content-Length for any response with a status code of 1xx, 204 or
+        # 304. Such a response has no message body to delimit, so the
+        # connection may be reused.
         inst = self._makeOne()
         inst.request = DummyParser()
         inst.version = "1.1"
         inst.status = "100 Continue"
         result = inst.build_response_header()
         lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], b"HTTP/1.1 100 Continue")
-        self.assertEqual(lines[1], b"Connection: close")
-        self.assertTrue(lines[2].startswith(b"Date:"))
-        self.assertEqual(lines[3], b"Server: waitress")
-        self.assertTrue(inst.close_on_finish)
-        self.assertIn(("Connection", "close"), inst.response_headers)
+        self.assertTrue(lines[1].startswith(b"Date:"))
+        self.assertEqual(lines[2], b"Server: waitress")
+        self.assertFalse(inst.close_on_finish)
+        self.assertNotIn(("Connection", "close"), inst.response_headers)
 
     def test_build_response_header_v11_304_no_content_length_or_transfer_encoding(self):
-        # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
-        # for any response with a status code of 1xx, 204 or 304.
+        # RFC 9112 section 6.3: MUST NOT send Transfer-Encoding or
+        # Content-Length for any response with a status code of 1xx, 204 or
+        # 304. Such a response has no message body to delimit, so the
+        # connection may be reused; a 304 is the answer to a cache
+        # revalidation and closing on every one of them is expensive.
         inst = self._makeOne()
         inst.request = DummyParser()
         inst.version = "1.1"
         inst.status = "304 Not Modified"
         result = inst.build_response_header()
         lines = filter_lines(result)
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0], b"HTTP/1.1 304 Not Modified")
-        self.assertEqual(lines[1], b"Connection: close")
-        self.assertTrue(lines[2].startswith(b"Date:"))
-        self.assertEqual(lines[3], b"Server: waitress")
+        self.assertTrue(lines[1].startswith(b"Date:"))
+        self.assertEqual(lines[2], b"Server: waitress")
+        self.assertFalse(inst.close_on_finish)
+        self.assertNotIn(("Connection", "close"), inst.response_headers)
+
+    def test_build_response_header_v11_no_content_length_chunked_still_closes(self):
+        # A response that should have carried a body but has no length to
+        # declare is delimited by the chunked coding, and Waitress closes the
+        # connection afterwards; that behaviour is unchanged.
+        inst = self._makeOne()
+        inst.request = DummyParser()
+        inst.version = "1.1"
+        inst.status = "200 OK"
+        result = inst.build_response_header()
+        lines = filter_lines(result)
+        self.assertEqual(lines[0], b"HTTP/1.1 200 OK")
+        self.assertIn(b"Connection: close", lines)
+        self.assertIn(b"Transfer-Encoding: chunked", lines)
         self.assertTrue(inst.close_on_finish)
-        self.assertIn(("Connection", "close"), inst.response_headers)
+        self.assertTrue(inst.chunked_response)
 
     def test_build_response_header_via_added(self):
         inst = self._makeOne()

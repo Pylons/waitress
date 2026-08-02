@@ -4,6 +4,15 @@ Unreleased
 Bugfix
 ~~~~~~
 
+- Waitress no longer closes the connection after a response with a status code
+  of 1xx, 204 or 304. RFC 9112 section 6.3 says such a response carries no
+  message body and is terminated by the first empty line after the header
+  fields, so it is framed unambiguously without a ``Content-Length`` or a
+  ``Transfer-Encoding`` and the connection may be reused. Previously every one
+  of them was answered with ``Connection: close``, which meant a cache
+  revalidating against Waitress had to reconnect for each ``304 Not Modified``
+  it received. See https://github.com/Pylons/waitress/issues/197
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 
