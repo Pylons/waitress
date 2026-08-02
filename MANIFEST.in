@@ -11,6 +11,7 @@ include LICENSE.txt
 include contributing.md
 include CONTRIBUTORS.txt
 include COPYRIGHT.txt
+include .mailmap
 
 include pyproject.toml
 include .coveragerc .flake8
