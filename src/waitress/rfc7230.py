@@ -63,7 +63,8 @@ CHUNK_EXT = (
 )
 
 # RFC 3986 Section 3.2.2 "Host", which is what RFC 7230 Section 5.4 uses to
-# define the value of the Host header field:
+# define the value of the Host header field, and what RFC 9112 Section 3.2.3
+# uses for the authority-form of a request-target:
 #
 # host          = IP-literal / IPv4address / reg-name
 # IP-literal    = "[" ( IPv6address / IPvFuture  ) "]"
@@ -93,6 +94,12 @@ URI_HOST = "(?:" + IP_LITERAL + "|" + REG_NAME + ")"
 # Both the uri-host and the port may be empty as far as the grammar goes; the
 # callers apply the stricter rules that their context requires.
 HOST_RE = re.compile(("^" + URI_HOST + "(?::" + DIGIT + "*)?$").encode("latin-1"))
+
+# RFC 9112 Section 3.2.3: authority-form = uri-host ":" port. It is used only
+# for CONNECT, where the port is required to be present and valid.
+AUTHORITY_FORM_RE = re.compile(
+    ("^(?P<host>" + URI_HOST + "):(?P<port>" + DIGIT + "{0,5})$").encode("latin-1")
+)
 
 # Pre-compiled regular expressions for use elsewhere
 ONLY_HEXDIG_RE = re.compile(("^" + HEXDIG + "+$").encode("latin-1"))

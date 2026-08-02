@@ -197,7 +197,6 @@ class TestHTTPRequestParser(unittest.TestCase):
         # must not be mistaken for an absolute-form and rejected.
         for uri, path in (
             (b"example.com:443", "443"),
-            (b"example.com", "example.com"),
             (b"[::1]:443", "[::1]:443"),
         ):
             with self.subTest(uri=uri):
@@ -210,6 +209,29 @@ class TestHTTPRequestParser(unittest.TestCase):
                 self.assertEqual(parser.path, path)
                 # the Host header field is left exactly as the client sent it
                 self.assertEqual(parser.headers["HOST"], "example.com")
+
+    def test_received_connect_invalid_authority_form(self):
+        # RFC 9112 section 3.2.3: MUST reject a CONNECT request that targets an
+        # empty or invalid port number
+        for uri in (
+            b"example.com",  # no port at all
+            b"example.com:",  # empty port
+            b"example.com:0",  # port zero is not a valid port number
+            b"example.com:65536",  # out of range
+            b"example.com:999999",
+            b"example.com:https",  # the port must be numeric
+            b":443",  # no host
+            b"http://example.com:443",
+            b"/",
+            b"*",
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"CONNECT " + uri + b" HTTP/1.1\r\nHost: example.com\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+                self.assertIn("Request-target", parser.error.body)
 
     def test_received_bad_transfer_encoding(self):
         data = (

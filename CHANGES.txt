@@ -21,6 +21,13 @@ Backward Incompatibilities
   subcomponent, is rejected with a 400 (Bad Request). See
   https://github.com/Pylons/waitress/issues/467
 
+- The request-target of a CONNECT request is now validated as the
+  authority-form that RFC 9112 section 3.2.3 requires it to be, and a CONNECT
+  that targets an empty or invalid port number is rejected with a 400 (Bad
+  Request). Waitress still leaves it to the WSGI application to decide what to
+  do with a CONNECT, this only makes sure the request-target it is handed is
+  well formed. See https://github.com/Pylons/waitress/issues/463
+
 Bugfix
 ~~~~~~
 

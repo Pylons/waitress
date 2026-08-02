@@ -24,7 +24,7 @@ from urllib.parse import unquote_to_bytes
 
 from waitress.buffers import OverflowableBuffer
 from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
-from waitress.rfc7230 import HEADER_FIELD_RE, HOST_RE, ONLY_DIGIT_RE
+from waitress.rfc7230 import AUTHORITY_FORM_RE, HEADER_FIELD_RE, HOST_RE, ONLY_DIGIT_RE
 from waitress.utilities import (
     BadRequest,
     RequestEntityTooLarge,
@@ -266,6 +266,24 @@ class HTTPRequestParser:
         command = command.decode("latin-1")
         self.command = command
         self.version = version
+
+        if command == "CONNECT":
+            # RFC 9112 section 3.2.3: the request-target of a CONNECT is an
+            # authority-form, and a server MUST reject a CONNECT that targets
+            # an empty or invalid port number.
+            #
+            # Waitress leaves it to the WSGI application to decide what to do
+            # with a CONNECT, up to and including implementing a proxy with it,
+            # but the application can only do that safely if the target it is
+            # handed is well formed. This validates the shape of the
+            # request-target, it does not reject the method.
+            #
+            # NB: this has to happen before split_uri() is given a chance to
+            # look at the request-target, as urlsplit() parses the
+            # authority-form "example.com:443" as the scheme "example.com"
+            # followed by the path "443".
+            validate_authority_form(uri)
+
         (
             self.proxy_scheme,
             self.proxy_netloc,
@@ -274,12 +292,11 @@ class HTTPRequestParser:
             self.fragment,
         ) = split_uri(uri)
 
-        # NB: the check for CONNECT here is not an attempt to validate the
-        # request, Waitress leaves it to the WSGI application to decide what to
-        # do with a CONNECT. It is that a CONNECT uses the authority-form of
-        # request-target, which urlsplit() reads as a scheme followed by a path
+        # NB: a CONNECT is excluded here because its request-target is an
+        # authority-form, which urlsplit() reads as a scheme followed by a path
         # ("example.com:443" comes back as the scheme "example.com" and the
-        # path "443"), and an authority-form is not an absolute-form.
+        # path "443"). An authority-form is not an absolute-form, and it has
+        # been validated as one above already.
         if self.proxy_scheme and command != "CONNECT":
             # This is an absolute-form request-target. RFC 9112 section 3.2.2
             # says that an origin server MUST ignore the received Host header
@@ -419,6 +436,29 @@ def validate_uri_host(value, what):
 
     if not HOST_RE.match(value.encode("latin-1")):
         raise ParsingError(f"Invalid {what}")
+
+
+def validate_authority_form(uri):
+    """
+    Validate that ``uri`` is an "authority-form" request-target as defined by
+    RFC 9112 section 3.2.3, that is a uri-host followed by a non-empty and
+    in-range port number.
+    """
+
+    m = AUTHORITY_FORM_RE.match(uri)
+
+    if m is None:
+        raise ParsingError("Request-target is not in the authority-form")
+
+    host, port = m.group("host", "port")
+
+    if not host:
+        raise ParsingError("Request-target does not contain a host")
+
+    # The regular expression bounds the port to at most 5 digits, so int() is
+    # safe to use on it here
+    if not port or not 0 < int(port) <= 65535:
+        raise ParsingError("Request-target contains an empty or invalid port")
 
 
 def split_uri(uri):

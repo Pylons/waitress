@@ -262,6 +262,15 @@ class EchoTests:
             line, headers, response_body = read_http(fp)
             self.assertline(line, "400", "Bad Request", "HTTP/1.1")
 
+    def test_connect_method_invalid_port(self):
+        # RFC 9112 section 3.2.3
+        to_send = b"CONNECT victim.com HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+        self.connect()
+        self.sock.send(to_send)
+        with self.sock.makefile("rb", 0) as fp:
+            line, headers, response_body = read_http(fp)
+            self.assertline(line, "400", "Bad Request", "HTTP/1.1")
+
     def test_absolute_form_request_target(self):
         # RFC 9112 section 3.2.2: the authority of the request-target wins over
         # the Host header
