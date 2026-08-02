@@ -11,6 +11,69 @@ Backward Incompatibilities
   internationalised domain name has to be punycoded by the client, as it always
   should have been. See https://github.com/Pylons/waitress/issues/462
 
+- When a request uses the absolute-form of request-target, the authority from
+  the request-target is now used as the value of ``HTTP_HOST`` in the environ,
+  and the Host header field of the request is ignored. RFC 9112 section 3.2.2
+  requires this of an origin server, so that a request such as
+  ``GET http://evil.com/ HTTP/1.1`` with ``Host: victim.com`` can't be
+  interpreted one way by Waitress and another way by anything in front of it.
+  An absolute-form request-target with an empty authority, or with a userinfo
+  subcomponent, is rejected with a 400 (Bad Request). See
+  https://github.com/Pylons/waitress/issues/467
+
+Bugfix
+~~~~~~
+
+- Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
+  the correct header name as specified in RFC 7230.
+
+- Waitress will now drop a request if the Transer-Encoding is set twice in the
+  request, previously it would decode the chunks and pass it along to the WSGI
+  application with an appropriate content length. See
+  https://github.com/Pylons/waitress/issues/465 and
+  https://github.com/Pylons/waitress/pull/474
+
+- When encountering a request that has both Content-Length set and
+  Transfer-Encoding of chunked we now close the connection after it is
+  completed to comply with the requirements of RFC9112. See
+  https://github.com/Pylons/waitress/pull/475 and
+  https://github.com/Pylons/waitress/issues/464
+
+- A request that contains more than one Host header field is now rejected with
+  a 400 (Bad Request), rather than being passed to the WSGI application with
+  the values joined by a comma. See
+  https://github.com/Pylons/waitress/issues/462 and
+  https://github.com/Pylons/waitress/pull/484
+
+- A request that contains more than one Content-Type header field is now
+  rejected with a 400 (Bad Request). Content-Type is a singleton field, and
+  recipients differ in which of the values they pick when it is sent more than
+  once. The same applies to Content-Length. See
+  https://github.com/Pylons/waitress/issues/466 and
+  https://github.com/Pylons/waitress/pull/488
+
+3.0.2 (2024-11-16)
+------------------
+
+Security
+~~~~~~~~
+
+- When using Waitress to process trusted proxy headers, Waitress will now
+  update the headers to drop any untrusted values, thereby making sure that
+  WSGI apps only get trusted and validated values that Waitress itself used to
+  update the environ. See https://github.com/Pylons/waitress/pull/452 and
+  https://github.com/Pylons/waitress/issues/451
+
+
+3.0.1 (2024-10-28)
+------------------
+
+Backward Incompatibilities
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Python 3.8 is no longer supported.
+  See https://github.com/Pylons/waitress/pull/445.
+
 Bugfix
 ~~~~~~
 

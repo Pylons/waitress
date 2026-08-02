@@ -262,6 +262,18 @@ class EchoTests:
             line, headers, response_body = read_http(fp)
             self.assertline(line, "400", "Bad Request", "HTTP/1.1")
 
+    def test_absolute_form_request_target(self):
+        # RFC 9112 section 3.2.2: the authority of the request-target wins over
+        # the Host header
+        to_send = b"GET http://evil.com/page HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+        self.connect()
+        self.sock.send(to_send)
+        with self.sock.makefile("rb", 0) as fp:
+            line, headers, echo = self._read_echo(fp)
+            self.assertline(line, "200", "OK", "HTTP/1.1")
+            self.assertEqual(echo.headers["HOST"], "evil.com")
+            self.assertEqual(echo.path_info, "/page")
+
     def test_send_with_body(self):
         to_send = b"GET / HTTP/1.0\r\nContent-Length: 5\r\n\r\n"
         to_send += b"hello"

@@ -274,6 +274,31 @@ class HTTPRequestParser:
             self.fragment,
         ) = split_uri(uri)
 
+        # NB: the check for CONNECT here is not an attempt to validate the
+        # request, Waitress leaves it to the WSGI application to decide what to
+        # do with a CONNECT. It is that a CONNECT uses the authority-form of
+        # request-target, which urlsplit() reads as a scheme followed by a path
+        # ("example.com:443" comes back as the scheme "example.com" and the
+        # path "443"), and an authority-form is not an absolute-form.
+        if self.proxy_scheme and command != "CONNECT":
+            # This is an absolute-form request-target. RFC 9112 section 3.2.2
+            # says that an origin server MUST ignore the received Host header
+            # field and use the host information from the request-target
+            # instead, so that the two can't disagree about which host the
+            # request was meant for.
+            #
+            # validate_uri_host() rejects a userinfo subcomponent along with
+            # everything else that isn't a valid uri-host, since "@" may not
+            # appear in one. RFC 9110 section 4.2.1 requires that an "http"
+            # URI with an empty host be rejected as invalid, so an authority
+            # is required here rather than merely allowed.
+            if not self.proxy_netloc:
+                raise ParsingError("Empty authority in absolute-form request-target")
+
+            validate_uri_host(self.proxy_netloc, "request-target authority")
+
+            headers["HOST"] = self.proxy_netloc
+
         # RFC 9112 section 3.2 requires a 400 (Bad Request) response to any
         # HTTP/1.1 request that lacks a Host header field, or that has a Host
         # header field with an invalid field value. Duplicate Host headers are
@@ -386,7 +411,8 @@ class HTTPRequestParser:
 def validate_uri_host(value, what):
     """
     Validate that ``value`` is a "uri-host [ ':' port ]" as required by RFC 7230
-    section 5.4 for the Host header field.
+    section 5.4 for the Host header field, and by RFC 3986 section 3.2 for the
+    authority of an absolute-form request-target.
 
     ``what`` names the thing being validated, for use in the error message.
     """

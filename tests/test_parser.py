@@ -148,6 +148,69 @@ class TestHTTPRequestParser(unittest.TestCase):
                 self.assertIsInstance(parser.error, BadRequest)
                 self.assertIn("Invalid Host header", parser.error.body)
 
+    def test_received_absolute_form_overrides_host_header(self):
+        # RFC 9112 section 3.2.2: an origin server MUST ignore the Host header
+        # field of a request with an absolute-form request-target and use the
+        # host information from the request-target instead
+        data = b"GET http://evil.com/page HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.headers["HOST"], "evil.com")
+        self.assertEqual(self.parser.path, "/page")
+
+    def test_received_absolute_form_without_host_header(self):
+        data = b"GET http://evil.com:8080/page HTTP/1.1\r\n\r\n"
+        self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.headers["HOST"], "evil.com:8080")
+
+    def test_received_absolute_form_invalid_authority(self):
+        for uri in (
+            b"http:///page",  # RFC 9110 4.2.1: MUST reject an empty host
+            b"http://user@evil.com/page",  # userinfo is not allowed
+            b"http://evil.com:80x/page",
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET " + uri + b" HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+
+    def test_received_network_path_reference_is_a_path(self):
+        # a request-target that starts with "//" has no scheme, so it stays a
+        # path and the Host header is left alone. See
+        # https://github.com/Pylons/waitress/issues/260
+        data = b"GET //testing/whatever HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+        self.parser.received(data)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.headers["HOST"], "victim.com")
+        self.assertEqual(self.parser.path, "//testing/whatever")
+
+    def test_received_connect_is_not_an_absolute_form(self):
+        # a CONNECT uses the authority-form of request-target, which urlsplit()
+        # reads as a scheme followed by a path. Waitress passes a CONNECT
+        # through for the WSGI application to deal with, so the request-target
+        # must not be mistaken for an absolute-form and rejected.
+        for uri, path in (
+            (b"example.com:443", "443"),
+            (b"example.com", "example.com"),
+            (b"[::1]:443", "[::1]:443"),
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"CONNECT " + uri + b" HTTP/1.1\r\nHost: example.com\r\n\r\n"
+                parser.received(data)
+                self.assertIsNone(parser.error)
+                self.assertEqual(parser.command, "CONNECT")
+                self.assertEqual(parser.request_uri, uri.decode("latin-1"))
+                self.assertEqual(parser.path, path)
+                # the Host header field is left exactly as the client sent it
+                self.assertEqual(parser.headers["HOST"], "example.com")
+
     def test_received_bad_transfer_encoding(self):
         data = (
             b"GET /foobar HTTP/1.1\r\n"
@@ -785,7 +848,10 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertTrue(parser.completed)
         self.assertEqual(parser.version, "8.4")
         self.assertFalse(parser.empty)
-        self.assertEqual(parser.headers, {"CONTENT_LENGTH": "6"})
+        # the authority of the absolute-form request-target is used as the Host
+        self.assertEqual(
+            parser.headers, {"CONTENT_LENGTH": "6", "HOST": "example.com:8080"}
+        )
         self.assertEqual(parser.path, "/foobar")
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.proxy_scheme, "https")
