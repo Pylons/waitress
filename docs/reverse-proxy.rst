@@ -112,6 +112,39 @@ To configure waitress to use the ``Forwarded`` header, set::
    contain the IP address of the proxy.
 
 
+Header field names containing underscores
+-----------------------------------------
+
+Waitress silently drops any request header field whose name contains an
+underscore, and does not pass it to the WSGI application.
+
+An underscore is a valid character in a field name, so ``X_Forwarded_For`` is a
+legal HTTP header. The problem is the CGI style mapping that the WSGI environ
+uses: field names are upper-cased and dashes are replaced with underscores, so
+both ``X-Forwarded-For`` and ``X_Forwarded_For`` arrive at the application as
+``HTTP_X_FORWARDED_FOR``. Without this rule a client could forge a header that
+the proxy in front of Waitress believes only it is able to set, which would
+defeat the ``trusted_proxy`` handling described above.
+
+This is the same conclusion every other implementation of the CGI mapping has
+reached. nginx marks such names invalid via ``underscores_in_headers off`` and
+then discards them under ``ignore_invalid_headers``; Apache httpd has dropped
+them when building CGI variables since 2.4, as has mod_wsgi since 4.3.0;
+Werkzeug's development server skips them unconditionally; and gunicorn's
+``header_map`` setting documents ``drop`` as its safe default. Django applied
+the same rule at the framework level in CVE-2015-0219, which is where this
+class of bug was first described.
+
+Dropping the field rather than rejecting the whole request is deliberate.
+Discarding it already removes the ambiguity that makes the header spoofable, so
+refusing the request buys no further protection while risking legitimate
+traffic — an underscore is a valid character in a field name, and rejecting
+outright is itself hazardous in front of pipelining or proxies.
+
+If you need such a header to reach your application, rename it at the proxy to
+use dashes instead.
+
+
 Using ``url_prefix`` to influence ``SCRIPT_NAME`` and ``PATH_INFO``
 -------------------------------------------------------------------
 

@@ -232,7 +232,19 @@ class HTTPRequestParser:
             key, value = header.group("name", "value")
 
             if b"_" in key:
-                # TODO(xistence): Should we drop this request instead?
+                # An underscore is a valid tchar, so this is a legal field
+                # name, but the CGI style mapping the WSGI environ uses is
+                # ambiguous for it: both "X-Forwarded-For" and
+                # "X_Forwarded_For" become HTTP_X_FORWARDED_FOR, so a client
+                # could otherwise forge a header that a proxy in front of us
+                # believes only it can set.
+                #
+                # Dropping the field rather than the request is what nginx
+                # (underscores_in_headers off, then ignore_invalid_headers),
+                # Apache httpd, mod_wsgi, Werkzeug and gunicorn (header_map,
+                # which documents "drop" as the safe default) all do. Dropping
+                # is enough to remove the ambiguity, so rejecting the request
+                # outright would buy nothing and only risk legitimate traffic.
 
                 continue
 
