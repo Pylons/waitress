@@ -67,7 +67,6 @@ class SubprocessTests:
 
     def start_subprocess(self, target, **kw):
         # Spawn a server process.
-        self.queue = multiprocessing.Queue()
 
         if "COVERAGE_RCFILE" in os.environ:
             os.environ["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_RCFILE"]
@@ -84,6 +83,15 @@ class SubprocessTests:
             ctx = multiprocessing.get_context("spawn")
         else:
             ctx = multiprocessing.get_context("fork")
+
+        # NB: the queue has to come from the same context as the process. A
+        # queue built from the default context carries a SemLock tagged with
+        # that context, and multiprocessing refuses to hand a fork-context
+        # SemLock to a spawn-context child. The default start method is
+        # platform dependent -- fork on Linux, spawn on macOS -- so taking it
+        # from multiprocessing directly happens to work on one and not on the
+        # other.
+        self.queue = ctx.Queue()
 
         self.proc = ctx.Process(
             target=start_server,
