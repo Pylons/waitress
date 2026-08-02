@@ -81,59 +81,6 @@ Backward Incompatibilities
 - Python 3.8 is no longer supported.
   See https://github.com/Pylons/waitress/pull/445.
 
-Bugfix
-~~~~~~
-
-- Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
-  the correct header name as specified in RFC 7230.
-
-- Waitress will now drop a request if the Transer-Encoding is set twice in the
-  request, previously it would decode the chunks and pass it along to the WSGI
-  application with an appropriate content length. See
-  https://github.com/Pylons/waitress/issues/465 and
-  https://github.com/Pylons/waitress/pull/474
-
-- When encountering a request that has both Content-Length set and
-  Transfer-Encoding of chunked we now close the connection after it is
-  completed to comply with the requirements of RFC9112. See
-  https://github.com/Pylons/waitress/pull/475 and
-  https://github.com/Pylons/waitress/issues/464
-
-- A request that contains more than one Host header field is now rejected with
-  a 400 (Bad Request), rather than being passed to the WSGI application with
-  the values joined by a comma. See
-  https://github.com/Pylons/waitress/issues/462 and
-  https://github.com/Pylons/waitress/pull/484
-
-- A request that contains more than one Content-Type header field is now
-  rejected with a 400 (Bad Request). Content-Type is a singleton field, and
-  recipients differ in which of the values they pick when it is sent more than
-  once. The same applies to Content-Length. See
-  https://github.com/Pylons/waitress/issues/466 and
-  https://github.com/Pylons/waitress/pull/488
-
-3.0.2 (2024-11-16)
-------------------
-
-Security
-~~~~~~~~
-
-- When using Waitress to process trusted proxy headers, Waitress will now
-  update the headers to drop any untrusted values, thereby making sure that
-  WSGI apps only get trusted and validated values that Waitress itself used to
-  update the environ. See https://github.com/Pylons/waitress/pull/452 and
-  https://github.com/Pylons/waitress/issues/451
-
-
-3.0.1 (2024-10-28)
-------------------
-
-Backward Incompatibilities
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Python 3.8 is no longer supported.
-  See https://github.com/Pylons/waitress/pull/445.
-
 Features
 ~~~~~~~~
 
