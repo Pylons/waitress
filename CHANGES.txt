@@ -1,5 +1,5 @@
-Unreleased
-----------
+4.0.0 (unreleased)
+------------------
 
 Backward Incompatibilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,6 +27,17 @@ Backward Incompatibilities
   Request). Waitress still leaves it to the WSGI application to decide what to
   do with a CONNECT, this only makes sure the request-target it is handed is
   well formed. See https://github.com/Pylons/waitress/issues/463
+
+- The two remaining forms of request-target described by RFC 9112 section 3.2
+  are now validated as well. The asterisk-form ``*`` is only accepted for an
+  OPTIONS request, as section 3.2.4 restricts it to a server-wide OPTIONS;
+  sending it with any other method is rejected with a 400 (Bad Request).
+  Anything that is not an absolute-form, an authority-form or the asterisk-form
+  has to be an origin-form, which section 3.2.1 defines as an absolute-path,
+  and a request-target that does not begin with a ``/`` is now rejected the
+  same way rather than reaching the application as a ``PATH_INFO`` that PEP
+  3333 does not allow. A request-target beginning with ``//`` is still treated
+  as a path, as before.
 
 Bugfix
 ~~~~~~

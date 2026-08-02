@@ -190,6 +190,57 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["HOST"], "victim.com")
         self.assertEqual(self.parser.path, "//testing/whatever")
 
+    def test_received_asterisk_form_options(self):
+        # RFC 9112 section 3.2.4: the asterisk-form is used for a server-wide
+        # OPTIONS request
+        data = b"OPTIONS * HTTP/1.1\r\nHost: localhost\r\n\r\n"
+        self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.command, "OPTIONS")
+        self.assertEqual(self.parser.path, "*")
+
+    def test_received_asterisk_form_rejected_for_other_methods(self):
+        # the asterisk-form is only a request-target for OPTIONS; for anything
+        # else it names nothing that could be routed
+        for command in (b"GET", b"POST", b"HEAD", b"DELETE"):
+            with self.subTest(command=command):
+                parser = HTTPRequestParser(Adjustments())
+                data = command + b" * HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+
+    def test_received_origin_form_must_be_an_absolute_path(self):
+        # RFC 9112 section 3.2.1: an origin-form is an absolute-path, which
+        # begins with a "/". PEP 3333 wants the same of PATH_INFO.
+        for uri in (
+            b"foo/bar",
+            b"1.2.3.4:80/x",
+            b"%2Ffoo",  # a percent encoded "/" does not make an absolute-path
+            b".",
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET " + uri + b" HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+
+    def test_received_origin_form_accepted(self):
+        for uri, path in (
+            (b"/", "/"),
+            (b"/foo", "/foo"),
+            (b"/foo?a=b", "/foo"),
+            (b"/foo%2Fbar", "/foo/bar"),
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET " + uri + b" HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertIsNone(parser.error)
+                self.assertEqual(parser.path, path)
+
     def test_received_connect_is_not_an_absolute_form(self):
         # a CONNECT uses the authority-form of request-target, which urlsplit()
         # reads as a scheme followed by a path. Waitress passes a CONNECT

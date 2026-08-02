@@ -316,6 +316,32 @@ class HTTPRequestParser:
 
             headers["HOST"] = self.proxy_netloc
 
+        elif command != "CONNECT":
+            # Not an absolute-form, and not the authority-form of a CONNECT,
+            # so RFC 9112 section 3.2 leaves only two forms this can be. A
+            # request-target that is neither is malformed and does not name
+            # anything we could route.
+
+            if uri == b"*":
+                # RFC 9112 section 3.2.4: the asterisk-form is only used for a
+                # server-wide OPTIONS request. For any other method it is not
+                # a request-target at all, and passing it through would hand
+                # the application a PATH_INFO of "*" to make sense of.
+
+                if command != "OPTIONS":
+                    raise ParsingError(
+                        "Asterisk-form request-target is only valid for OPTIONS"
+                    )
+            elif not uri.startswith(b"/"):
+                # RFC 9112 section 3.2.1: an origin-form is an absolute-path
+                # optionally followed by a query, and an absolute-path begins
+                # with a "/". PEP 3333 wants the same of PATH_INFO.
+                #
+                # NB: this looks at the request-target as it arrived rather
+                # than at the decoded path, so that a percent encoded "/"
+                # can not stand in for the real one.
+                raise ParsingError("Request-target is not in the origin-form")
+
         # RFC 9112 section 3.2 requires a 400 (Bad Request) response to any
         # HTTP/1.1 request that lacks a Host header field, or that has a Host
         # header field with an invalid field value. Duplicate Host headers are
