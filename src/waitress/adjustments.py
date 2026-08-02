@@ -138,6 +138,7 @@ class Adjustments:
         ("connection_limit", int),
         ("cleanup_interval", int),
         ("channel_timeout", int),
+        ("shutdown_timeout", int),
         ("log_socket_errors", asbool),
         ("max_request_header_size", int),
         ("max_request_body_size", int),
@@ -252,6 +253,14 @@ class Adjustments:
 
     # Maximum seconds to leave an inactive connection open.
     channel_timeout = 120
+
+    # Maximum seconds to spend shutting down gracefully. Once the server is
+    # asked to stop it no longer accepts new connections, and keeps running the
+    # main loop for at most this long so that requests that are already being
+    # serviced get a chance to finish and have their response written back to
+    # the client. Set to 0 to disable the graceful shutdown entirely and tear
+    # everything down immediately.
+    shutdown_timeout = 5
 
     # Boolean: turn off to not log premature client disconnects.
     log_socket_errors = True

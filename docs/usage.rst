@@ -80,6 +80,88 @@ can be used in development and in situations where the likes of
     # Listen on only IPv4 on port 8041
     waitress-serve --port=8041 myapp:wsgifunc
 
+.. _shutdown:
+
+Shutting down
+-------------
+
+When ``server.run()`` is interrupted, either by :kbd:`Ctrl-C` or by a
+``SystemExit``, Waitress shuts down gracefully:
+
+- it closes its listening sockets, so the port is released and no new
+  connections are accepted;
+- it stops reading new requests off the connections that are still open;
+- it keeps running its main loop so that requests that are already being
+  serviced can finish and have their response written back to the client;
+- once every connection has been dealt with, it stops the worker threads and
+  closes up shop.
+
+Requests that have not finished within ``shutdown_timeout`` seconds (5 by
+default) do not get to hold up the shutdown any further, and their connections
+are closed. Interrupting a second time skips the wait entirely. See
+:ref:`arguments` for ``shutdown_timeout``.
+
+Waitress does not install any signal handlers of its own. To shut down on a
+``SIGTERM`` from a process manager, install a handler that raises
+``SystemExit`` in the main thread and let ``run()`` take it from there:
+
+.. code-block:: python
+
+    import signal
+    import sys
+
+    from waitress.server import create_server
+
+    server = create_server(app, listen="*:8080")
+    signal.signal(signal.SIGTERM, lambda *args: sys.exit(0))
+    server.run()
+
+The shutdown is also available directly as ``server.graceful_shutdown()``, for
+when you drive the main loop yourself rather than through ``run()``. Note that
+it runs the main loop while it drains, so it has to be called from the same
+thread the loop runs on.
+
+``server.close()`` is the non-graceful counterpart: it stops the worker threads
+and closes every connection immediately, without giving the requests that are
+in flight a chance to finish.
+
+.. _running-in-a-thread:
+
+Running in a background thread
+------------------------------
+
+``server.run()`` blocks. To run a server alongside something else, for example
+to serve an application under test, use ``start()`` and ``stop()`` instead:
+
+.. code-block:: python
+
+    from waitress.server import create_server
+
+    server = create_server(app, host="127.0.0.1", port=0)
+    server.start()
+    try:
+        ...
+    finally:
+        server.stop()
+
+``start()`` runs the main loop in a daemon thread and returns immediately.
+``stop()`` shuts the server down gracefully and waits for it to finish, and is
+the one method that may be called from any thread, including from within the
+WSGI application itself.
+
+Because the server is already listening by the time ``start()`` returns, asking
+for port ``0`` and then reading back the port that the operating system picked
+is race free — there is no window in which another process could take it:
+
+.. code-block:: python
+
+    server = create_server(app, host="127.0.0.1", port=0)
+    server.start()
+    url = f"http://{server.effective_host}:{server.effective_port}/"
+
+With several listening sockets, ``server.effective_listen`` holds the full list
+of ``(host, port)`` pairs instead.
+
 Heroku
 ------
 

@@ -48,6 +48,7 @@ class HTTPChannel(wasyncore.dispatcher):
     sent_continue = False  # used as a latch after sending 100 continue
     total_outbufs_len = 0  # total bytes ready to send
     current_outbuf_count = 0  # total bytes written to current outbuf
+    draining = False  # set to True to stop reading new requests off the socket
 
     #
     # ASYNCHRONOUS METHODS (including __init__)
@@ -142,13 +143,17 @@ class HTTPChannel(wasyncore.dispatcher):
         # 1. We're not already about to close the connection.
         # 2. We're not waiting to flush remaining data before closing the
         #    connection
-        # 3. There are not too many tasks already queued (if lookahead is enabled)
-        # 4. There's no data in the output buffer that needs to be sent
+        # 3. We're not draining the channel for a graceful shutdown, during
+        #    which we finish the requests we already have but don't take on
+        #    any new ones.
+        # 4. There are not too many tasks already queued (if lookahead is enabled)
+        # 5. There's no data in the output buffer that needs to be sent
         #    before we potentially create a new task.
 
         return not (
             self.will_close
             or self.close_when_flushed
+            or self.draining
             or len(self.requests) > self.adj.channel_request_lookahead
             or self.total_outbufs_len
         )

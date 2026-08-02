@@ -90,6 +90,12 @@ class _triggerbase:
             self._close()  # subclass does OS-specific stuff
 
     def pull_trigger(self, thunk=None):
+        if self._closed:
+            # There is no main loop left to wake up, and the file descriptor we
+            # would be writing to may well have been handed out to somebody
+            # else by now.
+            return
+
         if thunk:
             with self.lock:
                 self.thunks.append(thunk)
