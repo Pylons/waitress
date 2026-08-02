@@ -18,6 +18,17 @@ from waitress.utilities import cleanup_unix_socket
 dn = os.path.dirname
 here = dn(__file__)
 
+PYPY = sys.implementation.name == "pypy"
+
+# How long to wait for a freshly spawned server subprocess to bind a socket and
+# hand the address it bound to back over the queue.
+#
+# This is not the time the work takes, it is a bound on a pathological hang: on
+# success the get() returns the moment the address arrives, so a generous value
+# costs nothing. Five seconds was tight enough that a loaded machine could trip
+# it on its own.
+SERVER_START_TIMEOUT = 30
+
 
 class NullHandler(logging.Handler):  # pragma: no cover
     """A logging handler that swallows all emitted messages."""
@@ -61,10 +72,18 @@ class SubprocessTests:
         if "COVERAGE_RCFILE" in os.environ:
             os.environ["COVERAGE_PROCESS_START"] = os.environ["COVERAGE_RCFILE"]
 
-        if not WIN:
-            ctx = multiprocessing.get_context("fork")
-        else:
+        if WIN or PYPY:
+            # fork() only duplicates the calling thread, so if any other thread
+            # in this process happens to hold a lock at the moment we fork, the
+            # child inherits it already locked and with no thread left alive to
+            # release it. The child then hangs before it can report the address
+            # it bound to, and the test fails on an unrelated-looking timeout.
+            # This is timing dependent, and PyPy loses the race often enough to
+            # make the suite flaky, so pay the cost of a fresh interpreter
+            # there as we already do on Windows.
             ctx = multiprocessing.get_context("spawn")
+        else:
+            ctx = multiprocessing.get_context("fork")
 
         self.proc = ctx.Process(
             target=start_server,
@@ -76,7 +95,7 @@ class SubprocessTests:
         if self.proc.exitcode is not None:  # pragma: no cover
             raise RuntimeError("%s didn't start" % str(target))
         # Get the socket the server is listening on.
-        self.bound_to = self.queue.get(timeout=5)
+        self.bound_to = self.queue.get(timeout=SERVER_START_TIMEOUT)
         self.sock = self.create_socket()
 
     def stop_subprocess(self):
