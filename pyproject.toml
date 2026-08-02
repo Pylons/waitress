@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "waitress"
-version = "3.0.2"
+version = "3.1.0.dev0"
 authors = [{ name = "Zope Foundation and Contributors", email = "zope-dev@zope.org" }]
 maintainers = [{ name = "Pylons Project", email = "pylons-discuss@googlegroups.com" }]
 description = "Waitress WSGI server"
