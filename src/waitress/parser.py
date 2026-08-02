@@ -24,7 +24,7 @@ from urllib.parse import unquote_to_bytes
 
 from waitress.buffers import OverflowableBuffer
 from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
-from waitress.rfc7230 import HEADER_FIELD_RE, ONLY_DIGIT_RE
+from waitress.rfc7230 import HEADER_FIELD_RE, HOST_RE, ONLY_DIGIT_RE
 from waitress.utilities import (
     BadRequest,
     RequestEntityTooLarge,
@@ -273,6 +273,19 @@ class HTTPRequestParser:
             self.query,
             self.fragment,
         ) = split_uri(uri)
+
+        # RFC 9112 section 3.2 requires a 400 (Bad Request) response to any
+        # HTTP/1.1 request that lacks a Host header field, or that has a Host
+        # header field with an invalid field value. Duplicate Host headers are
+        # already rejected as part of SINGLETON_FIELDS above.
+        host = headers.get("HOST")
+
+        if host is None:
+            if version == "1.1":
+                raise ParsingError("HTTP/1.1 request does not contain a Host header")
+        else:
+            validate_uri_host(host, "Host header")
+
         self.url_scheme = self.adj.url_scheme
         connection = headers.get("CONNECTION", "")
 
@@ -368,6 +381,18 @@ class HTTPRequestParser:
 
         if body_rcv is not None:
             body_rcv.getbuf().close()
+
+
+def validate_uri_host(value, what):
+    """
+    Validate that ``value`` is a "uri-host [ ':' port ]" as required by RFC 7230
+    section 5.4 for the Host header field.
+
+    ``what`` names the thing being validated, for use in the error message.
+    """
+
+    if not HOST_RE.match(value.encode("latin-1")):
+        raise ParsingError(f"Invalid {what}")
 
 
 def split_uri(uri):

@@ -1,6 +1,16 @@
 Unreleased
 ----------
 
+Backward Incompatibilities
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- An HTTP/1.1 request that does not contain a Host header field is now rejected
+  with a 400 (Bad Request), as required by RFC 9112 section 3.2. A Host header
+  field whose value is not a valid ``uri-host [ ":" port ]`` is rejected the
+  same way, whatever the HTTP version of the request. Note that this means an
+  internationalised domain name has to be punycoded by the client, as it always
+  should have been. See https://github.com/Pylons/waitress/issues/462
+
 Bugfix
 ~~~~~~
 

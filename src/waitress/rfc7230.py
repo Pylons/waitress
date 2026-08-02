@@ -62,6 +62,38 @@ CHUNK_EXT = (
     "(?:;(?P<extension>" + CHUNK_EXT_NAME + ")(?:=(?P<value>" + CHUNK_EXT_VAL + "))?)*"
 )
 
+# RFC 3986 Section 3.2.2 "Host", which is what RFC 7230 Section 5.4 uses to
+# define the value of the Host header field:
+#
+# host          = IP-literal / IPv4address / reg-name
+# IP-literal    = "[" ( IPv6address / IPvFuture  ) "]"
+# IPvFuture     = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
+# reg-name      = *( unreserved / pct-encoded / sub-delims )
+# unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
+# sub-delims    = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+# pct-encoded   = "%" HEXDIG HEXDIG
+#
+# IPv4address is a strict subset of reg-name, so it doesn't need to be matched
+# separately. The contents of an IP-literal are not validated any further than
+# the set of characters that may appear inside of one.
+UNRESERVED = r"[A-Za-z0-9\-._~]"
+SUB_DELIMS = r"[!$&'()*+,;=]"
+PCT_ENCODED = "%" + HEXDIG + HEXDIG
+IPV6_LITERAL = r"\[[A-Fa-f0-9:.]+\]"
+IPVFUTURE_LITERAL = (
+    r"\[[vV]" + HEXDIG + r"+\.(?:" + UNRESERVED + "|" + SUB_DELIMS + "|:)+\\]"
+)
+IP_LITERAL = "(?:" + IPV6_LITERAL + "|" + IPVFUTURE_LITERAL + ")"
+# NB: the alternatives here are disjoint (no character may start more than one
+# of them), so this can't backtrack catastrophically
+REG_NAME = "(?:" + UNRESERVED + "|" + PCT_ENCODED + "|" + SUB_DELIMS + ")*"
+URI_HOST = "(?:" + IP_LITERAL + "|" + REG_NAME + ")"
+
+# RFC 7230 Section 5.4: Host = uri-host [ ":" port ], where port = *DIGIT.
+# Both the uri-host and the port may be empty as far as the grammar goes; the
+# callers apply the stricter rules that their context requires.
+HOST_RE = re.compile(("^" + URI_HOST + "(?::" + DIGIT + "*)?$").encode("latin-1"))
+
 # Pre-compiled regular expressions for use elsewhere
 ONLY_HEXDIG_RE = re.compile(("^" + HEXDIG + "+$").encode("latin-1"))
 ONLY_DIGIT_RE = re.compile(("^" + DIGIT + "+$").encode("latin-1"))
