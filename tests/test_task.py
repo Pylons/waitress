@@ -274,6 +274,8 @@ class TestTask(unittest.TestCase):
         self.assertTrue(inst.chunked_response)
 
     def test_build_response_header_via_added(self):
+        # RFC 9110 section 7.6.3: the received-protocol is a required part of
+        # a Via field value, the pseudonym alone is not well formed
         inst = self._makeOne()
         inst.request = DummyParser()
         inst.version = "1.0"
@@ -285,7 +287,18 @@ class TestTask(unittest.TestCase):
         self.assertEqual(lines[1], b"Connection: close")
         self.assertTrue(lines[2].startswith(b"Date:"))
         self.assertEqual(lines[3], b"Server: abc")
-        self.assertEqual(lines[4], b"Via: waitress")
+        self.assertEqual(lines[4], b"Via: 1.0 waitress")
+
+    def test_build_response_header_via_uses_request_version(self):
+        inst = self._makeOne()
+        inst.request = DummyParser()
+        inst.version = "1.1"
+        inst.status = "200 OK"
+        inst.content_length = 0
+        inst.response_headers = [("Server", "abc")]
+        result = inst.build_response_header()
+        lines = filter_lines(result)
+        self.assertIn(b"Via: 1.1 waitress", lines)
 
     def test_build_response_header_date_exists(self):
         inst = self._makeOne()

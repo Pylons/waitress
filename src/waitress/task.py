@@ -273,7 +273,12 @@ class Task:
             if ident:
                 self.response_headers.append(("Server", ident))
         else:
-            self.response_headers.append(("Via", ident or "waitress"))
+            # RFC 9110 section 7.6.3: Via = #( received-protocol RWS
+            # received-by [ RWS comment ] ). The received-protocol is not
+            # optional, so the pseudonym on its own is not a well formed field
+            # value; the protocol-name may only be elided when it is HTTP,
+            # which leaves the version of the request we received.
+            self.response_headers.append(("Via", f"{version} {ident or 'waitress'}"))
 
         if not date_header:
             self.response_headers.append(("Date", build_http_date(self.start_time)))
