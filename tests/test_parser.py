@@ -27,6 +27,7 @@ from waitress.parser import (
 )
 from waitress.utilities import (
     BadRequest,
+    HTTPVersionNotSupported,
     RequestEntityTooLarge,
     RequestHeaderFieldsTooLarge,
     ServerNotImplemented,
@@ -111,7 +112,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertDictEqual(self.parser.headers, {})
 
     def test_received_no_doublecr(self):
-        data = b"GET /foobar HTTP/8.4\r\n"
+        data = b"GET /foobar HTTP/1.1\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, 22)
         self.assertFalse(self.parser.completed)
@@ -124,14 +125,14 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_received_cl_too_large(self):
         self.parser.adj.max_request_body_size = 2
-        data = b"GET /foobar HTTP/8.4\r\nContent-Length: 10\r\n\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nContent-Length: 10\r\n\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, 44)
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, RequestEntityTooLarge)
 
     def test_received_headers_not_too_large_multiple_chunks(self):
-        data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nX-Foo: 1\r\n"
         data2 = b"X-Foo-Other: 3\r\n\r\n"
         self.parser.adj.max_request_header_size = len(data) + len(data2) + 1
         result = self.parser.received(data)
@@ -143,7 +144,7 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_received_headers_too_large(self):
         self.parser.adj.max_request_header_size = 2
-        data = b"GET /foobar HTTP/8.4\r\nX-Foo: 1\r\n\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nX-Foo: 1\r\n\r\n"
         result = self.parser.received(data)
         self.assertEqual(result, 34)
         self.assertTrue(self.parser.completed)
@@ -201,14 +202,67 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIsNone(self.parser.error)
         self.assertEqual(self.parser.headers["CONTENT_LENGTH"], "29")
 
+    def test_received_unsupported_http_version(self):
+        # RFC 9112 section 2.3: a server SHOULD respond with a 505 (HTTP
+        # Version Not Supported) when the major version is one it does not
+        # support
+        for version in (b"0.9", b"2.0", b"3.0", b"9.9"):
+            with self.subTest(version=version):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET /foobar HTTP/" + version + b"\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, HTTPVersionNotSupported)
+                self.assertEqual(parser.error.code, 505)
+
+    def test_received_higher_minor_version_treated_as_1_1(self):
+        # RFC 9112 section 2.3: a recipient that receives a higher minor
+        # version within a major version it implements SHOULD process the
+        # message as the highest minor version it is conformant with
+        for version in (b"1.2", b"1.9"):
+            with self.subTest(version=version):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET /foobar HTTP/" + version + b"\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertIsNone(parser.error)
+                self.assertEqual(parser.version, "1.1")
+
+    def test_received_higher_minor_version_honours_connection(self):
+        # the point of normalising the version: everything version dependent
+        # is keyed on it being exactly "1.0" or "1.1", so an unrecognised
+        # version used to fall through all of it
+        parser = HTTPRequestParser(Adjustments())
+        parser.received(
+            b"GET /foobar HTTP/1.2\r\nHost: localhost\r\nConnection: close\r\n\r\n"
+        )
+        self.assertIsNone(parser.error)
+        self.assertTrue(parser.connection_close)
+
+    def test_received_only_crlf_skipped_before_request_line(self):
+        # RFC 9112 section 2.2 sanctions ignoring empty lines before the
+        # request-line, and nothing else. A bare lstrip() also ate spaces,
+        # tabs, vertical tabs and form feeds.
+        parser = HTTPRequestParser(Adjustments())
+        parser.received(b"\r\n\r\nGET /foobar HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        self.assertIsNone(parser.error)
+
+        for prefix in (b" ", b"\t", b"\x0b", b"\x0c"):
+            with self.subTest(prefix=prefix):
+                parser = HTTPRequestParser(Adjustments())
+                parser.received(
+                    prefix + b"GET /foobar HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                )
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+
     def test_parse_header_gardenpath(self):
-        data = b"GET /foobar HTTP/8.4\r\nfoo: bar\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\n"
         self.parser.parse_header(data)
-        self.assertEqual(self.parser.first_line, b"GET /foobar HTTP/8.4")
+        self.assertEqual(self.parser.first_line, b"GET /foobar HTTP/1.1")
         self.assertEqual(self.parser.headers["FOO"], "bar")
 
     def test_parse_header_no_cr_in_headerplus(self):
-        data = b"GET /foobar HTTP/8.4"
+        data = b"GET /foobar HTTP/1.1"
 
         try:
             self.parser.parse_header(data)
@@ -218,7 +272,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_bad_content_length(self):
-        data = b"GET /foobar HTTP/8.4\r\ncontent-length: abc\r\n"
+        data = b"GET /foobar HTTP/1.1\r\ncontent-length: abc\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -228,7 +282,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_bad_content_length_plus(self):
-        data = b"GET /foobar HTTP/8.4\r\ncontent-length: +10\r\n"
+        data = b"GET /foobar HTTP/1.1\r\ncontent-length: +10\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -238,7 +292,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_bad_content_length_minus(self):
-        data = b"GET /foobar HTTP/8.4\r\ncontent-length: -10\r\n"
+        data = b"GET /foobar HTTP/1.1\r\ncontent-length: -10\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -248,7 +302,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_multiple_content_length(self):
-        data = b"GET /foobar HTTP/8.4\r\ncontent-length: 10\r\ncontent-length: 20\r\n"
+        data = b"GET /foobar HTTP/1.1\r\ncontent-length: 10\r\ncontent-length: 20\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -349,7 +403,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.parser.close()  # doesn't raise
 
     def test_parse_header_lf_only(self):
-        data = b"GET /foobar HTTP/8.4\nfoo: bar"
+        data = b"GET /foobar HTTP/1.1\nfoo: bar"
 
         try:
             self.parser.parse_header(data)
@@ -359,7 +413,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_cr_only(self):
-        data = b"GET /foobar HTTP/8.4\rfoo: bar"
+        data = b"GET /foobar HTTP/1.1\rfoo: bar"
         try:
             self.parser.parse_header(data)
         except ParsingError:
@@ -368,7 +422,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_extra_lf_in_header(self):
-        data = b"GET /foobar HTTP/8.4\r\nfoo: \nbar\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nfoo: \nbar\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -377,7 +431,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_extra_lf_in_first_line(self):
-        data = b"GET /foobar\n HTTP/8.4\r\n"
+        data = b"GET /foobar\n HTTP/1.1\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -386,7 +440,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_whitespace(self):
-        data = b"GET /foobar HTTP/8.4\r\nfoo : bar\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nfoo : bar\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -417,7 +471,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
-            self.assertIn("Invalid header", e.args[0])
+            self.assertIn("Obsolete line folding", e.args[0])
         else:  # pragma: nocover
             self.assertTrue(False)
 
@@ -452,18 +506,24 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
 
     def test_parse_header_multiple_values_header_folded(self):
+        # RFC 9112 section 5.2: a server that receives an obs-fold MUST either
+        # reject the message or replace the fold with SP. We reject.
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more, please, yes\r\n"
-        self.parser.parse_header(data)
-
-        self.assertIn("FOO", self.parser.headers)
-        self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Obsolete line folding", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
 
     def test_parse_header_multiple_values_header_folded_multiple(self):
         data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more\r\nfoo: please, yes\r\n"
-        self.parser.parse_header(data)
-
-        self.assertIn("FOO", self.parser.headers)
-        self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("Obsolete line folding", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
 
     def test_parse_header_multiple_values_extra_space(self):
         # Tests errata from: https://www.rfc-editor.org/errata_search.php?rfc=7230&eid=4189
@@ -575,20 +635,17 @@ class Test_get_header_lines(unittest.TestCase):
         self.assertListEqual(result, [b"slam", b"slim"])
 
     def test_get_header_lines_folded(self):
-        # From RFC2616:
-        # HTTP/1.1 header field values can be folded onto multiple lines if the
-        # continuation line begins with a space or horizontal tab. All linear
-        # white space, including folding, has the same semantics as SP. A
-        # recipient MAY replace any linear white space with a single SP before
-        # interpreting the field value or forwarding the message downstream.
-
-        # We are just preserving the whitespace that indicates folding.
-        result = self._callFUT(b"slim\r\n slam")
-        self.assertListEqual(result, [b"slim slam"])
+        # RFC 9112 section 5.2: a server that receives an obs-fold in a request
+        # message that is not within a message/http container MUST either
+        # reject the message with a 400 (Bad Request) or replace each obs-fold
+        # with one or more SP octets before interpreting the field value. We
+        # reject: folding was deprecated by RFC 7230 in 2014, and unfolding
+        # leaves us reading a field one way while something in front of us
+        # that rejects folding, or unfolds differently, reads it another.
+        self.assertRaises(ParsingError, self._callFUT, b"slim\r\n slam")
 
     def test_get_header_lines_tabbed(self):
-        result = self._callFUT(b"slam\r\n\tslim")
-        self.assertListEqual(result, [b"slam\tslim"])
+        self.assertRaises(ParsingError, self._callFUT, b"slam\r\n\tslim")
 
     def test_get_header_lines_malformed(self):
         # https://corte.si/posts/code/pathod/pythonservers/index.html
@@ -618,7 +675,7 @@ class Test_crack_first_line(unittest.TestCase):
         self.assertTupleEqual(result, (b"GET", b"/", b""))
 
     def test_crack_first_line_bad_method(self):
-        result = self._callFUT(b"GE\x00 /foobar HTTP/8.4")
+        result = self._callFUT(b"GE\x00 /foobar HTTP/1.1")
         self.assertTupleEqual(result, (b"", b"", b""))
 
     def test_crack_first_line_bad_version(self):
@@ -644,7 +701,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
 
     def testSimpleGET(self):
         data = (
-            b"GET /foobar HTTP/8.4\r\n"
+            b"GET /foobar HTTP/1.1\r\n"
             b"FirstName: mickey\r\n"
             b"lastname: Mouse\r\n"
             b"content-length: 6\r\n"
@@ -654,7 +711,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         parser = self.parser
         self.feed(data)
         self.assertTrue(parser.completed)
-        self.assertEqual(parser.version, "8.4")
+        self.assertEqual(parser.version, "1.1")
         self.assertFalse(parser.empty)
         self.assertDictEqual(
             parser.headers,
@@ -673,7 +730,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
 
     def testComplexGET(self):
         data = (
-            b"GET /foo/a+%2B%2F%C3%A4%3D%26a%3Aint?d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6 HTTP/8.4\r\n"
+            b"GET /foo/a+%2B%2F%C3%A4%3D%26a%3Aint?d=b+%2B%2F%3D%26b%3Aint&c+%2B%2F%3D%26c%3Aint=6 HTTP/1.1\r\n"
             b"FirstName: mickey\r\n"
             b"lastname: Mouse\r\n"
             b"content-length: 10\r\n"
@@ -683,7 +740,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         parser = self.parser
         self.feed(data)
         self.assertEqual(parser.command, "GET")
-        self.assertEqual(parser.version, "8.4")
+        self.assertEqual(parser.version, "1.1")
         self.assertFalse(parser.empty)
         self.assertDictEqual(
             parser.headers,
@@ -706,7 +763,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
 
     def testProxyGET(self):
         data = (
-            b"GET https://example.com:8080/foobar HTTP/8.4\r\n"
+            b"GET https://example.com:8080/foobar HTTP/1.1\r\n"
             b"content-length: 6\r\n"
             b"\r\n"
             b"Hello."
@@ -714,7 +771,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         parser = self.parser
         self.feed(data)
         self.assertTrue(parser.completed)
-        self.assertEqual(parser.version, "8.4")
+        self.assertEqual(parser.version, "1.1")
         self.assertFalse(parser.empty)
         self.assertEqual(parser.headers, {"CONTENT_LENGTH": "6"})
         self.assertEqual(parser.path, "/foobar")
@@ -729,7 +786,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         # Ensure that headers with the same key get concatenated as per
         # RFC2616.
         data = (
-            b"GET /foobar HTTP/8.4\r\n"
+            b"GET /foobar HTTP/1.1\r\n"
             b"x-forwarded-for: 10.11.12.13\r\n"
             b"x-forwarded-for: unknown,127.0.0.1\r\n"
             b"X-Forwarded_for: 255.255.255.255\r\n"
@@ -749,7 +806,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
 
     def testSpoofedHeadersDropped(self):
         data = (
-            b"GET /foobar HTTP/8.4\r\n"
+            b"GET /foobar HTTP/1.1\r\n"
             b"x-auth_user: bob\r\n"
             b"content-length: 6\r\n"
             b"\r\n"

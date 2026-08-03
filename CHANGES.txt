@@ -1,5 +1,39 @@
-Unreleased
-----------
+4.0.0 (unreleased)
+------------------
+
+Backward Incompatibilities
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- A request whose HTTP version has a major version other than 1 is now
+  rejected with a 505 (HTTP Version Not Supported), and one with a higher
+  minor version than Waitress implements, such as ``HTTP/1.9``, is processed
+  as ``HTTP/1.1``. RFC 9112 section 2.3 asks for both. Previously any
+  ``[0-9].[0-9]`` was accepted and kept verbatim, and because everything
+  version dependent is keyed on the version being exactly ``1.0`` or ``1.1``,
+  an unrecognised one fell through all of it: a request claiming ``HTTP/2.0``
+  had its ``Connection`` and ``Expect`` header fields silently ignored.
+
+- Obsolete line folding in a request header field is now rejected with a 400
+  (Bad Request). RFC 9112 section 5.2 requires a server to either reject an
+  obs-fold or replace it with SP before interpreting the field value, and
+  folding has been deprecated since RFC 7230 in 2014. Waitress used to join
+  the continuation onto the preceding line, which left it reading a field one
+  way while something in front of it that rejects folding, or unfolds it
+  differently, read it another.
+
+- Header fields named in the ``Connection`` header field of a request are no
+  longer passed to the WSGI application. RFC 9110 section 7.6.1 makes them
+  connection specific, applying to a single hop and not to be forwarded.
+  Waitress is the end of the connection, so handing them to the application
+  amounts to forwarding them: a client could name a header there that a proxy
+  in front of Waitress believes only it controls, and the application has no
+  way to tell the two apart.
+
+- Only empty lines are now skipped before the request-line. RFC 9112 section
+  2.2 sanctions ignoring a CRLF received before a request-line, which lets a
+  client send a spare one after a request when pipelining. Waitress stripped
+  any leading whitespace, which also covered spaces, tabs, vertical tabs, form
+  feeds and lone CR or LF octets, none of which may appear there.
 
 Bugfix
 ~~~~~~

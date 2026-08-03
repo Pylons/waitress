@@ -27,6 +27,7 @@ from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
 from waitress.rfc7230 import HEADER_FIELD_RE, ONLY_DIGIT_RE
 from waitress.utilities import (
     BadRequest,
+    HTTPVersionNotSupported,
     RequestEntityTooLarge,
     RequestHeaderFieldsTooLarge,
     ServerNotImplemented,
@@ -46,6 +47,10 @@ class ParsingError(Exception):
 
 
 class TransferEncodingNotImplemented(Exception):
+    pass
+
+
+class HTTPVersionNotSupportedError(Exception):
     pass
 
 
@@ -130,11 +135,20 @@ class HTTPRequestParser:
                 # Header finished.
                 header_plus = s[:index]
 
-                # Remove preceding blank lines. This is suggested by
-                # https://tools.ietf.org/html/rfc7230#section-3.5 to support
-                # clients sending an extra CR LF after another request when
-                # using HTTP pipelining
-                header_plus = header_plus.lstrip()
+                # Remove preceding blank lines. RFC 9112 section 2.2 says a
+                # server that is expecting to read a start-line SHOULD ignore
+                # at least one empty line received before it, which supports
+                # clients sending an extra CRLF after a request when they are
+                # pipelining.
+                #
+                # NB: only whole CRLF pairs are skipped. A bare lstrip() also
+                # eats spaces, tabs, vertical tabs, form feeds and lone CR or
+                # LF octets, none of which RFC 9112 allows before a
+                # request-line, and swallowing them here would hide them from
+                # the checks further down.
+
+                while header_plus.startswith(b"\r\n"):
+                    header_plus = header_plus[2:]
 
                 if not header_plus:
                     self.empty = True
@@ -147,6 +161,9 @@ class HTTPRequestParser:
                         self.completed = True
                     except TransferEncodingNotImplemented as e:
                         self.error = ServerNotImplemented(e.args[0])
+                        self.completed = True
+                    except HTTPVersionNotSupportedError as e:
+                        self.error = HTTPVersionNotSupported(e.args[0])
                         self.completed = True
                     else:
                         if self.body_rcv is None:
@@ -265,6 +282,30 @@ class HTTPRequestParser:
         version = version.decode("latin-1")
         command = command.decode("latin-1")
         self.command = command
+
+        if version:
+            # RFC 9112 section 2.3: a recipient that receives a message with a
+            # major version it implements but a higher minor version than it
+            # implements SHOULD process the message as if it were in the
+            # highest minor version it is conformant with, and a server SHOULD
+            # respond with a 505 (HTTP Version Not Supported) when the major
+            # version is one it does not support.
+            #
+            # This matters beyond tidiness: everything version dependent below
+            # is keyed on the version being exactly "1.0" or "1.1", so an
+            # unrecognised one used to fall through all of it. A request
+            # claiming HTTP/2.0 had its Connection and Expect header fields
+            # ignored, and nothing else in Waitress noticed either.
+            major, _, minor = version.partition(".")
+
+            if major != "1":
+                raise HTTPVersionNotSupportedError(
+                    "HTTP version %s is not supported" % version
+                )
+
+            if minor > "1":
+                version = "1.1"
+
         self.version = version
         (
             self.proxy_scheme,
@@ -408,7 +449,7 @@ def split_uri(uri):
 
 def get_header_lines(header):
     """
-    Splits the header into lines, putting multi-line headers together.
+    Splits the header into lines.
     """
     r = []
     lines = header.split(b"\r\n")
@@ -423,12 +464,25 @@ def get_header_lines(header):
             )
 
         if line.startswith((b" ", b"\t")):
-            if not r:
-                # https://corte.si/posts/code/pathod/pythonservers/index.html
-                raise ParsingError('Malformed header line "%s"' % str(line, "latin-1"))
-            r[-1] += line
-        else:
-            r.append(line)
+            # RFC 9112 section 5.2: a server that receives an obs-fold in a
+            # request message that is not within a message/http container MUST
+            # either reject the message with a 400 (Bad Request), preferably
+            # with a representation explaining that obsolete line folding is
+            # unacceptable, or replace each obs-fold with one or more SP
+            # octets before interpreting the field value.
+            #
+            # We reject. Folding has been deprecated since RFC 7230 in 2014,
+            # and unfolding leaves us interpreting a field one way while
+            # something in front of us that rejects folding, or unfolds it
+            # differently, interprets it another.
+            #
+            # NB: a folded line arriving first has nothing to fold onto, which
+            # used to be the only case rejected here. See
+            # https://corte.si/posts/code/pathod/pythonservers/index.html
+            raise ParsingError(
+                'Obsolete line folding is not allowed "%s"' % str(line, "latin-1")
+            )
+        r.append(line)
 
     return r
 

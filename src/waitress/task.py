@@ -18,6 +18,7 @@ import threading
 import time
 
 from .buffers import ReadOnlyFileBasedBuffer
+from .rfc7230 import connection_options
 from .utilities import build_http_date, logger, queue_logger
 
 rename_headers = {  # or keep them without the HTTP_ prefix added
@@ -558,7 +559,25 @@ class WSGITask(Task):
             "wsgi.input_terminated": True,  # wsgi.input is EOF terminated
         }
 
+        # RFC 9110 section 7.6.1: the field names listed in the Connection
+        # header field are connection specific, they apply to this hop only
+        # and a recipient must not forward them. Waitress is the end of the
+        # line for the connection, so handing them to the application is the
+        # equivalent of forwarding: a client can name a header there that the
+        # proxy in front of us believes only it controls, and the application
+        # has no way to tell the difference.
+        #
+        # The field names Connection itself may carry are dropped along with
+        # the ones it names, since they describe the connection rather than
+        # the request.
+        hop_by_hop_fields = {
+            option.upper().replace("-", "_")
+            for option in connection_options(request.headers.get("CONNECTION", ""))
+        }
+
         for key, value in dict(request.headers).items():
+            if key in hop_by_hop_fields:
+                continue
             mykey = rename_headers.get(key, None)
             if mykey is None:
                 mykey = "HTTP_" + key
