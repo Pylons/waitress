@@ -75,6 +75,11 @@ def slash_fixed_str(s):
         # always have a leading slash, replace any number of leading slashes
         # with a single slash, and strip any trailing slashes
         s = "/" + s.lstrip("/").rstrip("/")
+        # Normalize encoding to match PEP 3333: WSGI PATH_INFO/SCRIPT_NAME
+        # are raw URL bytes decoded as ISO-8859-1.  Encode the user-supplied
+        # Unicode string as UTF-8 and decode as ISO-8859-1 so that non-ASCII
+        # characters compare equal to the parser-produced path.
+        s = s.encode("utf-8").decode("iso-8859-1")
     return s
 
 

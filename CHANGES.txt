@@ -4,6 +4,11 @@ Unreleased
 Bugfix
 ~~~~~~
 
+- Waitress now normalizes a non-ASCII ``url_prefix`` to the PEP 3333
+  encoding used for request paths, so the prefix matches the parsed
+  ``PATH_INFO``/``SCRIPT_NAME``. See
+  https://github.com/Pylons/waitress/pull/493.
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 
