@@ -144,3 +144,27 @@ def zombies_test():
 
 def test_suite():
     return doctest.DocTestSuite()
+
+
+# ``test_suite`` matches pytest's default python_functions pattern (test_*)
+# and is intended for use by external test runners (e.g. zope.testrunner)
+# via the classic ``test_suite()`` module convention, not for direct
+# collection by pytest. Without this, pytest collects and "runs" it as a
+# test, then warns because it returns a DocTestSuite instead of None
+# (PytestReturnNotNoneWarning), which is slated to become a hard error in
+# a future pytest version. See GH #481.
+test_suite.__test__ = False
+
+
+def test_test_suite_excluded_from_pytest_collection():
+    """``test_suite`` must not be collected/run directly as a pytest test.
+
+    It exists for external test runners (e.g. zope.testrunner) that call
+    ``test_suite()`` via the classic module-level convention, not for
+    pytest itself. Its name matches pytest's default python_functions
+    pattern ("test_*"), so without ``__test__ = False`` pytest collects
+    and runs it, then warns because it returns a DocTestSuite instead of
+    None (PytestReturnNotNoneWarning), which is slated to become a hard
+    error in a future pytest version. See GH #481.
+    """
+    assert test_suite.__test__ is False
