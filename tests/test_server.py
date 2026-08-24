@@ -138,6 +138,14 @@ class TestWSGIServer(unittest.TestCase):
         inst.pull_trigger()
         self.assertTrue(inst.trigger.pulled)
 
+    def test_close(self):
+        """close() must shut down the task dispatcher, matching
+        MultiSocketServer.close(), or its threads are left running
+        (issue #480)"""
+        inst = self._makeOneWithMap(_start=False)
+        inst.close()
+        self.assertTrue(inst.task_dispatcher.was_shutdown)
+
     def test_add_task(self):
         task = DummyTask()
         inst = self._makeOneWithMap()
