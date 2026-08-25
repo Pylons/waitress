@@ -11,18 +11,81 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Tests for waitress.channel maintenance logic"""
+"""Tests for waitress.channel maintenance logic
 
-import doctest
+Regression test for HTTPChannel.maintenance: channels that have been
+"inactive" for a configured time get closed. The bug was that
+last_activity is set at creation time but never updated during async
+channel activity (reads and writes), so any channel older than the
+configured timeout would be marked for closing when maintenance ran,
+regardless of activity.
+
+This used to be a single doctest (see git history), written against a
+Python 2-only API (tuple-unpacking ``bind`` parameters, print
+statements) that could not run under Python 3 at all, and that pytest
+additionally warned about collecting via its ``test_suite()`` wrapper
+(see GH #481). It is rewritten below as ordinary pytest functions
+against the current API.
+"""
+
+import socket
+import time
+
+from waitress.server import create_server
+
+dummy_app = object()
+
+
+class FakeListenSocket(socket.socket):
+    """Stand-in for the listening socket create_server() binds to. Only
+    used because _start=False and _sock is supplied still exercises the
+    normal socket setup path (set_reuse_addr, etc.) -- nothing here is
+    ever actually connected to."""
+
+    family = socket.AF_INET
+    type = socket.SOCK_STREAM
+    proto = 0
+
+    def __init__(self):
+        self.bound = None
+        self.opts = []
+
+    def bind(self, addr):
+        self.bound = addr
+
+    def listen(self, num):
+        self.listened = num
+
+    def getsockname(self):
+        return self.bound
+
+    def setsockopt(self, *arg):
+        self.opts.append(arg)
+
+    def getsockopt(self, *arg):
+        return 1
+
+    def setblocking(self, *_):
+        pass
+
+    def fileno(self):
+        return 10
+
+    def getpeername(self):
+        return "127.0.0.1"
+
+    def close(self):
+        pass
 
 
 class FakeSocket:  # pragma: no cover
-    data = ""
-    setblocking = lambda *_: None
-    close = lambda *_: None
+    """Minimal socket stand-in, just enough to construct a real
+    HTTPChannel and drive it through handle_read()/handle_write()."""
 
     def __init__(self, no):
         self.no = no
+        self.to_recv = b""
+        self.sent = b""
 
     def fileno(self):
         return self.no
@@ -30,141 +93,130 @@ class FakeSocket:  # pragma: no cover
     def getpeername(self):
         return ("localhost", self.no)
 
+    def getsockopt(self, level, optname):
+        return 2048
+
+    def setblocking(self, *_):
+        pass
+
+    def close(self):
+        pass
+
     def send(self, data):
-        self.data += data
+        self.sent += data
         return len(data)
 
-    def recv(self, data):
-        return "data"
+    def recv(self, buffer_size):
+        result = self.to_recv[:buffer_size]
+        self.to_recv = self.to_recv[buffer_size:]
+        return result
 
 
-def zombies_test():
-    """Regression test for HTTPChannel.maintenance method
+class DummyTaskDispatcher:
+    def __init__(self):
+        self.tasks = []
 
-    Bug: This method checks for channels that have been "inactive" for a
-    configured time. The bug was that last_activity is set at creation time
-    but never updated during async channel activity (reads and writes), so
-    any channel older than the configured timeout will be closed when a new
-    channel is created, regardless of activity.
+    def add_task(self, task):
+        self.tasks.append(task)
 
-    >>> import time
-    >>> import waitress.adjustments
-    >>> config = waitress.adjustments.Adjustments()
-
-    >>> from waitress.server import HTTPServer
-    >>> class TestServer(HTTPServer):
-    ...     def bind(self, (ip, port)):
-    ...         print "Listening on %s:%d" % (ip or '*', port)
-    >>> sb = TestServer('127.0.0.1', 80, start=False, verbose=True)
-    Listening on 127.0.0.1:80
-
-    First we confirm the correct behavior, where a channel with no activity
-    for the timeout duration gets closed.
-
-    >>> from waitress.channel import HTTPChannel
-    >>> socket = FakeSocket(42)
-    >>> channel = HTTPChannel(sb, socket, ('localhost', 42))
-
-    >>> channel.connected
-    True
-
-    >>> channel.last_activity -= int(config.channel_timeout) + 1
-
-    >>> channel.next_channel_cleanup[0] = channel.creation_time - int(
-    ...     config.cleanup_interval) - 1
-
-    >>> socket2 = FakeSocket(7)
-    >>> channel2 = HTTPChannel(sb, socket2, ('localhost', 7))
-
-    >>> channel.connected
-    False
-
-    Write Activity
-    --------------
-
-    Now we make sure that if there is activity the channel doesn't get closed
-    incorrectly.
-
-    >>> channel2.connected
-    True
-
-    >>> channel2.last_activity -= int(config.channel_timeout) + 1
-
-    >>> channel2.handle_write()
-
-    >>> channel2.next_channel_cleanup[0] = channel2.creation_time - int(
-    ...     config.cleanup_interval) - 1
-
-    >>> socket3 = FakeSocket(3)
-    >>> channel3 = HTTPChannel(sb, socket3, ('localhost', 3))
-
-    >>> channel2.connected
-    True
-
-    Read Activity
-    --------------
-
-    We should test to see that read activity will update a channel as well.
-
-    >>> channel3.connected
-    True
-
-    >>> channel3.last_activity -= int(config.channel_timeout) + 1
-
-    >>> import waitress.parser
-    >>> channel3.parser_class = (
-    ...    waitress.parser.HTTPRequestParser)
-    >>> channel3.handle_read()
-
-    >>> channel3.next_channel_cleanup[0] = channel3.creation_time - int(
-    ...     config.cleanup_interval) - 1
-
-    >>> socket4 = FakeSocket(4)
-    >>> channel4 = HTTPChannel(sb, socket4, ('localhost', 4))
-
-    >>> channel3.connected
-    True
-
-    Main loop window
-    ----------------
-
-    There is also a corner case we'll do a shallow test for where a
-    channel can be closed waiting for the main loop.
-
-    >>> channel4.last_activity -= 1
-
-    >>> last_active = channel4.last_activity
-
-    >>> channel4.set_async()
-
-    >>> channel4.last_activity != last_active
-    True
-    """
+    def shutdown(self):
+        self.was_shutdown = True
 
 
-def test_suite():
-    return doctest.DocTestSuite()
+def _make_server(map, channel_timeout=120, cleanup_interval=30):
+    """A real TcpWSGIServer, not started, backed by a FakeSocket so no
+    actual socket is bound."""
+    return create_server(
+        dummy_app,
+        host="127.0.0.1",
+        port=0,
+        map=map,
+        _sock=FakeListenSocket(),
+        _dispatcher=DummyTaskDispatcher(),
+        _start=False,
+        channel_timeout=channel_timeout,
+        cleanup_interval=cleanup_interval,
+    )
 
 
-# ``test_suite`` matches pytest's default python_functions pattern (test_*)
-# and is intended for use by external test runners (e.g. zope.testrunner)
-# via the classic ``test_suite()`` module convention, not for direct
-# collection by pytest. Without this, pytest collects and "runs" it as a
-# test, then warns because it returns a DocTestSuite instead of None
-# (PytestReturnNotNoneWarning), which is slated to become a hard error in
-# a future pytest version. See GH #481.
-test_suite.__test__ = False
+def _make_channel(server, no, map):
+    from waitress.channel import HTTPChannel
+
+    sock = FakeSocket(no)
+    channel = HTTPChannel(server, sock, ("localhost", no), adj=server.adj, map=map)
+    server.active_channels[no] = channel
+
+    return channel, sock
 
 
-def test_test_suite_excluded_from_pytest_collection():
-    """``test_suite`` must not be collected/run directly as a pytest test.
+def test_maintenance_closes_inactive_channel():
+    """A channel with no activity for the timeout duration gets marked
+    for closing by maintenance."""
+    map = {}
+    server = _make_server(map, channel_timeout=1)
+    channel, _ = _make_channel(server, 42, map)
 
-    It exists for external test runners (e.g. zope.testrunner) that call
-    ``test_suite()`` via the classic module-level convention, not for
-    pytest itself. Its name matches pytest's default python_functions
-    pattern ("test_*"), so without ``__test__ = False`` pytest collects
-    and runs it, then warns because it returns a DocTestSuite instead of
-    None (PytestReturnNotNoneWarning), which is slated to become a hard
-    error in a future pytest version. See GH #481.
-    """
-    assert test_suite.__test__ is False
+    assert channel.will_close is False
+
+    channel.last_activity -= server.adj.channel_timeout + 1
+    server.maintenance(time.time())
+
+    assert channel.will_close is True
+
+
+def test_maintenance_write_activity_prevents_close():
+    """A channel that has had write activity since it went "idle" must
+    not be marked for closing, even though it's older than the
+    timeout."""
+    map = {}
+    server = _make_server(map, channel_timeout=1)
+    channel, sock = _make_channel(server, 7, map)
+
+    channel.last_activity -= server.adj.channel_timeout + 1
+
+    # Give it something to flush, then flush it -- this is what bumps
+    # last_activity on the write path.
+    channel.total_outbufs_len = 1
+    channel.outbufs[0].append(b"data")
+    channel.handle_write()
+
+    server.maintenance(time.time())
+
+    assert channel.will_close is False
+
+
+def test_maintenance_read_activity_prevents_close():
+    """A channel that has had read activity since it went "idle" must
+    not be marked for closing, even though it's older than the
+    timeout."""
+    map = {}
+    server = _make_server(map, channel_timeout=1)
+    channel, sock = _make_channel(server, 3, map)
+
+    channel.last_activity -= server.adj.channel_timeout + 1
+
+    # A single byte of inbound data is enough to bump last_activity via
+    # handle_read(), without needing a complete HTTP request.
+    sock.to_recv = b"G"
+    channel.handle_read()
+
+    server.maintenance(time.time())
+
+    assert channel.will_close is False
+
+
+def test_maintenance_leaves_channel_with_pending_requests_alone():
+    """A channel currently servicing a request must never be marked
+    for closing by maintenance, regardless of last_activity -- matching
+    the "main loop window" case from the original regression: activity
+    can still be in flight even if the timestamp itself is stale."""
+    map = {}
+    server = _make_server(map, channel_timeout=1)
+    channel, _ = _make_channel(server, 4, map)
+
+    channel.last_activity -= server.adj.channel_timeout + 1
+    channel.requests = [object()]
+
+    server.maintenance(time.time())
+
+    assert channel.will_close is False
