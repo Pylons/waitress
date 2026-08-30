@@ -4,6 +4,10 @@ Unreleased
 Bugfix
 ~~~~~~
 
+- Ignore ``EBADF`` from ``select``/``poll`` when a socket is closed while
+  the server is waiting for I/O, instead of crashing the worker loop.
+  See https://github.com/Pylons/waitress/issues/468
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 
