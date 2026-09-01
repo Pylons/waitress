@@ -768,6 +768,33 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ["PATH_INFO"], "")
         self.assertEqual(environ["SCRIPT_NAME"], "/foo")
 
+    def test_get_environment_drops_connection_named_fields(self):
+        # RFC 9110 section 7.6.1: the field names listed in Connection are
+        # connection specific and must not be forwarded. Handing them to the
+        # application is the equivalent of forwarding: a client could name a
+        # header there that the proxy in front of us believes it controls.
+        inst = self._makeOne()
+        request = DummyParser()
+        request.headers = {
+            "CONNECTION": "keep-alive, X-Secret",
+            "X_SECRET": "spoofed",
+            "X_KEPT": "fine",
+            "HOST": "localhost",
+        }
+        inst.request = request
+        environ = inst.get_environment()
+        self.assertNotIn("HTTP_X_SECRET", environ)
+        self.assertEqual(environ["HTTP_X_KEPT"], "fine")
+        self.assertEqual(environ["HTTP_HOST"], "localhost")
+
+    def test_get_environment_keeps_fields_when_no_connection(self):
+        inst = self._makeOne()
+        request = DummyParser()
+        request.headers = {"X_SECRET": "fine", "HOST": "localhost"}
+        inst.request = request
+        environ = inst.get_environment()
+        self.assertEqual(environ["HTTP_X_SECRET"], "fine")
+
     def test_get_environment_values(self):
         import sys
 

@@ -298,3 +298,8 @@ class InternalServerError(Error):
 class ServerNotImplemented(Error):
     code = 501
     reason = "Not Implemented"
+
+
+class HTTPVersionNotSupported(Error):
+    code = 505
+    reason = "HTTP Version Not Supported"

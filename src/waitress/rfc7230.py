@@ -73,3 +73,23 @@ HEADER_FIELD_RE = re.compile(
 QUOTED_PAIR_RE = re.compile(QUOTED_PAIR)
 QUOTED_STRING_RE = re.compile(QUOTED_STRING)
 CHUNK_EXT_RE = re.compile(("^" + CHUNK_EXT + "$").encode("latin-1"))
+
+
+def connection_options(value):
+    """
+    Return the set of connection options in a Connection header field value.
+
+    RFC 9112 Section 9.1 defines the field as a comma separated list of
+    options, so an option has to be looked for as a member of that list rather
+    than by comparing the whole field value.
+
+    Options are case insensitive, and a field that appeared more than once has
+    already been joined with commas by the parser, which is exactly the same
+    grammar, so this handles that as well.
+    """
+
+    return {
+        option.strip(" \t").lower()
+        for option in value.split(",")
+        if option.strip(" \t")
+    }
