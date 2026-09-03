@@ -716,7 +716,13 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertTrue(parser.completed)
         self.assertEqual(parser.version, "8.4")
         self.assertFalse(parser.empty)
-        self.assertEqual(parser.headers, {"CONTENT_LENGTH": "6"})
+        # HOST is derived from the absolute-form request-target's own
+        # authority (RFC 9112 sec 3.2.2), even though no explicit Host
+        # header was sent here. See GH #467.
+        self.assertEqual(
+            parser.headers,
+            {"CONTENT_LENGTH": "6", "HOST": "example.com:8080"},
+        )
         self.assertEqual(parser.path, "/foobar")
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.proxy_scheme, "https")
@@ -724,6 +730,28 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.query, "")
         self.assertEqual(parser.get_body_stream().getvalue(), b"Hello.")
+
+    def testProxyGETIgnoresMismatchedHostHeader(self):
+        """
+        Regression test for
+        https://github.com/Pylons/waitress/issues/467
+
+        Per RFC 9112 sec 3.2.2, an absolute-form request-target's own
+        authority must be used as the Host, and any Host header
+        actually received on the wire must be ignored -- even (and
+        especially) when it disagrees with the request-target, as a
+        malicious or misconfigured client might send.
+        """
+        data = (
+            b"GET http://example.com/page HTTP/1.1\r\n"
+            b"Host: attacker-controlled.example\r\n"
+            b"\r\n"
+        )
+        parser = self.parser
+        self.feed(data)
+        self.assertTrue(parser.completed)
+        self.assertEqual(parser.headers["HOST"], "example.com")
+        self.assertEqual(parser.path, "/page")
 
     def testDuplicateHeaders(self):
         # Ensure that headers with the same key get concatenated as per

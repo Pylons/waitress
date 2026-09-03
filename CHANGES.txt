@@ -8,6 +8,16 @@ Bugfix
   the server is waiting for I/O, instead of crashing the worker loop.
   See https://github.com/Pylons/waitress/issues/468
 
+- When a request uses the absolute-form of request-target (e.g.
+  ``GET http://example.com/page HTTP/1.1``), waitress now uses that
+  request-target's own authority as the ``Host``, ignoring any received
+  ``Host`` header, per RFC 9112 section 3.2.2. Previously, a client-supplied
+  ``Host`` header that disagreed with the request-target's authority was
+  used as-is, which could let a request's ``Host``-based routing, access
+  control, or cache-key handling be driven by a value the request line
+  itself contradicted. See
+  https://github.com/Pylons/waitress/issues/467
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 
