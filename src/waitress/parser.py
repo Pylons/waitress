@@ -273,6 +273,20 @@ class HTTPRequestParser:
             self.query,
             self.fragment,
         ) = split_uri(uri)
+
+        if self.proxy_netloc:
+            # RFC 9112 sec 3.2.2: "When a proxy receives a request with an
+            # absolute-form of request-target, the proxy MUST ignore the
+            # received Host header field (if any) and instead replace it
+            # with the host information of the request-target." The same
+            # requirement applies to an origin server receiving such a
+            # request. Without this, a client could send a request whose
+            # Host header differs from the request-target's own authority,
+            # and any code relying on the (untouched) Host header -- for
+            # routing, access control, or cache keys -- would be acting on
+            # a value the request-line itself contradicts. See GH #467.
+            headers["HOST"] = self.proxy_netloc
+
         self.url_scheme = self.adj.url_scheme
         connection = headers.get("CONNECTION", "")
 
