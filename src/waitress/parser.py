@@ -24,7 +24,7 @@ from urllib.parse import unquote_to_bytes
 
 from waitress.buffers import OverflowableBuffer
 from waitress.receiver import ChunkedReceiver, FixedStreamReceiver
-from waitress.rfc7230 import HEADER_FIELD_RE, ONLY_DIGIT_RE
+from waitress.rfc7230 import AUTHORITY_FORM_RE, HEADER_FIELD_RE, HOST_RE, ONLY_DIGIT_RE
 from waitress.utilities import (
     BadRequest,
     RequestEntityTooLarge,
@@ -266,6 +266,24 @@ class HTTPRequestParser:
         command = command.decode("latin-1")
         self.command = command
         self.version = version
+
+        if command == "CONNECT":
+            # RFC 9112 section 3.2.3: the request-target of a CONNECT is an
+            # authority-form, and a server MUST reject a CONNECT that targets
+            # an empty or invalid port number.
+            #
+            # Waitress leaves it to the WSGI application to decide what to do
+            # with a CONNECT, up to and including implementing a proxy with it,
+            # but the application can only do that safely if the target it is
+            # handed is well formed. This validates the shape of the
+            # request-target, it does not reject the method.
+            #
+            # NB: this has to happen before split_uri() is given a chance to
+            # look at the request-target, as urlsplit() parses the
+            # authority-form "example.com:443" as the scheme "example.com"
+            # followed by the path "443".
+            validate_authority_form(uri)
+
         (
             self.proxy_scheme,
             self.proxy_netloc,
@@ -273,6 +291,69 @@ class HTTPRequestParser:
             self.query,
             self.fragment,
         ) = split_uri(uri)
+
+        # NB: a CONNECT is excluded here because its request-target is an
+        # authority-form, which urlsplit() reads as a scheme followed by a path
+        # ("example.com:443" comes back as the scheme "example.com" and the
+        # path "443"). An authority-form is not an absolute-form, and it has
+        # been validated as one above already.
+        if self.proxy_scheme and command != "CONNECT":
+            # This is an absolute-form request-target. RFC 9112 section 3.2.2
+            # says that an origin server MUST ignore the received Host header
+            # field and use the host information from the request-target
+            # instead, so that the two can't disagree about which host the
+            # request was meant for.
+            #
+            # validate_uri_host() rejects a userinfo subcomponent along with
+            # everything else that isn't a valid uri-host, since "@" may not
+            # appear in one. RFC 9110 section 4.2.1 requires that an "http"
+            # URI with an empty host be rejected as invalid, so an authority
+            # is required here rather than merely allowed.
+            if not self.proxy_netloc:
+                raise ParsingError("Empty authority in absolute-form request-target")
+
+            validate_uri_host(self.proxy_netloc, "request-target authority")
+
+            headers["HOST"] = self.proxy_netloc
+
+        elif command != "CONNECT":
+            # Not an absolute-form, and not the authority-form of a CONNECT,
+            # so RFC 9112 section 3.2 leaves only two forms this can be. A
+            # request-target that is neither is malformed and does not name
+            # anything we could route.
+
+            if uri == b"*":
+                # RFC 9112 section 3.2.4: the asterisk-form is only used for a
+                # server-wide OPTIONS request. For any other method it is not
+                # a request-target at all, and passing it through would hand
+                # the application a PATH_INFO of "*" to make sense of.
+
+                if command != "OPTIONS":
+                    raise ParsingError(
+                        "Asterisk-form request-target is only valid for OPTIONS"
+                    )
+            elif not uri.startswith(b"/"):
+                # RFC 9112 section 3.2.1: an origin-form is an absolute-path
+                # optionally followed by a query, and an absolute-path begins
+                # with a "/". PEP 3333 wants the same of PATH_INFO.
+                #
+                # NB: this looks at the request-target as it arrived rather
+                # than at the decoded path, so that a percent encoded "/"
+                # can not stand in for the real one.
+                raise ParsingError("Request-target is not in the origin-form")
+
+        # RFC 9112 section 3.2 requires a 400 (Bad Request) response to any
+        # HTTP/1.1 request that lacks a Host header field, or that has a Host
+        # header field with an invalid field value. Duplicate Host headers are
+        # already rejected as part of SINGLETON_FIELDS above.
+        host = headers.get("HOST")
+
+        if host is None:
+            if version == "1.1":
+                raise ParsingError("HTTP/1.1 request does not contain a Host header")
+        else:
+            validate_uri_host(host, "Host header")
+
         self.url_scheme = self.adj.url_scheme
         connection = headers.get("CONNECTION", "")
 
@@ -368,6 +449,42 @@ class HTTPRequestParser:
 
         if body_rcv is not None:
             body_rcv.getbuf().close()
+
+
+def validate_uri_host(value, what):
+    """
+    Validate that ``value`` is a "uri-host [ ':' port ]" as required by RFC 7230
+    section 5.4 for the Host header field, and by RFC 3986 section 3.2 for the
+    authority of an absolute-form request-target.
+
+    ``what`` names the thing being validated, for use in the error message.
+    """
+
+    if not HOST_RE.match(value.encode("latin-1")):
+        raise ParsingError(f"Invalid {what}")
+
+
+def validate_authority_form(uri):
+    """
+    Validate that ``uri`` is an "authority-form" request-target as defined by
+    RFC 9112 section 3.2.3, that is a uri-host followed by a non-empty and
+    in-range port number.
+    """
+
+    m = AUTHORITY_FORM_RE.match(uri)
+
+    if m is None:
+        raise ParsingError("Request-target is not in the authority-form")
+
+    host, port = m.group("host", "port")
+
+    if not host:
+        raise ParsingError("Request-target does not contain a host")
+
+    # The regular expression bounds the port to at most 5 digits, so int() is
+    # safe to use on it here
+    if not port or not 0 < int(port) <= 65535:
+        raise ParsingError("Request-target contains an empty or invalid port")
 
 
 def split_uri(uri):

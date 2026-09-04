@@ -133,7 +133,7 @@ Contributors
 
 - Ben Warren, 2015-05-17
 
-- Bert JW Regeer, 2015-09-23
+- Delta Regeer, 2015-09-23
 
 - Yu Zhou, 2015-09-24
 
@@ -154,3 +154,5 @@ Contributors
 - Arun Raghunath, 2026-03-13
 
 - Rui Xi, 2026-03-20
+
+- Gyanu, 2026-08-30

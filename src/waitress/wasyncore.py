@@ -166,10 +166,10 @@ def poll(timeout=0.0, map=None):
         try:
             r, w, e = select.select(r, w, e, timeout)
         except OSError as err:
-            if err.args[0] != EINTR:
-                raise
-            else:
+            # close() from another thread can leave a stale fd in the set
+            if err.args[0] in (EINTR, EBADF):
                 return
+            raise
 
         for fd in r:
             obj = map.get(fd)
@@ -212,9 +212,9 @@ def poll2(timeout=0.0, map=None):
         try:
             r = pollster.poll(timeout)
         except OSError as err:
-            if err.args[0] != EINTR:
-                raise
-            r = []
+            if err.args[0] in (EINTR, EBADF):
+                return
+            raise
 
         for fd, flags in r:
             obj = map.get(fd)

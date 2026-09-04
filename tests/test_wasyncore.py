@@ -1353,9 +1353,25 @@ class Test_poll(unittest.TestCase):
         self.assertIsNone(result)
         self.assertListEqual(dummy_select.selected, [([0], [], [0], 0.0)])
 
+    def test_select_raises_EBADF(self):
+        dummy_select = DummySelect(select.error(errno.EBADF))
+        disp = DummyDispatcher()
+        disp.readable = lambda: True
+        map = {0: disp}
+        try:
+            from waitress import wasyncore
+
+            old_select = wasyncore.select
+            wasyncore.select = dummy_select
+            result = self._callFUT(map=map)
+        finally:
+            wasyncore.select = old_select
+        self.assertIsNone(result)
+        self.assertListEqual(dummy_select.selected, [([0], [], [0], 0.0)])
+
     def test_select_raises_non_EINTR(self):
         # i read the mock.patch docs.  nerp.
-        dummy_select = DummySelect(select.error(errno.EBADF))
+        dummy_select = DummySelect(select.error(errno.EPERM))
         disp = DummyDispatcher()
         disp.readable = lambda: True
         map = {0: disp}
@@ -1392,9 +1408,24 @@ class Test_poll2(unittest.TestCase):
             wasyncore.select = old_select
         self.assertListEqual(pollster.polled, [0.0])
 
+    def test_select_raises_EBADF(self):
+        pollster = DummyPollster(exc=select.error(errno.EBADF))
+        dummy_select = DummySelect(pollster=pollster)
+        disp = DummyDispatcher()
+        map = {0: disp}
+        try:
+            from waitress import wasyncore
+
+            old_select = wasyncore.select
+            wasyncore.select = dummy_select
+            self._callFUT(map=map)
+        finally:
+            wasyncore.select = old_select
+        self.assertListEqual(pollster.polled, [0.0])
+
     def test_select_raises_non_EINTR(self):
         # i read the mock.patch docs.  nerp.
-        pollster = DummyPollster(exc=select.error(errno.EBADF))
+        pollster = DummyPollster(exc=select.error(errno.EPERM))
         dummy_select = DummySelect(pollster=pollster)
         disp = DummyDispatcher()
         map = {0: disp}
