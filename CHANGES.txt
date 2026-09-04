@@ -42,6 +42,21 @@ Backward Incompatibilities
 Bugfix
 ~~~~~~
 
+- Waitress no longer closes the connection after a response with a status code
+  of 1xx, 204 or 304. RFC 9112 section 6.3 says such a response carries no
+  message body and is terminated by the first empty line after the header
+  fields, so it is framed unambiguously without a ``Content-Length`` or a
+  ``Transfer-Encoding`` and the connection may be reused. Previously every one
+  of them was answered with ``Connection: close``, which meant a cache
+  revalidating against Waitress had to reconnect for each ``304 Not Modified``
+  it received. See https://github.com/Pylons/waitress/issues/197
+
+- The ``Via`` response header that Waitress adds when the WSGI application
+  supplies its own ``Server`` header now includes the received-protocol that
+  RFC 9110 section 7.6.3 requires, for example ``Via: 1.1 waitress`` rather
+  than the ``Via: waitress`` written before, which is not a well formed field
+  value.
+
 - Ignore ``EBADF`` from ``select``/``poll`` when a socket is closed while
   the server is waiting for I/O, instead of crashing the worker loop.
   See https://github.com/Pylons/waitress/issues/468
