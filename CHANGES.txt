@@ -39,8 +39,63 @@ Backward Incompatibilities
   3333 does not allow. A request-target beginning with ``//`` is still treated
   as a path, as before.
 
+Features
+~~~~~~~~
+
+- Waitress now shuts down gracefully. Upon being interrupted it closes its
+  listening sockets, stops reading new requests off the connections that are
+  still open, and keeps running the main loop until the requests that are
+  already being serviced have finished and their responses have been written
+  back to the client. Only then are the worker threads stopped and the
+  remaining connections closed.
+
+  Previously the main loop was stopped immediately, which meant that any
+  response that had not been fully written out yet was dropped, and that a
+  task thread that was waiting on the main loop to drain an output buffer was
+  left blocked forever.
+
+  This is also exposed as ``server.graceful_shutdown()`` for those that drive
+  the server themselves instead of using ``server.run()``. See
+  https://github.com/Pylons/waitress/issues/198 and
+  https://github.com/Pylons/waitress/issues/264
+
+- Servers now have public ``start()`` and ``stop()`` methods that run the main
+  loop in a background thread and shut it down again. ``stop()`` is safe to
+  call from any thread, including from within the WSGI application. This
+  removes the need for the kind of workaround that WebTest's
+  ``StopableWSGIServer`` had to resort to, and combined with
+  ``server.effective_port`` it allows binding to port ``0`` and reading back
+  the port that was picked without racing anybody else for it. See
+  https://github.com/Pylons/waitress/issues/290
+
+- Added a new ``shutdown_timeout`` adjustment (default: 5 seconds) that bounds
+  how long the graceful shutdown described above may take, and that replaces
+  the previously hardcoded timeout used when stopping the worker threads. Set
+  it to ``0`` to tear everything down immediately instead. See
+  https://github.com/Pylons/waitress/issues/134
+
 Bugfix
 ~~~~~~
+
+- Waitress no longer leaks threads, sockets and socket map entries when it
+  fails to create a server, for example because the port it was asked to
+  listen on is already in use. The worker threads are no longer started until
+  every listening socket has been successfully bound, and anything that was
+  created before the failure is now cleaned up rather than being left running
+  with no way for the caller to get at it. See
+  https://github.com/Pylons/waitress/issues/480
+
+- ``BaseWSGIServer.close()`` now shuts down the task dispatcher and closes the
+  connections that are still open, matching what ``MultiSocketServer.close()``
+  already did. Previously closing a server that was listening on a single
+  socket left its worker threads running. See
+  https://github.com/Pylons/waitress/issues/402 and
+  https://github.com/Pylons/waitress/issues/480
+
+- Pulling the trigger after it has been closed is now a no-op instead of an
+  error. A task thread that finished right as the server was going away could
+  previously write to a file descriptor that had already been closed, and
+  potentially handed out to something else in the meantime.
 
 - Ignore ``EBADF`` from ``select``/``poll`` when a socket is closed while
   the server is waiting for I/O, instead of crashing the worker loop.

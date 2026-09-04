@@ -39,6 +39,19 @@ hop_by_hop = frozenset(
 )
 
 
+def in_task_thread():
+    """
+    Return True if the calling thread is one of the threads a
+    ``ThreadedTaskDispatcher`` services tasks in, which is to say one of the
+    threads the WSGI application runs in.
+
+    Waiting for a shutdown to complete from one of these deadlocks: the
+    shutdown is waiting for this very thread to finish what it is doing.
+    """
+
+    return getattr(threading.current_thread(), "waitress_task_thread", False)
+
+
 class ThreadedTaskDispatcher:
     """A Task Dispatcher that creates a thread for each task."""
 
@@ -59,6 +72,7 @@ class ThreadedTaskDispatcher:
             target=target, name=f"waitress-{thread_no}", args=(thread_no,)
         )
         t.daemon = True
+        t.waitress_task_thread = True
         t.start()
 
     def handler_thread(self, thread_no):
