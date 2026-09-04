@@ -89,9 +89,205 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertIsInstance(self.parser.error, BadRequest)
         self.assertTrue(self.parser.error.body.startswith("Duplicate header:"))
 
+    def test_received_missing_host_header_11(self):
+        # RFC 9112 section 3.2: MUST reject an HTTP/1.1 request that lacks a
+        # Host header field
+        data = b"POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\n"
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertIn("does not contain a Host header", self.parser.error.body)
+
+    def test_received_missing_host_header_10(self):
+        # the Host header is only required from HTTP/1.1 onwards
+        data = b"POST / HTTP/1.0\r\nContent-Length: 0\r\n\r\n"
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsNone(self.parser.error)
+
+    def test_received_valid_host_headers(self):
+        for host in (
+            b"example.com",
+            b"example.com:8080",
+            b"example.com.",
+            b"under_score.example.com",
+            b"127.0.0.1:80",
+            b"[::1]",
+            b"[::1]:8080",
+            b"[v7.host:in-the:future]",
+            b"xn--n3h.example",
+            b"",
+        ):
+            with self.subTest(host=host):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET / HTTP/1.1\r\nHost: " + host + b"\r\n\r\n"
+                parser.received(data)
+                self.assertIsNone(parser.error)
+                self.assertEqual(parser.headers["HOST"], host.decode("latin-1"))
+
+    def test_received_invalid_host_headers(self):
+        # RFC 9112 section 3.2: MUST reject a Host header field with an invalid
+        # field value
+        for host in (
+            b"exa mple.com",  # whitespace is not allowed in a uri-host
+            b"example.com:80x",  # the port must be numeric
+            b"example.com:80:80",
+            b"user@example.com",  # a userinfo subcomponent is not an uri-host
+            b"example.com/path",
+            b"example.com?query",
+            b"[::1",  # unterminated IP-literal
+            b"exampl\xc3\xa9.com",  # IDNs need to be punycoded by the client
+        ):
+            with self.subTest(host=host):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET / HTTP/1.1\r\nHost: " + host + b"\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+                self.assertIn("Invalid Host header", parser.error.body)
+
+    def test_received_absolute_form_overrides_host_header(self):
+        # RFC 9112 section 3.2.2: an origin server MUST ignore the Host header
+        # field of a request with an absolute-form request-target and use the
+        # host information from the request-target instead
+        data = b"GET http://evil.com/page HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+        result = self.parser.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(self.parser.completed)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.headers["HOST"], "evil.com")
+        self.assertEqual(self.parser.path, "/page")
+
+    def test_received_absolute_form_without_host_header(self):
+        data = b"GET http://evil.com:8080/page HTTP/1.1\r\n\r\n"
+        self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.headers["HOST"], "evil.com:8080")
+
+    def test_received_absolute_form_invalid_authority(self):
+        for uri in (
+            b"http:///page",  # RFC 9110 4.2.1: MUST reject an empty host
+            b"http://user@evil.com/page",  # userinfo is not allowed
+            b"http://evil.com:80x/page",
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET " + uri + b" HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+
+    def test_received_network_path_reference_is_a_path(self):
+        # a request-target that starts with "//" has no scheme, so it stays a
+        # path and the Host header is left alone. See
+        # https://github.com/Pylons/waitress/issues/260
+        data = b"GET //testing/whatever HTTP/1.1\r\nHost: victim.com\r\n\r\n"
+        self.parser.received(data)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.headers["HOST"], "victim.com")
+        self.assertEqual(self.parser.path, "//testing/whatever")
+
+    def test_received_asterisk_form_options(self):
+        # RFC 9112 section 3.2.4: the asterisk-form is used for a server-wide
+        # OPTIONS request
+        data = b"OPTIONS * HTTP/1.1\r\nHost: localhost\r\n\r\n"
+        self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertIsNone(self.parser.error)
+        self.assertEqual(self.parser.command, "OPTIONS")
+        self.assertEqual(self.parser.path, "*")
+
+    def test_received_asterisk_form_rejected_for_other_methods(self):
+        # the asterisk-form is only a request-target for OPTIONS; for anything
+        # else it names nothing that could be routed
+        for command in (b"GET", b"POST", b"HEAD", b"DELETE"):
+            with self.subTest(command=command):
+                parser = HTTPRequestParser(Adjustments())
+                data = command + b" * HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+
+    def test_received_origin_form_must_be_an_absolute_path(self):
+        # RFC 9112 section 3.2.1: an origin-form is an absolute-path, which
+        # begins with a "/". PEP 3333 wants the same of PATH_INFO.
+        for uri in (
+            b"foo/bar",
+            b"1.2.3.4:80/x",
+            b"%2Ffoo",  # a percent encoded "/" does not make an absolute-path
+            b".",
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET " + uri + b" HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+
+    def test_received_origin_form_accepted(self):
+        for uri, path in (
+            (b"/", "/"),
+            (b"/foo", "/foo"),
+            (b"/foo?a=b", "/foo"),
+            (b"/foo%2Fbar", "/foo/bar"),
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"GET " + uri + b" HTTP/1.1\r\nHost: localhost\r\n\r\n"
+                parser.received(data)
+                self.assertIsNone(parser.error)
+                self.assertEqual(parser.path, path)
+
+    def test_received_connect_is_not_an_absolute_form(self):
+        # a CONNECT uses the authority-form of request-target, which urlsplit()
+        # reads as a scheme followed by a path. Waitress passes a CONNECT
+        # through for the WSGI application to deal with, so the request-target
+        # must not be mistaken for an absolute-form and rejected.
+        for uri, path in (
+            (b"example.com:443", "443"),
+            (b"[::1]:443", "[::1]:443"),
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"CONNECT " + uri + b" HTTP/1.1\r\nHost: example.com\r\n\r\n"
+                parser.received(data)
+                self.assertIsNone(parser.error)
+                self.assertEqual(parser.command, "CONNECT")
+                self.assertEqual(parser.request_uri, uri.decode("latin-1"))
+                self.assertEqual(parser.path, path)
+                # the Host header field is left exactly as the client sent it
+                self.assertEqual(parser.headers["HOST"], "example.com")
+
+    def test_received_connect_invalid_authority_form(self):
+        # RFC 9112 section 3.2.3: MUST reject a CONNECT request that targets an
+        # empty or invalid port number
+        for uri in (
+            b"example.com",  # no port at all
+            b"example.com:",  # empty port
+            b"example.com:0",  # port zero is not a valid port number
+            b"example.com:65536",  # out of range
+            b"example.com:999999",
+            b"example.com:https",  # the port must be numeric
+            b":443",  # no host
+            b"http://example.com:443",
+            b"/",
+            b"*",
+        ):
+            with self.subTest(uri=uri):
+                parser = HTTPRequestParser(Adjustments())
+                data = b"CONNECT " + uri + b" HTTP/1.1\r\nHost: example.com\r\n\r\n"
+                parser.received(data)
+                self.assertTrue(parser.completed)
+                self.assertIsInstance(parser.error, BadRequest)
+                self.assertIn("Request-target", parser.error.body)
+
     def test_received_bad_transfer_encoding(self):
         data = (
             b"GET /foobar HTTP/1.1\r\n"
+            b"Host: example.com\r\n"
             b"Transfer-Encoding: foo\r\n"
             b"\r\n"
             b"1d;\r\n"
@@ -99,7 +295,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             b"0\r\n\r\n"
         )
         result = self.parser.received(data)
-        self.assertEqual(result, 48)
+        self.assertEqual(result, 67)
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, ServerNotImplemented)
 
@@ -153,6 +349,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.parser.adj.max_request_body_size = 2
         data = (
             b"GET /foobar HTTP/1.1\r\n"
+            b"Host: example.com\r\n"
             b"Transfer-Encoding: chunked\r\n"
             b"X-Foo: 1\r\n"
             b"\r\n"
@@ -162,7 +359,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         )
 
         result = self.parser.received(data)
-        self.assertEqual(result, 62)
+        self.assertEqual(result, 81)
         self.parser.received(data[result:])
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, RequestEntityTooLarge)
@@ -170,6 +367,7 @@ class TestHTTPRequestParser(unittest.TestCase):
     def test_received_error_from_parser(self):
         data = (
             b"GET /foobar HTTP/1.1\r\n"
+            b"Host: example.com\r\n"
             b"Transfer-Encoding: chunked\r\n"
             b"X-Foo: 1\r\n"
             b"\r\n"
@@ -186,6 +384,7 @@ class TestHTTPRequestParser(unittest.TestCase):
     def test_received_chunked_completed_sets_content_length(self):
         data = (
             b"GET /foobar HTTP/1.1\r\n"
+            b"Host: example.com\r\n"
             b"Transfer-Encoding: chunked\r\n"
             b"X-Foo: 1\r\n"
             b"\r\n"
@@ -194,7 +393,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             b"0\r\n\r\n"
         )
         result = self.parser.received(data)
-        self.assertEqual(result, 62)
+        self.assertEqual(result, 81)
         data = data[result:]
         result = self.parser.received(data)
         self.assertTrue(self.parser.completed)
@@ -259,19 +458,21 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_parse_header_11_te_chunked(self):
         # NB: test that capitalization of header value is unimportant
-        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: ChUnKed\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: ChUnKed\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
 
     def test_parse_header_11_te_chunked_with_cl_close_connection(self):
         # NB: test that capitalization of header value is unimportant
-        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: chunked\r\ncontent-length: 10\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: chunked\r\ncontent-length: 10\r\n"
         self.parser.parse_header(data)
         self.assertEqual(self.parser.body_rcv.__class__.__name__, "ChunkedReceiver")
         self.assertEqual(self.parser.connection_close, True)
 
     def test_parse_header_transfer_encoding_invalid(self):
-        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\n"
+        data = (
+            b"GET /foobar HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: gzip\r\n"
+        )
 
         try:
             self.parser.parse_header(data)
@@ -281,7 +482,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_transfer_encoding_invalid_multiple(self):
-        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: gzip\r\ntransfer-encoding: chunked\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: gzip\r\ntransfer-encoding: chunked\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -291,7 +492,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_transfer_encoding_invalid_multiple_chunked(self):
-        data = b"GET /foobar HTTP/1.1\r\ntransfer-encoding: chunked\r\ntransfer-encoding: chunked\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: chunked\r\ntransfer-encoding: chunked\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -304,7 +505,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_transfer_encoding_invalid_whitespace(self):
-        data = b"GET /foobar HTTP/1.1\r\nTransfer-Encoding:\x85chunked\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding:\x85chunked\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -319,7 +520,7 @@ class TestHTTPRequestParser(unittest.TestCase):
         # which if waitress were to accidentally do the wrong thing get
         # lowercased to just the ascii "k" due to unicode collisions during
         # transformation
-        data = b"GET /foobar HTTP/1.1\r\nTransfer-Encoding: chun\xe2\x84\xaaed\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chun\xe2\x84\xaaed\r\n"
 
         try:
             self.parser.parse_header(data)
@@ -329,12 +530,12 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_11_expect_continue(self):
-        data = b"GET /foobar HTTP/1.1\r\nexpect: 100-continue\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nexpect: 100-continue\r\n"
         self.parser.parse_header(data)
         self.assertTrue(self.parser.expect_continue)
 
     def test_parse_header_connection_close(self):
-        data = b"GET /foobar HTTP/1.1\r\nConnection: close\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n"
         self.parser.parse_header(data)
         self.assertTrue(self.parser.connection_close)
 
@@ -395,7 +596,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_whitespace_vtab(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo:\x0bbar\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo:\x0bbar\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -404,7 +605,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_no_colon(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nnotvalid\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar\r\nnotvalid\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -413,7 +614,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_folding_spacing(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\n\t\x0bbaz\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar\r\n\t\x0bbaz\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -422,7 +623,9 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_invalid_chars(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nfoo: \x0bbaz\r\n"
+        data = (
+            b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar\r\nfoo: \x0bbaz\r\n"
+        )
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -431,12 +634,14 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_other_whitespace(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: \xa0something\x85\r\n"
+        data = (
+            b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: \xa0something\x85\r\n"
+        )
         self.parser.parse_header(data)
         self.assertEqual(self.parser.headers["FOO"], "\xa0something\x85")
 
     def test_parse_header_empty(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nempty:\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar\r\nempty:\r\n"
         self.parser.parse_header(data)
 
         self.assertIn("EMPTY", self.parser.headers)
@@ -445,21 +650,21 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertEqual(self.parser.headers["FOO"], "bar")
 
     def test_parse_header_multiple_values(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever, more, please, yes\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar, whatever, more, please, yes\r\n"
         self.parser.parse_header(data)
 
         self.assertIn("FOO", self.parser.headers)
         self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
 
     def test_parse_header_multiple_values_header_folded(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more, please, yes\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar, whatever,\r\n more, please, yes\r\n"
         self.parser.parse_header(data)
 
         self.assertIn("FOO", self.parser.headers)
         self.assertEqual(self.parser.headers["FOO"], "bar, whatever, more, please, yes")
 
     def test_parse_header_multiple_values_header_folded_multiple(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar, whatever,\r\n more\r\nfoo: please, yes\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar, whatever,\r\n more\r\nfoo: please, yes\r\n"
         self.parser.parse_header(data)
 
         self.assertIn("FOO", self.parser.headers)
@@ -467,14 +672,14 @@ class TestHTTPRequestParser(unittest.TestCase):
 
     def test_parse_header_multiple_values_extra_space(self):
         # Tests errata from: https://www.rfc-editor.org/errata_search.php?rfc=7230&eid=4189
-        data = b"GET /foobar HTTP/1.1\r\nfoo: abrowser/0.001 (C O M M E N T)\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: abrowser/0.001 (C O M M E N T)\r\n"
         self.parser.parse_header(data)
 
         self.assertIn("FOO", self.parser.headers)
         self.assertEqual(self.parser.headers["FOO"], "abrowser/0.001 (C O M M E N T)")
 
     def test_parse_header_invalid_backtrack_bad(self):
-        data = b"GET /foobar HTTP/1.1\r\nfoo: bar\r\nfoo: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\x10\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo: bar\r\nfoo: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\x10\r\n"
         try:
             self.parser.parse_header(data)
         except ParsingError as e:
@@ -483,7 +688,7 @@ class TestHTTPRequestParser(unittest.TestCase):
             self.assertTrue(False)
 
     def test_parse_header_short_values(self):
-        data = b"GET /foobar HTTP/1.1\r\none: 1\r\ntwo: 22\r\n"
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\none: 1\r\ntwo: 22\r\n"
         self.parser.parse_header(data)
 
         self.assertIn("ONE", self.parser.headers)
@@ -716,7 +921,10 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         self.assertTrue(parser.completed)
         self.assertEqual(parser.version, "8.4")
         self.assertFalse(parser.empty)
-        self.assertEqual(parser.headers, {"CONTENT_LENGTH": "6"})
+        # the authority of the absolute-form request-target is used as the Host
+        self.assertEqual(
+            parser.headers, {"CONTENT_LENGTH": "6", "HOST": "example.com:8080"}
+        )
         self.assertEqual(parser.path, "/foobar")
         self.assertEqual(parser.command, "GET")
         self.assertEqual(parser.proxy_scheme, "https")
