@@ -1,5 +1,43 @@
-Unreleased
-----------
+4.0.0 (unreleased)
+------------------
+
+Backward Incompatibilities
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- An HTTP/1.1 request that does not contain a Host header field is now rejected
+  with a 400 (Bad Request), as required by RFC 9112 section 3.2. A Host header
+  field whose value is not a valid ``uri-host [ ":" port ]`` is rejected the
+  same way, whatever the HTTP version of the request. Note that this means an
+  internationalised domain name has to be punycoded by the client, as it always
+  should have been. See https://github.com/Pylons/waitress/issues/462
+
+- When a request uses the absolute-form of request-target, the authority from
+  the request-target is now used as the value of ``HTTP_HOST`` in the environ,
+  and the Host header field of the request is ignored. RFC 9112 section 3.2.2
+  requires this of an origin server, so that a request such as
+  ``GET http://evil.com/ HTTP/1.1`` with ``Host: victim.com`` can't be
+  interpreted one way by Waitress and another way by anything in front of it.
+  An absolute-form request-target with an empty authority, or with a userinfo
+  subcomponent, is rejected with a 400 (Bad Request). See
+  https://github.com/Pylons/waitress/issues/467
+
+- The request-target of a CONNECT request is now validated as the
+  authority-form that RFC 9112 section 3.2.3 requires it to be, and a CONNECT
+  that targets an empty or invalid port number is rejected with a 400 (Bad
+  Request). Waitress still leaves it to the WSGI application to decide what to
+  do with a CONNECT, this only makes sure the request-target it is handed is
+  well formed. See https://github.com/Pylons/waitress/issues/463
+
+- The two remaining forms of request-target described by RFC 9112 section 3.2
+  are now validated as well. The asterisk-form ``*`` is only accepted for an
+  OPTIONS request, as section 3.2.4 restricts it to a server-wide OPTIONS;
+  sending it with any other method is rejected with a 400 (Bad Request).
+  Anything that is not an absolute-form, an authority-form or the asterisk-form
+  has to be an origin-form, which section 3.2.1 defines as an absolute-path,
+  and a request-target that does not begin with a ``/`` is now rejected the
+  same way rather than reaching the application as a ``PATH_INFO`` that PEP
+  3333 does not allow. A request-target beginning with ``//`` is still treated
+  as a path, as before.
 
 Bugfix
 ~~~~~~
@@ -19,6 +57,10 @@ Bugfix
   than the ``Via: waitress`` written before, which is not a well formed field
   value.
 
+- Ignore ``EBADF`` from ``select``/``poll`` when a socket is closed while
+  the server is waiting for I/O, instead of crashing the worker loop.
+  See https://github.com/Pylons/waitress/issues/468
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 
@@ -33,6 +75,19 @@ Bugfix
   completed to comply with the requirements of RFC9112. See
   https://github.com/Pylons/waitress/pull/475 and
   https://github.com/Pylons/waitress/issues/464
+
+- A request that contains more than one Host header field is now rejected with
+  a 400 (Bad Request), rather than being passed to the WSGI application with
+  the values joined by a comma. See
+  https://github.com/Pylons/waitress/issues/462 and
+  https://github.com/Pylons/waitress/pull/484
+
+- A request that contains more than one Content-Type header field is now
+  rejected with a 400 (Bad Request). Content-Type is a singleton field, and
+  recipients differ in which of the values they pick when it is sent more than
+  once. The same applies to Content-Length. See
+  https://github.com/Pylons/waitress/issues/466 and
+  https://github.com/Pylons/waitress/pull/488
 
 3.0.2 (2024-11-16)
 ------------------
