@@ -46,6 +46,10 @@ Bugfix
   the server is waiting for I/O, instead of crashing the worker loop.
   See https://github.com/Pylons/waitress/issues/468
 
+- Close fully-sent keep-alive output buffers after a request finishes, so a
+  tempfile used for a large ``wsgi.file_wrapper`` response does not stay open
+  until the next request. See https://github.com/Pylons/waitress/issues/461
+
 - Renamed the HTTP header "Trailers" to "Trailer" to fix a typo and comply with
   the correct header name as specified in RFC 7230.
 

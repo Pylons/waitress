@@ -606,6 +606,29 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertTrue(request.serviced)
         self.assertTrue(request.closed)
 
+    def test_service_keep_alive_closes_empty_outbuf(self):
+        inst, sock, map = self._makeOneWithMap()
+        request = DummyRequest()
+        inst.task_class = DummyTaskClass()
+        old = DummyBuffer(b"")
+        inst.outbufs = [old]
+        inst.requests = [request]
+        inst.service()
+        self.assertTrue(old.closed)
+        self.assertEqual(len(inst.outbufs), 1)
+        self.assertIsNot(inst.outbufs[0], old)
+
+    def test_service_keep_alive_leaves_unsent_outbuf(self):
+        inst, sock, map = self._makeOneWithMap()
+        request = DummyRequest()
+        inst.task_class = DummyTaskClass()
+        old = DummyBuffer(b"still here")
+        inst.outbufs = [old]
+        inst.requests = [request]
+        inst.service()
+        self.assertFalse(old.closed)
+        self.assertIs(inst.outbufs[0], old)
+
     def test_service_with_one_error_request(self):
         inst, sock, map = self._makeOneWithMap()
         request = DummyRequest()
