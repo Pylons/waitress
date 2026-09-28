@@ -102,3 +102,28 @@ It also allows for setting the standard ``WEB_CONCURRENCY`` environment variable
 Note that Waitress uses a thread-based model and careful effort should be taken to ensure that requests do not take longer than 30 seconds or Heroku will inform the client that the request failed even though the request is still being processed by Waitress and occupying a thread until it completes.
 
 For more information on this, see :ref:`runner`.
+
+
+Take over a connection in response handler
+------------------------------------------
+
+For the WebSocket upgrade handshake, waitress puts a ``waitress.hijack``
+callable in the WSGI environment. Calling it hands the connection to the
+application:
+
+.. code-block:: python
+
+    def app(environ, start_response):
+        sock = environ['waitress.hijack']()
+        # 'sock' is now yours; speak whatever protocol you like on it
+        ...
+        sock.close()
+        return []
+
+The socket returned is in blocking mode and is a duplicate of the one waitress
+holds, so closing it is safe and is the application's job. After the call
+waitress writes no response on the connection, reads no further request from
+it, and closes its own descriptor once the application returns. The thread
+servicing the request is occupied for as long as the application holds the
+connection, so size ``threads`` for the number of concurrent long-lived
+connections you expect.

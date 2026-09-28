@@ -191,6 +191,18 @@ class Task:
                 self.response_headers.append(("Connection", "close"))
         self.close_on_finish = True
 
+    def hijack(self):
+        # Take the connection away from waitress and return its socket.
+        sock = self.channel.socket.dup()
+        sock.setblocking(True)
+
+        # adjust task's state so it finishes cleanly
+        self.wrote_header = True
+        self.close_on_finish = True
+        self.channel.will_close = True
+
+        return sock
+
     def build_response_header(self):
         version = self.version
         # Figure out whether the connection should be closed.
@@ -569,6 +581,10 @@ class WSGITask(Task):
         # check if the client disconnected. Only works with
         # channel_request_lookahead larger than 0.
         environ["waitress.client_disconnected"] = self.channel.check_client_disconnected
+
+        # Insert a callable into the environment that allows the application
+        # to take the connection over for WebSocket protocol upgrade.
+        environ["waitress.hijack"] = self.hijack
 
         # cache the environ for this request
         self.environ = environ

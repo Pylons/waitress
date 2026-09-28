@@ -1,4 +1,5 @@
 import io
+import socket
 import unittest
 
 
@@ -768,6 +769,51 @@ class TestWSGITask(unittest.TestCase):
         self.assertEqual(environ["PATH_INFO"], "")
         self.assertEqual(environ["SCRIPT_NAME"], "/foo")
 
+    def test_hijack_communication_handover(self):
+        server_sock, client_sock = socket.socketpair()
+        self.addCleanup(server_sock.close)
+        self.addCleanup(client_sock.close)
+        # waitress keeps its own socket non-blocking for the main loop
+        server_sock.setblocking(False)
+
+        channel = DummyChannel()
+        channel.socket = server_sock
+        inst = self._makeOne(channel=channel)
+
+        sock = inst.hijack()
+        self.addCleanup(sock.close)
+
+        # a duplicate, so closing it leaves the channel's descriptor alone
+        self.assertNotEqual(sock.fileno(), server_sock.fileno())
+        # and usable from a thread, which a non-blocking socket would not be
+        self.assertIsNone(sock.gettimeout())
+        sock.sendall(b"hello")
+        self.assertEqual(client_sock.recv(5), b"hello")
+
+        self.assertTrue(inst.wrote_header)
+        self.assertTrue(inst.close_on_finish)
+        self.assertTrue(channel.will_close)
+
+        sock.close()
+        self.assertNotEqual(server_sock.fileno(), -1)
+
+    def test_hijack_finishes_cleanly(self):
+        server_sock, client_sock = socket.socketpair()
+        self.addCleanup(server_sock.close)
+        self.addCleanup(client_sock.close)
+
+        channel = DummyChannel()
+        channel.socket = server_sock
+        inst = self._makeOne(channel=channel)
+
+        sock = inst.hijack()
+        self.addCleanup(sock.close)
+        inst.finish()
+
+        # nothing of the HTTP response reaches the upgraded connection
+        self.assertEqual(channel.written, b"")
+        self.assertEqual(channel.otherdata, [])
+
     def test_get_environment_values(self):
         import sys
 
@@ -804,6 +850,7 @@ class TestWSGITask(unittest.TestCase):
                 "SERVER_PROTOCOL",
                 "SERVER_SOFTWARE",
                 "waitress.client_disconnected",
+                "waitress.hijack",
                 "wsgi.errors",
                 "wsgi.file_wrapper",
                 "wsgi.input",
@@ -960,6 +1007,8 @@ class DummyChannel:
     adj = DummyAdj()
     creation_time = 0
     addr = ("127.0.0.1", 39830)
+    socket = None
+    will_close = False
 
     def check_client_disconnected(self):
         # For now, until we have tests handling this feature

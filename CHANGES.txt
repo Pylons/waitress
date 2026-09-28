@@ -39,6 +39,18 @@ Backward Incompatibilities
   3333 does not allow. A request-target beginning with ``//`` is still treated
   as a path, as before.
 
+Features
+~~~~~~~~
+
+- The WSGI environment now contains a ``waitress.hijack`` callable that lets an
+  application take the connection away from waitress and speak WebSocket
+  protocol. It returns a blocking socket the application owns; waitress then
+  writes no response, reads no further request and leaves the connection
+  alone. The thread servicing the request stays busy for as long as the
+  application holds the connection, so the number of upgraded connections a
+  server can carry at once is bounded by ``threads``.
+  See https://github.com/Pylons/waitress/pull/470
+
 Bugfix
 ~~~~~~
 
