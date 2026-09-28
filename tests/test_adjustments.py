@@ -174,6 +174,15 @@ class TestAdjustments(unittest.TestCase):
         # localhost...
         self.assertTupleEqual(("127.0.0.1", 8080), bind_pairs[0])
 
+    def test_url_prefix_non_ascii(self):
+        inst = self._makeOne(url_prefix="/école")
+
+        # SCRIPT_NAME/PATH_INFO carry non-ASCII bytes as UTF-8 decoded as
+        # latin-1, matching how the request path is decoded in parser.py,
+        # so url_prefix must be normalized the same way to compare equal
+        # to an incoming path.
+        self.assertEqual(inst.url_prefix, "/école".encode("utf-8").decode("latin-1"))
+
     def test_goodvar_listen(self):
         inst = self._makeOne(listen="127.0.0.1")
 
