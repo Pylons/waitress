@@ -416,6 +416,33 @@ class HTTPChannel(wasyncore.dispatcher):
                     self.server.pull_trigger()
                     self.outbuf_lock.wait()
 
+    def _recycle_idle_outbufs(self):
+        """Close fully-sent output buffers on a keep-alive connection.
+
+        ``_flush_some`` only closes an empty outbuf when another buffer
+        follows it, so a tempfile-backed buffer from a large file response
+        otherwise stays open until the next request or the client disconnects.
+        """
+        with self.outbuf_lock:
+            while len(self.outbufs) > 1 and self.outbufs[0].__len__() == 0:
+                toclose = self.outbufs.pop(0)
+                try:
+                    toclose.close()
+                except Exception:
+                    self.logger.exception(
+                        "Unknown exception while trying to close outbuf"
+                    )
+            if self.outbufs and self.outbufs[0].__len__() == 0:
+                toclose = self.outbufs[0]
+                self.outbufs[0] = OverflowableBuffer(self.adj.outbuf_overflow)
+                self.current_outbuf_count = 0
+                try:
+                    toclose.close()
+                except Exception:
+                    self.logger.exception(
+                        "Unknown exception while trying to close outbuf"
+                    )
+
     def service(self):
         """Execute one request. If there are more, we add another task to the
         server at the end."""
@@ -489,6 +516,8 @@ class HTTPChannel(wasyncore.dispatcher):
 
             if self.current_outbuf_count > 0:
                 self.current_outbuf_count = self.adj.outbuf_high_watermark
+
+            self._recycle_idle_outbufs()
 
             request.close()
 
