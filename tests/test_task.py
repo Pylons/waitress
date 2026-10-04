@@ -178,14 +178,12 @@ class TestTask(unittest.TestCase):
         inst.version = "1.1"
         result = inst.build_response_header()
         lines = filter_lines(result)
-        self.assertEqual(len(lines), 5)
+        self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b"HTTP/1.1 200 OK")
-        self.assertEqual(lines[1], b"Connection: close")
-        self.assertTrue(lines[2].startswith(b"Date:"))
-        self.assertEqual(lines[3], b"Server: waitress")
-        self.assertEqual(lines[4], b"Transfer-Encoding: chunked")
-        self.assertIn(("Connection", "close"), inst.response_headers)
-        self.assertTrue(inst.close_on_finish)
+        self.assertTrue(lines[1].startswith(b"Date:"))
+        self.assertEqual(lines[2], b"Server: waitress")
+        self.assertEqual(lines[3], b"Transfer-Encoding: chunked")
+        self.assertFalse(inst.close_on_finish)
 
     def test_build_response_header_v11_200_no_content_length(self):
         inst = self._makeOne()
@@ -193,14 +191,12 @@ class TestTask(unittest.TestCase):
         inst.version = "1.1"
         result = inst.build_response_header()
         lines = filter_lines(result)
-        self.assertEqual(len(lines), 5)
+        self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], b"HTTP/1.1 200 OK")
-        self.assertEqual(lines[1], b"Connection: close")
-        self.assertTrue(lines[2].startswith(b"Date:"))
-        self.assertEqual(lines[3], b"Server: waitress")
-        self.assertEqual(lines[4], b"Transfer-Encoding: chunked")
-        self.assertTrue(inst.close_on_finish)
-        self.assertIn(("Connection", "close"), inst.response_headers)
+        self.assertTrue(lines[1].startswith(b"Date:"))
+        self.assertEqual(lines[2], b"Server: waitress")
+        self.assertEqual(lines[3], b"Transfer-Encoding: chunked")
+        self.assertFalse(inst.close_on_finish)
 
     def test_build_response_header_v11_204_no_content_length_or_transfer_encoding(self):
         # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length

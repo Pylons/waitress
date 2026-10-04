@@ -249,8 +249,7 @@ class Task:
                 if self.has_body:
                     self.response_headers.append(("Transfer-Encoding", "chunked"))
                     self.chunked_response = True
-
-                if not self.close_on_finish:
+                elif not self.close_on_finish:
                     self.set_close_on_finish()
 
             # under HTTP 1.1 keep-alive is default, no need to set the header
