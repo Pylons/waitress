@@ -302,7 +302,7 @@ asyncore_use_poll
     By default ``asyncore.loop()`` uses ``select()`` which has a limit of 1024 file descriptors.
     ``select()`` and ``poll()`` provide basically the same functionality, but ``poll()`` doesn't have the file descriptors limit.
 
-    Default: ``False``
+    Default: ``True``
 
     .. versionadded:: 0.8.6
 

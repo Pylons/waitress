@@ -282,7 +282,7 @@ class Adjustments:
     asyncore_loop_timeout = 1
 
     # The asyncore.loop flag to use poll() instead of the default select().
-    asyncore_use_poll = False
+    asyncore_use_poll = True
 
     # Enable IPv4 by default
     ipv4 = True

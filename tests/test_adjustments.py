@@ -184,6 +184,8 @@ class TestAdjustments(unittest.TestCase):
     def test_default_listen(self):
         inst = self._makeOne()
 
+        self.assertTrue(inst.asyncore_use_poll)
+
         bind_pairs = [(host, port) for (_, _, _, (host, port)) in inst.listen]
 
         self.assertListEqual(bind_pairs, [("0.0.0.0", 8080)])
