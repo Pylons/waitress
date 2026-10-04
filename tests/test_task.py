@@ -74,6 +74,23 @@ class TestThreadedTaskDispatcher(unittest.TestCase):
         inst.add_task(task)
         self.assertEqual(len(inst.queue_logger.logged), 1)
         inst.add_task(task)
+        self.assertEqual(len(inst.queue_logger.logged), 1)
+
+    def test_add_task_queue_depth_warning_resets_when_idle(self):
+        task = DummyTask()
+        inst = self._makeOne()
+        inst.threads.add(0)
+        inst.queue_logger = DummyLogger()
+        inst.add_task(task)
+        self.assertEqual(len(inst.queue_logger.logged), 0)
+        inst.threads = set()
+        inst.add_task(task)
+        self.assertEqual(len(inst.queue_logger.logged), 1)
+        inst.threads.add(0)
+        inst.add_task(task)
+        self.assertEqual(len(inst.queue_logger.logged), 1)
+        inst.threads = set()
+        inst.add_task(task)
         self.assertEqual(len(inst.queue_logger.logged), 2)
 
     def test_shutdown_one_thread(self):

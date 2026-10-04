@@ -121,8 +121,21 @@ class TestWSGIServer(unittest.TestCase):
         inst = self._makeOneWithMap(_start=False)
         inst.asyncore = DummyAsyncore()
         inst.task_dispatcher = DummyTaskDispatcher()
-        inst.run()
+        closed_maps = []
+        import waitress.server as server_mod
+
+        orig_close_all = server_mod.wasyncore.close_all
+
+        def track_close_all(map=None, ignore_all=False):
+            closed_maps.append(map)
+
+        server_mod.wasyncore.close_all = track_close_all
+        try:
+            inst.run()
+        finally:
+            server_mod.wasyncore.close_all = orig_close_all
         self.assertTrue(inst.task_dispatcher.was_shutdown)
+        self.assertEqual(closed_maps, [inst._map])
 
     def test_run_base_server(self):
         inst = self._makeOneWithMulti(_start=False)

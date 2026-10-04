@@ -764,9 +764,11 @@ class TestHTTPChannel(unittest.TestCase):
 
     def test_cancel_with_requests(self):
         inst, sock, map = self._makeOneWithMap()
-        inst.requests = [None]
+        req = DummyRequest()
+        inst.requests = [req]
         inst.cancel()
         self.assertListEqual(inst.requests, [])
+        self.assertTrue(req.closed)
 
 
 class TestHTTPChannelLookahead(TestHTTPChannel):

@@ -53,6 +53,7 @@ class ThreadedTaskDispatcher:
         self.lock = threading.Lock()
         self.queue_cv = threading.Condition(self.lock)
         self.thread_exit_cv = threading.Condition(self.lock)
+        self._queue_depth_warning_active = False
 
     def start_new_thread(self, target, thread_no):
         t = threading.Thread(
@@ -109,9 +110,12 @@ class ThreadedTaskDispatcher:
             self.queue_cv.notify()
             queue_size = len(self.queue)
             idle_threads = len(self.threads) - self.stop_count - self.active_count
-            if queue_size > idle_threads:
+            if idle_threads > 0:
+                self._queue_depth_warning_active = False
+            elif queue_size > 0 and not self._queue_depth_warning_active:
+                self._queue_depth_warning_active = True
                 self.queue_logger.warning(
-                    "Task queue depth is %d", queue_size - idle_threads
+                    "Task queue depth is %d", queue_size
                 )
 
     def shutdown(self, cancel_pending=True, timeout=5):

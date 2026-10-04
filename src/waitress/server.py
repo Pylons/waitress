@@ -329,6 +329,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
             )
         except (SystemExit, KeyboardInterrupt):
             self.task_dispatcher.shutdown()
+            wasyncore.close_all(self._map)
 
     def pull_trigger(self):
         self.trigger.pull_trigger()

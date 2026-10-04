@@ -520,4 +520,7 @@ class HTTPChannel(wasyncore.dispatcher):
         self.will_close = True
         self.connected = False
         self.last_activity = time.time()
-        self.requests = []
+        with self.requests_lock:
+            for request in self.requests:
+                request.close()
+            self.requests = []
