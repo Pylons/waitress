@@ -82,6 +82,31 @@ class TestChunkedReceiver(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertFalse(inst.completed)
 
+    def test_received_control_line_too_long(self):
+        from waitress.receiver import MAX_CONTROL_LINE
+        from waitress.utilities import BadRequest
+
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        result = inst.received(b"a" * (MAX_CONTROL_LINE + 1))
+        self.assertEqual(result, MAX_CONTROL_LINE + 1)
+        self.assertTrue(inst.completed)
+        self.assertIsInstance(inst.error, BadRequest)
+        self.assertEqual(inst.error.body, "Chunk control line too long")
+
+    def test_received_control_line_too_long_with_crlf(self):
+        from waitress.receiver import MAX_CONTROL_LINE
+        from waitress.utilities import BadRequest
+
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        data = b"a" * (MAX_CONTROL_LINE + 1) + b"\r\n"
+        result = inst.received(data)
+        self.assertEqual(result, len(data))
+        self.assertTrue(inst.completed)
+        self.assertIsInstance(inst.error, BadRequest)
+        self.assertEqual(inst.error.body, "Chunk control line too long")
+
     def test_received_control_line_finished_garbage_in_input(self):
         buf = DummyBuffer()
         inst = self._makeOne(buf)
@@ -131,6 +156,20 @@ class TestChunkedReceiver(unittest.TestCase):
         result = inst.received(b"a")
         self.assertEqual(result, 1)
         self.assertFalse(inst.completed)
+
+    def test_received_trailer_too_long(self):
+        from waitress.receiver import MAX_TRAILER
+        from waitress.utilities import BadRequest
+
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        inst.all_chunks_received = True
+        inst.trailer = b"x" * MAX_TRAILER
+        result = inst.received(b"y")
+        self.assertEqual(result, 1)
+        self.assertTrue(inst.completed)
+        self.assertIsInstance(inst.error, BadRequest)
+        self.assertEqual(inst.error.body, "Chunk trailer too long")
 
     def test_received_trailer_finished(self):
         buf = DummyBuffer()
@@ -257,6 +296,18 @@ class TestChunkedReceiverParametrized:
         result = inst.received(data)
         assert result == len(data)
         assert inst.error is None
+
+    def test_received_chunk_size_hex_too_long(self):
+        from waitress.receiver import MAX_CHUNK_SIZE_HEX_LEN
+        from waitress.utilities import BadRequest
+
+        buf = DummyBuffer()
+        inst = self._makeOne(buf)
+        line = b"f" * (MAX_CHUNK_SIZE_HEX_LEN + 1) + b"\r\n"
+        result = inst.received(line)
+        assert result == len(line)
+        assert isinstance(inst.error, BadRequest)
+        assert inst.error.body == "Invalid chunk size"
 
     @pytest.mark.parametrize(
         "invalid_size", [b"0x04", b"+0x04", b"x04", b"+04", b" 04", b" 0x04"]

@@ -16,6 +16,11 @@
 from waitress.rfc7230 import CHUNK_EXT_RE, ONLY_HEXDIG_RE
 from waitress.utilities import BadRequest, find_double_newline
 
+MAX_CONTROL_LINE = 1024
+MAX_TRAILER = 65536
+# RFC 7230 allows chunk sizes up to 2**64-1; cap hex digits to limit abuse.
+MAX_CHUNK_SIZE_HEX_LEN = 16
+
 
 class FixedStreamReceiver:
     # See IStreamConsumer
@@ -67,9 +72,6 @@ class ChunkedReceiver:
     trailer = b""
     completed = False
     error = None
-
-    # max_control_line = 1024
-    # max_trailer = 65536
 
     def __init__(self, buf):
         self.buf = buf
@@ -125,6 +127,10 @@ class ChunkedReceiver:
 
                 if pos < 0:
                     # Control line not finished.
+                    if len(s) > MAX_CONTROL_LINE:
+                        self.error = BadRequest("Chunk control line too long")
+                        self.completed = True
+                        break
                     self.control_line = s
                     s = b""
                 else:
@@ -132,6 +138,11 @@ class ChunkedReceiver:
                     line = s[:pos]
                     s = s[pos + 2 :]
                     self.control_line = b""
+
+                    if len(line) > MAX_CONTROL_LINE:
+                        self.error = BadRequest("Chunk control line too long")
+                        self.completed = True
+                        break
 
                     if line:
                         # Begin a new chunk.
@@ -148,6 +159,12 @@ class ChunkedReceiver:
                                 break
 
                             line = line[:semi]
+
+                        if len(line) > MAX_CHUNK_SIZE_HEX_LEN:
+                            self.error = BadRequest("Invalid chunk size")
+                            self.all_chunks_received = True
+
+                            break
 
                         if not ONLY_HEXDIG_RE.match(line):
                             self.error = BadRequest("Invalid chunk size")
@@ -179,6 +196,10 @@ class ChunkedReceiver:
 
                 if pos < 0:
                     # Trailer not finished.
+                    if len(trailer) > MAX_TRAILER:
+                        self.error = BadRequest("Chunk trailer too long")
+                        self.completed = True
+                        break
                     self.trailer = trailer
                     s = b""
                 else:
