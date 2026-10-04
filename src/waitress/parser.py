@@ -361,6 +361,11 @@ class HTTPRequestParser:
             if connection.lower() != "keep-alive":
                 self.connection_close = True
 
+        if "TRANSFER_ENCODING" in headers and version != "1.1":
+            if version not in ("1.0", "1.1"):
+                raise ParsingError("HTTP version not supported")
+            raise ParsingError("Transfer-Encoding is not valid for this HTTP version")
+
         if version == "1.1":
             # since the server buffers data from chunked transfers and clients
             # never need to deal with chunked requests, downstream clients
