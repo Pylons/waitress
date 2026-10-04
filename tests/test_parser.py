@@ -586,6 +586,24 @@ class TestHTTPRequestParser(unittest.TestCase):
         else:  # pragma: nocover
             self.assertTrue(False)
 
+    def test_parse_header_underscore_in_field_name(self):
+        data = b"GET /foobar HTTP/1.1\r\nHost: example.com\r\nfoo_bar: baz\r\n"
+
+        try:
+            self.parser.parse_header(data)
+        except ParsingError as e:
+            self.assertIn("underscore", e.args[0])
+        else:  # pragma: nocover
+            self.assertTrue(False)
+
+    def test_received_underscore_header_name(self):
+        data = b"GET / HTTP/1.1\r\nHost: example.com\r\nfoo_bar: baz\r\n\r\n"
+
+        self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertIn("underscore", self.parser.error.body)
+
     def test_parse_header_invalid_whitespace(self):
         data = b"GET /foobar HTTP/8.4\r\nfoo : bar\r\n"
         try:
@@ -940,7 +958,6 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
             b"GET /foobar HTTP/8.4\r\n"
             b"x-forwarded-for: 10.11.12.13\r\n"
             b"x-forwarded-for: unknown,127.0.0.1\r\n"
-            b"X-Forwarded_for: 255.255.255.255\r\n"
             b"content-length: 6\r\n"
             b"\r\n"
             b"Hello."
@@ -955,7 +972,7 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
             },
         )
 
-    def testSpoofedHeadersDropped(self):
+    def testSpoofedHeadersRejected(self):
         data = (
             b"GET /foobar HTTP/8.4\r\n"
             b"x-auth_user: bob\r\n"
@@ -965,12 +982,8 @@ class TestHTTPRequestParserIntegration(unittest.TestCase):
         )
         self.feed(data)
         self.assertTrue(self.parser.completed)
-        self.assertDictEqual(
-            self.parser.headers,
-            {
-                "CONTENT_LENGTH": "6",
-            },
-        )
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertIn("underscore", self.parser.error.body)
 
 
 class Test_unquote_bytes_to_wsgi(unittest.TestCase):

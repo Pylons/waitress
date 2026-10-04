@@ -232,9 +232,9 @@ class HTTPRequestParser:
             key, value = header.group("name", "value")
 
             if b"_" in key:
-                # TODO(xistence): Should we drop this request instead?
-
-                continue
+                raise ParsingError(
+                    f"Header field name contains underscore: {key.decode('latin-1')}"
+                )
 
             # Only strip off whitespace that is considered valid whitespace by
             # RFC7230, don't strip the rest
