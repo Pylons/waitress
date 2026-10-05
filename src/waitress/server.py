@@ -355,6 +355,7 @@ class BaseWSGIServer(wasyncore.dispatcher):
 
     def close(self):
         self.trigger.close()
+        self.task_dispatcher.shutdown()
         return wasyncore.dispatcher.close(self)
 
 
