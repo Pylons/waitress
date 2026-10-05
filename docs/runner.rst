@@ -264,6 +264,14 @@ Tuning options:
     120. 'Inactive' is defined as 'has received no data from the client and has
     sent no data to the client'.
 
+``--shutdown-timeout=INT``
+    Maximum number of seconds to spend shutting down gracefully.  Default is 5.
+    Once waitress is asked to stop it stops accepting new connections and keeps
+    running its main loop for at most this long, so that requests that are
+    already being serviced get a chance to finish and have their response
+    written back to the client.  Set to ``0`` to tear everything down
+    immediately instead.
+
 ``--channel-request-lookahead=INT``
     Sets the amount of requests we can continue to read from the socket, while
     we are processing current requests. The default value won't allow any

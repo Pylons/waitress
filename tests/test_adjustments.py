@@ -123,6 +123,7 @@ class TestAdjustments(unittest.TestCase):
             connection_limit="1000",
             cleanup_interval="1100",
             channel_timeout="1200",
+            shutdown_timeout="15",
             log_socket_errors="true",
             max_request_header_size="1300",
             max_request_body_size="1400",
@@ -152,6 +153,7 @@ class TestAdjustments(unittest.TestCase):
         self.assertEqual(inst.connection_limit, 1000)
         self.assertEqual(inst.cleanup_interval, 1100)
         self.assertEqual(inst.channel_timeout, 1200)
+        self.assertEqual(inst.shutdown_timeout, 15)
         self.assertTrue(inst.log_socket_errors)
         self.assertEqual(inst.max_request_header_size, 1300)
         self.assertEqual(inst.max_request_body_size, 1400)

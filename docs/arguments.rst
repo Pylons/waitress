@@ -270,6 +270,19 @@ channel_timeout
 
     Default: ``120``
 
+shutdown_timeout
+    Maximum seconds to spend shutting down gracefully (integer).  Once waitress
+    is asked to stop it stops accepting new connections and keeps running its
+    main loop for at most this long, so that requests that are already being
+    serviced get a chance to finish and have their response written back to the
+    client.  Connections that are still open once this expires are closed, and
+    any tasks that are still queued are cancelled.  Set to ``0`` to tear
+    everything down immediately instead.
+
+    Default: ``5``
+
+    .. versionadded:: 3.1.0
+
 log_socket_errors
     Set to ``False`` to not log premature client disconnect tracebacks.
 
