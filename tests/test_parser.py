@@ -299,6 +299,28 @@ class TestHTTPRequestParser(unittest.TestCase):
         self.assertTrue(self.parser.completed)
         self.assertIsInstance(self.parser.error, ServerNotImplemented)
 
+    def test_received_transfer_encoding_on_http_10(self):
+        data = (
+            b"GET /foobar HTTP/1.0\r\n"
+            b"Transfer-Encoding: chunked\r\n"
+            b"\r\n"
+        )
+        self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertIn("Transfer-Encoding is not valid", self.parser.error.body)
+
+    def test_received_transfer_encoding_on_unsupported_http_version(self):
+        data = (
+            b"GET /foobar HTTP/8.4\r\n"
+            b"Transfer-Encoding: chunked\r\n"
+            b"\r\n"
+        )
+        self.parser.received(data)
+        self.assertTrue(self.parser.completed)
+        self.assertIsInstance(self.parser.error, BadRequest)
+        self.assertIn("HTTP version not supported", self.parser.error.body)
+
     def test_received_nonsense_nothing(self):
         data = b"\r\n\r\n"
         result = self.parser.received(data)
