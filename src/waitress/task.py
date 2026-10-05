@@ -243,15 +243,23 @@ class Task:
                 self.set_close_on_finish()
 
             if not content_length_header:
-                # RFC 7230: MUST NOT send Transfer-Encoding or Content-Length
-                # for any response with a status code of 1xx, 204 or 304.
+                # RFC 9112 section 6.3: MUST NOT send Transfer-Encoding or
+                # Content-Length for any response with a status code of 1xx,
+                # 204 or 304.
+                #
+                # Such a response carries no message body and is terminated by
+                # the first empty line after the header fields, so it is
+                # already framed unambiguously and the connection may be
+                # reused. Only a response that should have carried a body but
+                # has no length to declare needs the connection closed in
+                # order to delimit it.
 
                 if self.has_body:
                     self.response_headers.append(("Transfer-Encoding", "chunked"))
                     self.chunked_response = True
 
-                if not self.close_on_finish:
-                    self.set_close_on_finish()
+                    if not self.close_on_finish:
+                        self.set_close_on_finish()
 
             # under HTTP 1.1 keep-alive is default, no need to set the header
         else:
@@ -265,7 +273,12 @@ class Task:
             if ident:
                 self.response_headers.append(("Server", ident))
         else:
-            self.response_headers.append(("Via", ident or "waitress"))
+            # RFC 9110 section 7.6.3: Via = #( received-protocol RWS
+            # received-by [ RWS comment ] ). The received-protocol is not
+            # optional, so the pseudonym on its own is not a well formed field
+            # value; the protocol-name may only be elided when it is HTTP,
+            # which leaves the version of the request we received.
+            self.response_headers.append(("Via", f"{version} {ident or 'waitress'}"))
 
         if not date_header:
             self.response_headers.append(("Date", build_http_date(self.start_time)))

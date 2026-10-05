@@ -659,6 +659,42 @@ class PipeliningTests:
                 self.assertEqual(response_body, expect_body)
 
 
+class NotModifiedTests:
+    def setUp(self):
+        from tests.fixtureapps import notmodified
+
+        self.start_subprocess(notmodified.app)
+
+    def tearDown(self):
+        self.stop_subprocess()
+
+    def _check_bodiless_keepalive(self, path, status, reason):
+        # RFC 9112 section 6.3: a response with a 1xx, 204 or 304 status
+        # carries no message body and is terminated by the first empty line
+        # after the header fields. It is therefore framed unambiguously
+        # without a Content-Length or a Transfer-Encoding, and the connection
+        # may be reused; a cache revalidating against us should not have to
+        # reconnect for every 304 it gets back.
+        to_send = b"GET %s HTTP/1.1\r\nHost: localhost\r\n\r\n" % path
+        self.connect()
+        self.sock.send(to_send * 2)
+
+        with self.sock.makefile("rb", 0) as fp:
+            for _ in range(2):
+                line = fp.readline()  # status line
+                self.assertline(line, status, reason, "HTTP/1.1")
+                headers = parse_headers(fp)
+                self.assertNotIn("connection", headers)
+                self.assertNotIn("content-length", headers)
+                self.assertNotIn("transfer-encoding", headers)
+
+    def test_304_does_not_close_connection(self):
+        self._check_bodiless_keepalive(b"/", "304", "Not Modified")
+
+    def test_204_does_not_close_connection(self):
+        self._check_bodiless_keepalive(b"/nocontent", "204", "No Content")
+
+
 class ExpectContinueTests:
     def setUp(self):
         from tests.fixtureapps import echo
@@ -1643,6 +1679,10 @@ class TcpPipeliningTests(PipeliningTests, TcpTests, unittest.TestCase):
     pass
 
 
+class TcpNotModifiedTests(NotModifiedTests, TcpTests, unittest.TestCase):
+    pass
+
+
 class TcpExpectContinueTests(ExpectContinueTests, TcpTests, unittest.TestCase):
     pass
 
@@ -1716,6 +1756,9 @@ if hasattr(socket, "AF_UNIX"):
         pass
 
     class UnixPipeliningTests(PipeliningTests, UnixTests, unittest.TestCase):
+        pass
+
+    class UnixNotModifiedTests(NotModifiedTests, UnixTests, unittest.TestCase):
         pass
 
     class UnixExpectContinueTests(ExpectContinueTests, UnixTests, unittest.TestCase):
