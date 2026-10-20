@@ -74,6 +74,12 @@ Bugfix
   https://github.com/Pylons/waitress/issues/466 and
   https://github.com/Pylons/waitress/pull/488
 
+- A ``url_prefix`` containing non-ASCII characters now matches the request
+  path, which is decoded as UTF-8 bytes read as latin-1 per PEP 3333, so
+  ``SCRIPT_NAME`` and ``PATH_INFO`` are split correctly. See
+  https://github.com/Pylons/waitress/issues/492 and
+  https://github.com/Pylons/waitress/pull/508
+
 3.0.2 (2024-11-16)
 ------------------
 

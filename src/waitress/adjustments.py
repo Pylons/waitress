@@ -75,6 +75,11 @@ def slash_fixed_str(s):
         # always have a leading slash, replace any number of leading slashes
         # with a single slash, and strip any trailing slashes
         s = "/" + s.lstrip("/").rstrip("/")
+        # WSGI requires SCRIPT_NAME/PATH_INFO to carry non-ASCII characters
+        # as UTF-8 bytes decoded as latin-1, the same way the request path
+        # is decoded in parser.py, so url_prefix has to match that encoding
+        # for comparisons against the path to work.
+        s = s.encode("utf-8").decode("latin-1")
     return s
 
 
