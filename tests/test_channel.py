@@ -629,6 +629,40 @@ class TestHTTPChannel(unittest.TestCase):
         self.assertFalse(old.closed)
         self.assertIs(inst.outbufs[0], old)
 
+    def test_recycle_idle_outbufs_closes_leading_empty_bufs(self):
+        inst, sock, map = self._makeOneWithMap()
+        first = DummyBuffer(b"")
+        second = DummyBuffer(b"")
+        third = DummyBuffer(b"pending")
+        inst.outbufs = [first, second, third]
+        inst._recycle_idle_outbufs()
+        self.assertTrue(first.closed)
+        self.assertTrue(second.closed)
+        self.assertFalse(third.closed)
+        self.assertListEqual(inst.outbufs, [third])
+
+    def test_recycle_idle_outbufs_logs_close_error_on_leading_buf(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.logger = DummyLogger()
+        bad = DummyBuffer(b"")
+        bad.close = lambda: (_ for _ in ()).throw(IOError("boom"))
+        kept = DummyBuffer(b"pending")
+        inst.outbufs = [bad, kept]
+        inst._recycle_idle_outbufs()
+        self.assertEqual(len(inst.logger.exceptions), 1)
+        self.assertListEqual(inst.outbufs, [kept])
+
+    def test_recycle_idle_outbufs_logs_close_error_on_replaced_buf(self):
+        inst, sock, map = self._makeOneWithMap()
+        inst.logger = DummyLogger()
+        bad = DummyBuffer(b"")
+        bad.close = lambda: (_ for _ in ()).throw(IOError("boom"))
+        inst.outbufs = [bad]
+        inst._recycle_idle_outbufs()
+        self.assertEqual(len(inst.logger.exceptions), 1)
+        self.assertEqual(len(inst.outbufs), 1)
+        self.assertIsNot(inst.outbufs[0], bad)
+
     def test_service_with_one_error_request(self):
         inst, sock, map = self._makeOneWithMap()
         request = DummyRequest()
