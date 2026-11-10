@@ -30,6 +30,20 @@ class Test_run(unittest.TestCase):
     def test_bad_apps_app(self):
         self.match_output(["a"], 1, "No module named 'a'")
 
+    def test_bad_port_value(self):
+        self.match_output(
+            ["--port=abc", "tests.fixtureapps.runner:app"],
+            1,
+            "^Error: invalid literal for int",
+        )
+
+    def test_bad_threads_value(self):
+        self.match_output(
+            ["--threads=xyz", "tests.fixtureapps.runner:app"],
+            1,
+            "^Error: invalid literal for int",
+        )
+
     def test_bad_app_module(self):
         self.match_output(["nonexistent:a"], 1, "No module named 'nonexistent'")
 
