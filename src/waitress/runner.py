@@ -313,5 +313,11 @@ def run(argv=sys.argv, _serve=serve):
     # These arguments are specific to the runner, not waitress itself.
     del kw["help"], kw["app"]
 
-    _serve(app, **kw)
+    try:
+        _serve(app, **kw)
+    except ValueError as exc:
+        # invalid option values (e.g. --port=abc) are user errors, report
+        # them like any other bad argument instead of dumping a traceback
+        show_help(sys.stderr, name, str(exc))
+        return 1
     return 0
